@@ -38,36 +38,6 @@ If you want no server of ours anywhere, create the bot yourself.
 
 Whichever way you got the bot, until a chat is linked goodcryptoX shows **Open your bot**. It opens your bot's chat in Telegram; press **Start**, and the alerts arrive there.
 
-## Turn on topics
-
-Optional. With topics, each kind of alert arrives in its own topic of your bot's chat: **Orders**, **Bots** and **Account**. Only BotFather can turn them on:
-
-**1.** In Telegram, open **BotFather** and press **Open** at the bottom (not the buttons in its chat).
-
-![The arrow at Open](pictures/telegram/04-botfather-open.webp)
-
-**2.** Under My bots, tap your bot.
-
-![The arrow at your bot under My bots](pictures/telegram/05-my-bots.webp)
-
-**3.** Press **Bot Settings**.
-
-![The arrow at Bot Settings](pictures/telegram/06-bot-page-settings.webp)
-
-**4.** Under Threads Settings, turn **Threaded Mode** on.
-
-![The arrow at Threaded Mode, on](pictures/telegram/07-threaded-mode.webp)
-
-Come back to **Settings › Alerts**: goodcryptoX makes the topics and sorts your alerts into them.
-
-The long way works too: in your bot's chat, tap its picture, then **Bot Settings**, then **Change Bot Settings**, which opens BotFather; then steps 3 and 4.
-
-![The arrow at the bot's picture](pictures/telegram/01-bot-chat.webp)
-
-![The arrow at Bot Settings](pictures/telegram/02-bot-settings.webp)
-
-![The arrow at Change Bot Settings](pictures/telegram/03-change-bot-settings.webp)
-
 ## Disconnect
 
 Press **Disconnect** in Settings › Alerts. Your chat is told, and nothing more is sent. The bot itself stays yours in Telegram; delete it in BotFather if you no longer want it.

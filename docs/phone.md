@@ -24,7 +24,7 @@ A passkey saved in iCloud or Google already works on your other devices in the s
 
 Each device in the list has a switch: **Can trade** does everything you can; **Read-only** only looks. Give a shared or borrowed phone Read-only. Removing a device is a row in the same Settings list; it stops within a second.
 
-There is no other limit. Your keys never leave the machine goodcryptoX runs on.
+There is no other limit. Your keys never leave the machine goodcryptoX runs on. A device keeps goodcryptoX's own code after its first visit, so later visits open faster.
 
 ## On the home screen
 
