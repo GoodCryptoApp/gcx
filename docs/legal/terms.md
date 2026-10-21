@@ -24,7 +24,7 @@ Today our builder fee is **0.03 %** of each filled trade placed through goodcryp
 
 ## 5. Referrals and partner codes
 
-The optional referral offered when connecting an eligible account follows Hyperliquid’s own discount rules and may earn us a share of its fees. A partner code may reduce our fee and pays the partner a share of it. Once entered, the code covers your goodcryptoX’s accounts and cannot be changed or removed; signed order records go to our server as the privacy policy explains. We may change or end codes at our discretion. Partners’ earnings and payments are governed by their separate agreements with us.
+The optional referral offered when connecting an eligible account follows Hyperliquid’s own discount rules and may earn us a share of its fees. A partner code may reduce our fee and pays the partner a share of it; a partner’s own key reduces it on the partner’s own goodcryptoX and pays no share. Once entered, the code covers your goodcryptoX’s accounts and cannot be changed or removed; signed order records go to our server as the privacy policy explains. We may change or end codes at our discretion. Partners’ earnings and payments are governed by their separate agreements with us.
 
 ## 6. Trading risks
 
