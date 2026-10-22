@@ -1,6 +1,6 @@
 # What is goodcryptoX 3.0
 
-**[Download goodcryptoX for Mac](https://github.com/GoodCryptoApp/gcx/releases/latest/download/goodcryptoX.dmg)** · or [set it up on a server](install/server.md) or [on a NAS](install/nas.md), and use it from any computer or your phone.
+**[Download goodcryptoX for Mac](https://goodcrypto.app/download/mac?utm_source=docs&utm_medium=page&utm_campaign=first-release)** · or [set it up on a server](install/server.md) or [on a NAS](install/nas.md), and use it from any computer or your phone.
 
 [Why we moved](#why-we-moved) · [What it is](#what-it-is) · [Roadmap](#roadmap) · [How it works](#how-it-works) · [Secure and free to run](#secure-and-free-to-run) · [Set up on your Mac](install/mac.md) · [Set up on a NAS](install/nas.md) · [Set up on a server](install/server.md) · [Phone access](phone.md) · [Telegram alerts](telegram.md) · [Moving](install/moving.md)
 

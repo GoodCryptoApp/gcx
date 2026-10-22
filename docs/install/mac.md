@@ -2,9 +2,13 @@
 
 macOS 13.5 or later, Apple silicon or Intel.
 
+{% hint style="warning" %}
+**goodcryptoX trades only while this Mac is on and online.** It watches your orders and bots while it runs. A short break is fine: a dropped connection for a few minutes, a restart of the app or of the Mac, and goodcryptoX catches up when it is back. If this Mac is not normally on day and night, run goodcryptoX on a [NAS at home](nas.md) or a [rented server](server.md) instead: set it up once, step by step, then use it the same way from your browser or your phone, and never worry about a missed order. You can start here and [move it later](moving.md) in one file.
+{% endhint %}
+
 ## Start goodcryptoX
 
-1. [Download goodcryptoX](https://github.com/GoodCryptoApp/gcx/releases/latest/download/goodcryptoX.dmg) and open the `.dmg`.
+1. [Download goodcryptoX](https://goodcrypto.app/download/mac?utm_source=docs&utm_medium=page&utm_campaign=setup-mac) and open the `.dmg`.
 2. Drag **goodcryptoX** onto **Applications**, then double-click **goodcryptoX** in the same window.
 3. goodcryptoX appears in the menu bar at the top right, and your browser opens it. **Set up goodcryptoX** on the Dashboard walks you through the rest: your exchange accounts, then your Telegram bot.
 
