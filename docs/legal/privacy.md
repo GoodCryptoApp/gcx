@@ -29,7 +29,7 @@ Our services run on Cloudflare, under its terms, and do not retain IP addresses.
 
 ## What we hold
 
-We use reports and daily usage records to fix problems and improve goodcryptoX, keeping them for 180 days and retaining aggregate totals. Partner order records stay while we pay partners; their public trades are kept for 30 days after a day is counted, or while paying the partner. Partner payout records remain in our accounts. We hold subscribed email addresses for news and correspondence to answer you. Our download link, a web address and not the app, counts each click's source, country and device kind in our own records and in Google Analytics, and keeps nothing about you. These records do not give us your trading keys or control of your funds.
+We use reports and daily usage records to fix problems and improve goodcryptoX, keeping them for 180 days and retaining aggregate totals. Partner order records stay while we pay partners; their public trades are kept for 30 days after a day is counted, or while paying the partner. Partner payout records remain in our accounts. We hold subscribed email addresses for news and correspondence to answer you. Our download link, a web address and not the app, counts each click's source, the file chosen, country and device kind in our own records and in Google Analytics, and keeps nothing about you. These records do not give us your trading keys or control of your funds.
 
 ## Deleting your data
 

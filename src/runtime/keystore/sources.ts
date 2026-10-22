@@ -27,7 +27,8 @@ export interface StoringSource extends UnlockSource {
 /** Run an OS tool: secret input on stdin, secret output on stdout, killed at 5 s. stderr is not read, so never repeated. */
 export function runTool(kind: string, file: string, args: readonly string[], input?: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const child = spawn(file, args, { stdio: ["pipe", "pipe", "ignore"] });
+    // windowsHide: no console window on Windows (0008 amendment 1 d2.2), where the runtime itself runs with none.
+    const child = spawn(file, args, { stdio: ["pipe", "pipe", "ignore"], windowsHide: true });
     const out: Buffer[] = [];
     const wipe = () => { for (const b of out) b.fill(0); };
     let settled = false;

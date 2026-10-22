@@ -68,7 +68,7 @@ Reach goodcryptoX through a tunnel instead. Turn on SSH on the NAS (**Control Pa
 ssh -N -L 8128:127.0.0.1:8128 <user>@<your NAS's address>
 ```
 
-In a second window, sign in to the NAS with `ssh <user>@<your NAS's address>`, run `sudo docker exec gcx gcx open --print`, and open the link it prints in your browser within 60 seconds. goodcryptoX opens at `http://gcx.localhost:8128`. A network address such as `http://192.168.1.20:8128` does not open it.
+In a second window, sign in to the NAS with `ssh <user>@<your NAS's address>`, run `sudo docker exec gcx gcx open --print`, and open the link it prints in your browser within 60 seconds. goodcryptoX opens at `http://localhost:8128/gcx`. A network address such as `http://192.168.1.20:8128` does not open it.
 
 </details>
 

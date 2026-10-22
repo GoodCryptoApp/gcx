@@ -19,7 +19,7 @@ The dot on goodcryptoX's mark in the menu bar says how things stand: green, all 
 
 ## Another browser
 
-To use goodcryptoX in another browser on this Mac, type localhost:8128 in its address bar and press Unlock. If that address does not open, choose Copy sign-in link in the goodcryptoX menu and paste it there.
+To use goodcryptoX in another browser on this Mac, type localhost:8118 in its address bar and press Unlock. If that address does not open, choose Copy sign-in link in the goodcryptoX menu and paste it there.
 
 ## Add a phone or another computer
 

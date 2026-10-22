@@ -170,7 +170,7 @@ Or reach goodcryptoX through a tunnel instead. On your computer, open Terminal (
 ssh -N -L 8128:127.0.0.1:8128 root@<your server's address>
 ```
 
-Answer `yes` the first time, then enter the server's password (on Hostinger, the root password from step 5). Nothing more appears, which is right: keep the window open while you use goodcryptoX. Then run `gcx open --print` in the container's terminal (elsewhere `docker exec gcx gcx open --print`) and open the link it prints in your browser within 60 seconds. goodcryptoX opens at `http://gcx.localhost:8128`. If the log names a port other than 8128, use that number on both sides of the line and in the address.
+Answer `yes` the first time, then enter the server's password (on Hostinger, the root password from step 5). Nothing more appears, which is right: keep the window open while you use goodcryptoX. Then run `gcx open --print` in the container's terminal (elsewhere `docker exec gcx gcx open --print`) and open the link it prints in your browser within 60 seconds. goodcryptoX opens at `http://localhost:8128/gcx`. If the log names a port other than 8128, use that number on both sides of the line and in the address.
 
 </details>
 
