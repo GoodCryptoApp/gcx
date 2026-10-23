@@ -194,3 +194,71 @@ On Hostinger, choose **Update** in the `gcx` row's menu; elsewhere, run `docker 
 </details>
 
 goodcryptoX keeps your data in two Docker volumes, `gcx-data` and `gcx-secret`. Back them up together: `gcx-data` alone cannot open your keys.
+
+## Free and low-cost servers
+
+Low-cost and even free servers can run goodcryptoX. Oracle Cloud's Always Free Arm server has enough memory, but free capacity can be hard to get and Oracle may reclaim a lightly used server. It is worth considering if you already have an Oracle account; for a newcomer who wants the easiest setup, Hostinger is still the easiest we found.
+
+### Oracle Cloud Always Free
+
+Choose **Ampere A1**, with **Ubuntu**, **1 OCPU and 2 GB of memory**. goodcryptoX's Docker image works on both Arm and Intel/AMD without changing the commands. Avoid the free AMD micro: its 1 GB of memory leaves too little room for Ubuntu and goodcryptoX together.
+
+Oracle's [current free allowance](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm), checked 22 October 2026, covers this server; check the free label and the estimate before creating anything. The time-limited trial credit is a different offer.
+
+Before choosing Oracle:
+
+- Sign-up needs a credit or suitable debit card and may place a temporary hold; [contact Oracle](https://www.oracle.com/cloud/free/faq/) if verification fails.
+- Choose your [home region](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/managingregions.htm) carefully: free servers must be there, and it cannot be changed.
+- If no free server is available, try another availability domain in that region or try later.
+- Oracle may reclaim a lightly used server even while it runs; [back up both goodcryptoX volumes](#updates-and-backups) and expect interruptions.
+- Upgrading keeps the free allowance but permits charges above it; do not upgrade just to avoid reclamation.
+- Oracle may [suspend or terminate an account idle for 30 days](https://www.oracle.com/cloud/free/faq/); check its messages and your server regularly.
+
+### Oracle setup
+
+These steps follow Oracle's documentation; the walkthrough and screenshots await a verified Oracle account.
+
+**1. Sign in.** Open [Oracle Cloud](https://cloud.oracle.com/) with your cloud account. A new account starts from [Oracle's Free Tier page](https://www.oracle.com/cloud/free/).
+
+**2. Create the server.** Follow [Oracle's Linux server guide](https://docs.oracle.com/en-us/iaas/Content/Compute/tutorials/first-linux-instance/overview.htm): **Compute › Instances › Create instance**. Choose Ubuntu, then the **VM.Standard.A1.Flex** shape with **1 OCPU and 2 GB**. Keep the boot disk inside the free allowance and save the SSH key when Oracle offers it. The private key opens your server: keep it private.
+
+**3. Check the network.** The server needs a public address and SSH access. Allow SSH (TCP 22) from your computer's public IP address. No additional incoming port is needed for goodcryptoX: use the private tunnel below, or the sign-in link in [Sign in](#sign-in). Do not open port 8128 to the internet.
+
+**4. Connect.** On your computer, open Terminal, or PowerShell on Windows. Replace the two placeholders with the saved key file and the server's public address. On macOS or Linux, first run `chmod 400 <your-private-key-file>`; on Windows, use [Oracle's key-permission steps](https://docs.oracle.com/en-us/iaas/Content/Compute/tutorials/first-linux-instance/overview.htm):
+
+```
+ssh -i <your-private-key-file> ubuntu@<your-server-address>
+```
+
+**5. Install Docker if needed.** In that server terminal, follow [Docker's Ubuntu installation](https://docs.docker.com/engine/install/ubuntu/), using its apt repository, and install its Compose plugin too. The same instructions cover Arm and Intel/AMD. Check that `sudo docker compose version` prints a version.
+
+**6. Start goodcryptoX.** Run this on the server:
+
+```
+curl -fsSLo compose.yaml https://github.com/GoodCryptoApp/gcx/releases/latest/download/compose.yaml && sudo docker compose up -d && sudo docker logs -f gcx
+```
+
+**7. Open the panel.** Use the log's sign-in link as in [Sign in](#sign-in).
+
+<details>
+<summary>Use an SSH tunnel instead</summary>
+
+Keep this running in a second terminal on your computer:
+
+```
+ssh -i <your-private-key-file> -N -L 8128:127.0.0.1:8128 ubuntu@<your-server-address>
+```
+
+Then run `sudo docker exec gcx gcx open --print` on the server and open the link it prints within 60 seconds. If the log names another port, use that number on both sides of the tunnel. Never share the sign-in link.
+
+</details>
+
+### Other small servers
+
+Published prices checked 22 October 2026; currency, tax, region, payment term and renewal matter. Read the final price before paying. These providers have not had the screen-by-screen goodcryptoX walkthrough above.
+
+| Server | Published price | What matters |
+| --- | --- | --- |
+| [netcup VPS nano G11.5s](https://www.netcup.com/de/server/vps-lite) | €3.69/month including 19% VAT, six-month term | 2 GB memory, 60 GB disk; Nuremberg only. Prices vary with your tax country; choose IPv4 connectivity |
+| [OVHcloud VPS-1](https://www.ovhcloud.com/en/vps/) | From US$4.54/month | 4 GB memory, 40 GB disk. Starting price; confirm the term, tax, region and renewal in its order page |
+| [IONOS VPS S+](https://www.ionos.com/servers/vps) | US$2/month for three months, then US$6/month, one-year term | 2 GB memory, 60 GB disk; the low introductory price does not last the year |
