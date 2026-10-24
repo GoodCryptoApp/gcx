@@ -32,4 +32,4 @@ export const sealWith = async (secret: Buffer, plaintext: Buffer): Promise<Buffe
 export const unsealWith = async (file: Buffer, secret: Buffer): Promise<Buffer> => (await unseal(file, secret)).plaintext;
 
 export { KEYSTORE_FILE, MOVED_FILE, KeystoreError, removeKeyFiles, type KeystoreErrorCode } from "./format.js";
-export { CREDENTIAL, credentialFile, dpapi, environment, macosKeychain, passphrase, provision, secretService, systemdCredential, type StoringSource, type UnlockSource } from "./sources.js";
+export { CREDENTIAL, DPAPI_OWNER, PATIENT_TOOL_MS, credentialFile, dpapi, environment, macosKeychain, passphrase, provision, secretService, systemdCredential, type StoringSource, type UnlockSource } from "./sources.js";

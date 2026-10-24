@@ -1,31 +1,39 @@
 /**
  * Where the unlock secret comes from (0008 §7.2). One small interface: `read()` gives the secret or refuses with the
  * reason; sources the runtime writes to also `store()` it, and `provision` proves a store by reading it back through a
- * fresh child process. Every OS tool runs with a 5 s timeout, and a timeout is "locked", a handled state. A secret is
+ * fresh child process. Every OS tool runs with a 5 s timeout (a background retry passes a longer one, cli/keys.ts), and a timeout is "locked", a handled state. A secret is
  * a Buffer, never on argv, never in an error: errors carry the tool, the exit code or "timed out", not its output.
  *
  * What runs on which system, and what was tested where, is in docs/reference/runtime/keystore.md.
  */
 import { spawn } from "node:child_process";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { open, readFile, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { hostname, userInfo } from "node:os";
+import { join, win32 } from "node:path";
 import { writeAtomic } from "../fs/atomic.js";
 import { KeystoreError } from "./format.js";
 
 export const TOOL_TIMEOUT_MS = 5000;
+/** Where nothing but the person or a background attempt waits (an unlock attempt, `provision` at a connect): a slow tool (PowerShell under a first antivirus scan) is given this long. */
+export const PATIENT_TOOL_MS = 60_000;
 const SERVICE = "gcx-ai";
 
 export interface UnlockSource {
   readonly kind: string;
-  read(): Promise<Buffer>;
+  /** `limitMs`: how long an OS tool may take (`TOOL_TIMEOUT_MS` when absent); a source with no tool ignores it. */
+  read(limitMs?: number): Promise<Buffer>;
+  /** Whether what the source holds was sealed by another account or computer, so no try here can open it (DPAPI only); null: not known. */
+  elsewhere?(): boolean | null;
 }
 export interface StoringSource extends UnlockSource {
-  store(secret: Buffer): Promise<void>;
+  /** `limitMs` as `read`'s. */
+  store(secret: Buffer, limitMs?: number): Promise<void>;
 }
 
-/** Run an OS tool: secret input on stdin, secret output on stdout, killed at 5 s. stderr is not read, so never repeated. */
-export function runTool(kind: string, file: string, args: readonly string[], input?: Buffer): Promise<Buffer> {
+/** Run an OS tool: secret input on stdin, secret output on stdout, killed at `limitMs` (5 s by default). stderr is not read, so never repeated. */
+export function runTool(kind: string, file: string, args: readonly string[], input?: Buffer, limitMs = TOOL_TIMEOUT_MS): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     // windowsHide: no console window on Windows (0008 amendment 1 d2.2), where the runtime itself runs with none.
     const child = spawn(file, args, { stdio: ["pipe", "pipe", "ignore"], windowsHide: true });
@@ -39,8 +47,8 @@ export function runTool(kind: string, file: string, args: readonly string[], inp
       wipe();
       reject(new KeystoreError("unavailable", `${kind}: ${file} ${why}`));
     };
-    // Settles at 5 s even if a grandchild keeps the pipe open; the tool is killed.
-    const timer = setTimeout(() => { child.kill("SIGKILL"); fail("timed out after 5 s; the store stays locked"); }, TOOL_TIMEOUT_MS);
+    // Settles at the limit even if a grandchild keeps the pipe open; the tool is killed.
+    const timer = setTimeout(() => { child.kill("SIGKILL"); fail(`timed out after ${String(limitMs / 1000)} s`); }, limitMs);
     child.stdout.on("data", (b: Buffer) => out.push(b));
     child.stdin.on("error", () => undefined); // a tool that exits without reading its input
     child.on("error", () => { fail("could not be started"); });
@@ -81,15 +89,15 @@ export function macosKeychain(account: string, keychain?: string): StoringSource
   const where = keychain === undefined ? [] : [keychain];
   return {
     kind: "macos-keychain",
-    async store(secret) {
+    async store(secret, limitMs) {
       // The secret is pasted into a `security -i` line: only hex may reach it (a newline would run a second command).
       const hex = (b: number) => (b >= 48 && b <= 57) || (b >= 97 && b <= 102) || (b >= 65 && b <= 70);
       if (secret.length === 0 || !secret.every(hex)) throw new KeystoreError("unavailable", "macos-keychain: only a hex secret is stored");
       const line = Buffer.concat([Buffer.from(`add-generic-password -U -s ${SERVICE} -a ${q(account)} -w `), secret, Buffer.from(`${where.map((k) => ` ${q(k)}`).join("")}\n`)]);
-      try { await runTool(this.kind, "/usr/bin/security", ["-i"], line); } finally { line.fill(0); }
+      try { await runTool(this.kind, "/usr/bin/security", ["-i"], line, limitMs); } finally { line.fill(0); }
     },
-    async read() {
-      return secretOf(this.kind, await runTool(this.kind, "/usr/bin/security", ["find-generic-password", "-s", SERVICE, "-a", account, "-w", ...where]));
+    async read(limitMs) {
+      return secretOf(this.kind, await runTool(this.kind, "/usr/bin/security", ["find-generic-password", "-s", SERVICE, "-a", account, "-w", ...where], undefined, limitMs));
     },
   };
 }
@@ -107,18 +115,18 @@ export function secretService(account: string): StoringSource {
   const attrs = ["service", SERVICE, "account", account];
   return {
     kind,
-    async store(secret) {
+    async store(secret, limitMs) {
       graphical();
-      await runTool(kind, "secret-tool", ["store", "--label=GCX unlock", ...attrs], secret);
-      const found = await runTool(kind, "secret-tool", ["search", "--all", ...attrs]);
+      await runTool(kind, "secret-tool", ["store", "--label=GCX unlock", ...attrs], secret, limitMs);
+      const found = await runTool(kind, "secret-tool", ["search", "--all", ...attrs], undefined, limitMs);
       const path = /^\[(\/org\/freedesktop\/secrets\/collection\/[^/\]]+)\//m.exec(found.toString("latin1"));
       found.fill(0);
       if (!path) throw new KeystoreError("unavailable", `${kind}: the stored item was not found`);
       if (path[1] === "/org/freedesktop/secrets/collection/session") throw new KeystoreError("unavailable", `${kind}: the default collection is the in-memory session collection, lost at reboot; refused`);
     },
-    async read() {
+    async read(limitMs) {
       graphical();
-      return secretOf(kind, await runTool(kind, "secret-tool", ["lookup", ...attrs]));
+      return secretOf(kind, await runTool(kind, "secret-tool", ["lookup", ...attrs], undefined, limitMs));
     },
   };
 }
@@ -127,25 +135,39 @@ const DPAPI_CHECK = "if (-not (Test-Path (Join-Path $env:APPDATA 'Microsoft\\Pro
 const DPAPI = (op: "Protect" | "Unprotect") =>
   `Add-Type -AssemblyName System.Security; ${DPAPI_CHECK}; $m = New-Object IO.MemoryStream; [Console]::OpenStandardInput().CopyTo($m); ` +
   `$b = [Security.Cryptography.ProtectedData]::${op}($m.ToArray(), $null, 'CurrentUser'); [Console]::OpenStandardOutput().Write($b, 0, $b.Length)`;
+/** Windows PowerShell by its absolute path (unlock-retry): a runtime started at logon may inherit a PATH without it. `C:\Windows` when SystemRoot is not set. */
+export const powershell = (): string => win32.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+/** Beside the DPAPI blob: who sealed it, the Windows account and the computer as a hash (never a name, never a secret). */
+export const DPAPI_OWNER = "unlock.dpapi.owner";
+const ownerHere = (): string => createHash("sha256").update(`gcx-dpapi-owner:${userInfo().username}@${hostname()}`).digest("hex");
+
 /**
  * Windows: a DPAPI current-user blob in `<data>/unlock.dpapi`, through PowerShell `ProtectedData`, secret and blob on
  * stdin and stdout. Only with the user's profile loaded (exit 3 otherwise): the "at log on" task, never "run whether
- * user is logged on or not".
+ * user is logged on or not". A blob opens only for the Windows account (and computer) that sealed it: `DPAPI_OWNER` says
+ * whose it is, written with the blob and at a read that opens one without it or with another (unlock-retry), so a data folder
+ * copied to another account or computer is known as such (`elsewhere`) instead of tried again for ever.
  */
 export function dpapi(dataDir: string): StoringSource {
   const kind = "dpapi";
-  const blobPath = join(dataDir, "unlock.dpapi");
-  const ps = (op: "Protect" | "Unprotect", input: Buffer) => runTool(kind, "powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", DPAPI(op)], input);
+  const blobPath = join(dataDir, "unlock.dpapi"), ownerPath = join(dataDir, DPAPI_OWNER);
+  const note = (): string | null => { try { return readFileSync(ownerPath, "utf8"); } catch { return null; } };
+  const ps = (op: "Protect" | "Unprotect", input: Buffer, limitMs?: number) => runTool(kind, powershell(), ["-NoProfile", "-NonInteractive", "-Command", DPAPI(op)], input, limitMs);
   return {
     kind,
-    async store(secret) {
-      await writeAtomic(blobPath, await ps("Protect", secret));
+    async store(secret, limitMs) {
+      await writeAtomic(blobPath, await ps("Protect", secret, limitMs));
+      await writeAtomic(ownerPath, Buffer.from(ownerHere()));
     },
-    async read() {
+    async read(limitMs) {
       let blob: Buffer;
       try { blob = await readFile(blobPath); } catch { throw new KeystoreError("unavailable", `${kind}: no unlock.dpapi in the data folder`); }
-      return secretOf(kind, await ps("Unprotect", blob));
+      const secret = secretOf(kind, await ps("Unprotect", blob, limitMs));
+      // The account that opened the blob owns it: a missing note, or one that differs (a renamed PC or user), is written (judge Opus, finding 6).
+      if (note() !== ownerHere()) await writeAtomic(ownerPath, Buffer.from(ownerHere())).catch(() => undefined);
+      return secret;
     },
+    elsewhere() { const n = note(); return n === null ? null : n !== ownerHere(); },
   };
 }
 
@@ -229,12 +251,12 @@ function newSecret(): Buffer {
   return out;
 }
 
-/** Install time: store a fresh secret, read it back through a fresh child process, refuse the source if it differs. */
+/** Install time: store a fresh secret, read it back through a fresh child process, refuse the source if it differs. The person waits on it, nothing else: each tool is given `PATIENT_TOOL_MS`. */
 export async function provision(source: StoringSource): Promise<void> {
   const secret = newSecret();
   try {
-    await source.store(secret);
-    const back = await source.read();
+    await source.store(secret, PATIENT_TOOL_MS);
+    const back = await source.read(PATIENT_TOOL_MS);
     const same = back.length === secret.length && timingSafeEqual(back, secret);
     back.fill(0);
     if (!same) throw new KeystoreError("unavailable", `${source.kind}: the read-back differs from what was stored; refused`);

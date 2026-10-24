@@ -16,7 +16,7 @@ import { signAction } from "../../venues/hyperliquid/actions.js";
 import { writeAtomic } from "../fs/atomic.js";
 import { ADDRESSES_FILE, KEYSTORE_FILE, KeystoreError, MOVED_FILE, OLD_MOVED_FILE, decodeEntries, removeKeyFiles, encodeEntries, newSealer, reopen, seal, unseal, type Entry, type Sealer } from "./format.js";
 import { SignerRefused, type Address, type SignIntent, type Signer } from "./signer.js";
-import type { UnlockSource } from "./sources.js";
+import { PATIENT_TOOL_MS, type UnlockSource } from "./sources.js";
 import { agentAddress, localWallet, newAgentKey } from "./wallet.js";
 
 export interface ImportedAgent { sourceId: string; address: Address }
@@ -37,9 +37,11 @@ function addressesFrom(v: unknown): Record<string, Address> {
 
 const exists = (p: string) => access(p).then(() => true, () => false);
 
+/** The secret for a create or an unlock: nothing but the person waits on it, so the tool gets `PATIENT_TOOL_MS` (judge Fable, unlock-retry finding 1);
+ *  the start's unlock passes its own limit through `Keys.unlock`. */
 async function readSecret(source: UnlockSource): Promise<Buffer> {
   try {
-    return await source.read();
+    return await source.read(PATIENT_TOOL_MS);
   } catch (e) {
     throw e instanceof KeystoreError ? e : new KeystoreError("unavailable", `${source.kind}: the unlock source failed`);
   }
