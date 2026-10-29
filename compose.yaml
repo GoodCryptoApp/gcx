@@ -1,0 +1,29 @@
+# gcx on a NAS or a VPS (gcx's install page, "On a NAS or a VPS").
+# Start it with `docker compose up -d` in this file's folder, or create a project from this file in your NAS's container app.
+# - The panel listens on this machine's own 127.0.0.1 only: reach it from your computer through an SSH tunnel; the
+#   container's log (`docker logs gcx`) prints the line.
+# - Your data is in the volume gcx-data; the secret that unlocks your keys is in gcx-secret. Back them up together.
+# - Updates: the updater beside gcx follows the image tag below; a newer build is pulled and gcx restarted after its drain, by itself and when you
+#   press Update in Settings. It holds the Docker socket, which manages this machine's containers; it has no network of its own. A server where you
+#   ran `docker login` lends it that login (/root/.docker) for a private image.
+services:
+  gcx:
+    image: ghcr.io/goodcryptoapp/gcx:latest
+    container_name: gcx
+    network_mode: host
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    volumes: [gcx-data:/data, gcx-secret:/secret]
+  updater:
+    image: ghcr.io/goodcryptoapp/gcx:latest
+    container_name: gcx-updater
+    entrypoint: [gcx, updater]
+    user: "0:0"
+    network_mode: none
+    init: true
+    restart: unless-stopped
+    volumes: [/var/run/docker.sock:/var/run/docker.sock, /root/.docker:/docker:ro, gcx-data:/data]
+volumes:
+  gcx-data: {name: gcx-data}
+  gcx-secret: {name: gcx-secret}
