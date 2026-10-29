@@ -60,7 +60,7 @@ Run goodcryptoX on a server from the start. Any VPS or cloud provider works: AWS
 **3. Give it goodcryptoX's compose file by its link:**
 
 ```
-https://github.com/GoodCryptoApp/gcx/releases/latest/download/compose.yaml
+https://raw.githubusercontent.com/GoodCryptoApp/gcx/main/compose.yaml
 ```
 
 In a Docker panel, create a project from that link and name it `gcx`. In a terminal, run this line, with `sudo` before each `docker` where your system needs it:
@@ -69,7 +69,7 @@ In a Docker panel, create a project from that link and name it `gcx`. In a termi
 curl -fsSLo compose.yaml https://github.com/GoodCryptoApp/gcx/releases/latest/download/compose.yaml && docker compose up -d
 ```
 
-It downloads one plain text file, which you can read before you start it, and starts it. It runs no script of ours. The link is goodcryptoX's latest release on GitHub.
+It downloads one plain text file, which you can read before you start it, and starts it. It runs no script of ours. The Docker-panel link is goodcryptoX's compose file on GitHub, which uses the latest image.
 
 <details>
 <summary>If this does not work</summary>
