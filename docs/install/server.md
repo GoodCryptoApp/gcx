@@ -87,10 +87,10 @@ Rent a small server with Ubuntu and Docker, 2 GB of memory or more, in a region 
 
 ![The Compose menu, the arrow at Compose from URL](../pictures/install/hostinger/16-compose-menu.webp)
 
-**13. The link and the name.** Paste this link (goodcryptoX's latest release on GitHub), name the application `gcx` and press **Deploy**.
+**13. The link and the name.** Paste this link (goodcryptoX's compose file on GitHub; it always installs the latest release), name the application `gcx` and press **Deploy**.
 
 ```
-https://github.com/GoodCryptoApp/gcx/releases/latest/download/compose.yaml
+https://raw.githubusercontent.com/GoodCryptoApp/gcx/main/compose.yaml
 ```
 
 ![Compose from URL filled in, the arrow at Deploy](../pictures/install/hostinger/17b-compose-from-url-filled.webp)
