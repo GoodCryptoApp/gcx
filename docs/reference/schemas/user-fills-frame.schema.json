@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/user-fills-frame.schema.json",
+  "title": "User fills frame",
+  "description": "Hyperliquid's `userFills` stream (subscribed with aggregateByTime off) as the adapter publishes it (src/venues/hyperliquid/user.ts). Fills of other clients share the frame and are never dropped: only a numeric money field or an absent tid or oid refuses it, and cosmetic fields are carried as sent. Fills are in venue order: by time, and inside one millisecond by the startPosition chain (0003 §2.9). A fill's identity is `id` = venue:tid. The snapshot frame (`isSnapshot`) is admitted and deduplicated, never skipped.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "user", "isSnapshot", "fills", "unordered"],
+  "properties": {
+    "venue": { "type": "string" },
+    "user": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" },
+    "isSnapshot": { "type": "boolean" },
+    "fills": { "type": "array", "items": { "$ref": "#/$defs/fill" } },
+    "unordered": { "type": "array", "description": "(coin, millisecond) groups whose order the startPosition chain alone did not determine; the ledger re-orders them from the position before the group.", "items": { "type": "object", "additionalProperties": false, "required": ["coin", "time"], "properties": { "coin": { "type": "string" }, "time": { "type": "integer" } } } }
+  },
+  "$defs": {
+    "canonical": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$", "description": "A canonical decimal string. Never a JSON number." },
+    "id": { "type": "string", "pattern": "^\\d+$" },
+    "fill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["venue", "id", "tid", "coin", "side", "px", "sz", "time", "startPosition", "closedPnl", "oid", "fee"],
+      "properties": {
+        "venue": { "type": "string" },
+        "id": { "type": "string", "pattern": "^[a-z]+:\\d+$", "description": "venue:tid, the fill's identity." },
+        "tid": { "$ref": "#/$defs/id" },
+        "coin": { "type": "string" },
+        "side": { "enum": ["buy", "sell", "unknown"], "description": "`unknown` when the venue sent neither B nor A; its text is in `venueSide`." },
+        "venueSide": { "type": "string" },
+        "px": { "$ref": "#/$defs/canonical" },
+        "sz": { "$ref": "#/$defs/canonical" },
+        "time": { "type": "integer" },
+        "startPosition": { "$ref": "#/$defs/canonical", "description": "Signed position before the fill." },
+        "dir": { "type": "string" },
+        "closedPnl": { "$ref": "#/$defs/canonical" },
+        "hash": { "type": "string" },
+        "oid": { "$ref": "#/$defs/id" },
+        "cloid": { "type": "string", "description": "As the venue echoed it: 0x + 32 hex lower-cased, anything else verbatim (another client's order may carry any id)." },
+        "crossed": { "type": "boolean", "description": "True when the fill took liquidity." },
+        "fee": { "$ref": "#/$defs/canonical" },
+        "feeToken": { "type": "string" },
+        "builderFee": { "$ref": "#/$defs/canonical" },
+        "twapId": { "type": "string" },
+        "liquidation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["markPx"],
+          "properties": { "liquidatedUser": { "type": "string" }, "markPx": { "$ref": "#/$defs/canonical" }, "method": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

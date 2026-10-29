@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/order-row.schema.json",
+  "title": "Order row",
+  "description": "One order as the `orders` topic, the History pages and the details carry it. Money is a decimal string. `status` is the lifecycle only; 'partially filled' is derived from `filled`. Mirrors src/panel/model/frames.ts (OrderRow). See decision 0007 part 2 §9.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "seq", "sourceId", "instrumentId", "venue", "type", "side", "status", "custody", "resting", "isTrigger", "filled", "remaining", "reduceOnly", "postOnly", "createdAt"],
+  "properties": {
+      "closedBy": {"type": "array", "uniqueItems": true, "items": {"type": "string"}, "description": "A4: paired filled order ids, all partners; never inferred by a page read."},
+      "closed": {"type": "array", "uniqueItems": true, "items": {"type": "string"}, "description": "A4: paired filled order ids, all partners; never inferred by a page read."},
+    "id": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 0, "description": "The ledger event id of the row's last change. A row applies only if its seq is newer than the one held." },
+    "requestId": { "type": "string", "description": "The form's command id, until the row replaces the form's pending state." },
+    "removed": { "const": true, "description": "Added 2026-10-10 (0003b amendment 3 d1, rulings 339 and 413.3): the row's account is being removed from gcx or was removed with its trading history kept; the row takes no action. Absent otherwise." },
+    "account": { "type": "string", "description": "Added 2026-10-10 (0003b amendment 3 d1): with `removed`, the account's name (shown \"<name> (Account removed)\"), since its row in the accounts list is gone." },
+    "cloid": { "type": "string", "description": "The client order id gcx journals before sending. A venue order without it was placed outside gcx." },
+    "venueOrderId": { "type": "string" },
+    "imported": { "const": true, "description": "0004 amendment 3 d7: an order placed outside gcx that gcx took into its book on a change, for its whole life (its id stays ext:<the venue's order id>). Absent otherwise." },
+    "change": { "type": "object", "additionalProperties": false, "required": ["requestId", "outcome"], "properties": { "requestId": { "type": "string" }, "outcome": { "enum": ["applied", "reverted", "failed"] } }, "description": "Added 2026-10-18 (MH 726 (e)): the last change a request asked for since the runtime started (a modify, a take-profit or stop-loss edit) and how it ended: `applied` once the exchange took it (or at once when nothing rests there to change), `reverted` when the exchange refused it and the order is back as it was, `failed` when the order went into repair. Absent while the outcome is not known, for an order nobody changed, and after a restart. The panel's snackbar waits for its own request's." },
+    "cancelOnly": { "const": true, "description": "0004 amendment 3 d3: an order placed outside gcx that gcx can cancel but not change as it was placed (a take-profit trigger, a position TP/SL, a grouped leg, another copy's order): no pencil, no Modify. Absent otherwise." },
+    "changedAt": { "type": "integer", "description": "Optional C52 last admitted own display change, in epoch milliseconds; never a ledger sequence." },
+    "chartAlgo": { "type": "boolean", "description": "Optional factual legacy DCA exec_inst equivalence from generated-order membership or its actual iteration bracket; not inferred from a row botId label." },
+    "gridStart": { "const": true, "description": "A grid's start order: bought or sold at once at the price, its limit only the grid's edge it may not pass; the chart draws its fills, not a line at that edge. Absent on every other row and on older runtimes." },
+    "chartSeq": { "type": "integer", "minimum": 0, "description": "Optional visual-facts revision; includes indexed related-child changes without changing order state." },
+    "modifyChainId": { "type": "string", "description": "Shared by every order of a modify chain; the list keys the row by modifyChainId, else id." },
+    "parentId": { "type": "string" },
+    "unarmed": { "const": true, "description": "Added 2026-10-18 (MH 728 (a), 729 (b)): a take-profit or stop-loss leg whose parent order has not filled in full: a plan, nothing of it on the exchange. The lists leave it out (Open orders and History); its parent's details show it. Absent once the parent has filled, and from older runtimes (an older panel lists the leg as before)." },
+    "plannedExits": { "type": "object", "required": ["tp", "sl"], "additionalProperties": false, "properties": { "tp": { "type": "integer", "minimum": 0 }, "sl": { "type": "integer", "minimum": 0 } }, "description": "Added 2026-10-18 (MH 729 (r) (a)): on a parent order that ended (cancelled) before it filled in full, how many take-profits and stop-losses it had planned; their legs are `unarmed` and no list rows, so History's +TP/+SL tags read this. Absent on every other row, and from older runtimes." },
+    "restOf": { "type": "string", "description": "Added 2026-10-05 (0026 d5): a send of an order's rest, shown as its own row with the id `<order id>:rest<k>` (k = 1, 2, …): the order's id, which an action on the row acts on. Its size, fills, average and fee are that send's; the order's first row (its id) is its sends before the first rest. A person's take-profit or stop-loss keeps its role; a bot's rest is role and type `exit`. Absent on every other row, and from older runtimes." },
+    "role": { "enum": ["entry", "avg", "tp", "sl", "exit", "liquidation", "adl"], "description": "liquidation and adl (added 2026-10-05, decision 0016 Amendment 3 d4): in a bot's activity, its share of an order the exchange filled, with `whole`." },
+    "level": { "type": "integer", "minimum": 1, "description": "The averaging level when role is avg." },
+    "botId": { "type": "string", "description": "Set on a bot-owned order: the list offers the bot, not Cancel." },
+    "iteration": { "type": "integer", "minimum": 1 },
+    "sourceId": { "type": "string", "description": "The venue account." },
+    "display": { "$ref": "instrument-display.schema.json" },
+    "instrumentId": { "type": "string" },
+    "venue": { "type": "string" },
+    "type": { "enum": ["market", "gc-market", "limit", "stop-market", "stop-limit", "trailing", "trailing-limit", "reverse-trailing", "reverse-trailing-limit", "exit", "liquidation", "adl"], "description": "liquidation and adl (added 2026-10-05, decision 0016 Amendment 3 d4): a fill the exchange made, one closed row per account and venue order (id `liquidation:<sourceId>:<venue order id>`), with `botsShare`." },
+    "side": { "enum": ["buy", "sell"] },
+    "status": { "enum": ["planned", "sending", "open", "closed", "unknown"], "description": "Never moves backwards; a backwards upsert is refused and reported." },
+    "closeReason": { "enum": ["filled", "cancelled", "rejected", "expired"] },
+    "reason": { "type": "string", "description": "Why an order is unknown, rejected or failed to trigger. On a closed order whose `closeReason` is `rejected`, the exchange's own words unchanged (the raw message; absent for an order never placed or unfilled, where the exchange said nothing). On an order in repair: the engine's code, or, when the exchange refused the order and gave words (a take-profit, a stop-loss, a fired stop, an error gcx does not recognise), those words unchanged, or, when the exchange cancelled it, its cancel reason (`margin`, `liquidation`, `venue`); `why` is then our explanation (before 2026-10-05, ruling 203, always the code)." },
+    "why": { "type": "string", "description": "An order in repair: the repair as a sentence for the person, the text the notification says (when the exchange refused the order in words goodcryptoX named, its error type instead, ruling 203; when goodcryptoX refused it itself, `refusalBy` is `gcx` and the sentence says the order was never placed, ruling 570), in the person's language (the `language` setting; English when none is chosen or the language has no text for it). Absent when the order is not in repair. Added 2026-10-05 (ruling 203): also on a closed order whose `closeReason` is `rejected` (refused by the exchange, never placed, or unfilled): our explanation of the error, goodcryptoX's error type for the refusals it named, else the generic one; before it, such a row had no `why` and a reader ignores it." },
+    "refusalBy": { "const": "gcx", "description": "Added 2026-10-16 (ruling 570): on a closed order whose `closeReason` is `rejected`, `reason` is goodcryptoX's own words, not the exchange's: it refused the order before signing it (an instrument it does not trade, a market order it could not price because the book could not be read) or could not sign it; the words start \"not sent: \". Also, since the same day (batch-533-578 finding 1), on an order in repair (`status` `unknown`) whose `reason` is such words: a stop that fired and could not be priced. Absent (the default, and on every older row): `reason` is the exchange's words. A reader that does not know it shows `reason` as before." },
+    "repairCause": { "type": "string", "description": "Optional factual engine REPAIR code, such as failed-to-trigger after a definite venue refusal or unknown after an ambiguous send. Display metadata only: status, actions and retries keep their lifecycle meaning. Absent when not in REPAIR and on older rows; absent readers keep the previous presentation." },
+    "nativeTriggerState": { "enum": ["waiting", "triggered"], "description": "Optional positive venue phase of the native stop's current attempt, read from the incremental accepted-event index, seeded by the place reply and promoted by fills. A subsequent triggered account-stream update for an already accepted attempt does not update this fact. Display metadata only; no change to engine state, actions or retries. Absent on older records or without a supported positive fact; readers retain the existing fallback." },
+    "custody": { "enum": ["venue", "internal"], "description": "internal: a trigger gcx watches and sends itself." },
+    "resting": { "type": "boolean", "description": "In the venue's book now (venue truth). The order book dots show resting orders that are not triggers." },
+    "isTrigger": { "type": "boolean" },
+    "price": { "$ref": "#/$defs/decimal" },
+    "triggerPrice": { "$ref": "#/$defs/decimal", "description": "Absent until a trailing order with an activation price is active." },
+    "initialTriggerPrice": { "$ref": "#/$defs/decimal" },
+    "waitingTriggerPrice": { "$ref": "#/$defs/decimal", "description": "Current admitted stop seed while waiting for trailing activation, including waiting distance edits. The immutable initialTriggerPrice keeps its creation meaning. Absent after activation and on older runtimes; not an active path sample." },
+    "held": { "enum": ["stopped", "disk", "maintenance"], "description": "A send gcx holds for the person (0013 ruling 1; status sending): why, only for an order that opens or adds to a position. stopped: gcx stopped before sending it (the next start sends it); disk: the disk is full; maintenance: Hyperliquid was in maintenance when it was due (it goes by itself when the maintenance ends). POST /api/v1/orders/{id}/send-now sends it, cancel ends it. Added 2026-10-04; absent on older rows and on every send not held." },
+    "waiting": { "enum": ["rate-address", "upgrade-gate"], "description": "Added 2026-10-05 (0003 Amendment 2 d2, d8): rate-address, Hyperliquid's request allowance for this order's account is used up, and the order (or its cancel) waits its turn: the account sends one action every 10 seconds, in the order they were made. Nothing is refused; Cancel removes a waiting order at once. Added 2026-10-05 (0003 Amendment 3 d5): upgrade-gate, Hyperliquid takes only post-only orders for a few minutes after its upgrade; the order waits and is sent again every 10 seconds until taken (no `ahead`). Absent otherwise and from older runtimes." },
+    "ahead": { "type": "integer", "minimum": 0, "description": "With `waiting`: how many of the account's actions go before this one." },
+    "trailDistance": { "$ref": "#/$defs/decimal" },
+    "trailUnit": { "enum": ["pct", "quote"] },
+    "trailAnchorPrice": { "$ref": "#/$defs/decimal", "description": "Optional admitted trailing distance basis: current engine extreme while trailing, configured Start or recorded placement price while waiting. Display only; never inferred from rounded stop or current tick. Absent on older runtimes." },
+    "improveOnlyPrice": { "$ref": "#/$defs/decimal", "description": "Latest admitted waiting improve-only activation, updated by accepted waiting edits and retained after trailing begins. Display only; absent on older runtimes or ordinary trailing orders." },
+    "trailStart": { "anyOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }], "description": "Original configured trailing Start from the admitted order state. null positively means Auto; absent means unavailable on an older runtime or not a trailing order. Independent of computed activationPrice." },
+    "activationPrice": { "$ref": "#/$defs/decimal" },
+    "improveOnly": { "type": "boolean", "description": "Actual manual trailing improve-only state, when available." },
+    "trailPhase": { "enum": ["wait", "trail"], "description": "Engine-recorded trailing phase; absent on older runtimes." },
+    "trailStartedAt": { "type": "integer", "description": "Display-only timestamp of the admitted wait-to-trail activation output for the current trailing revision. Later stop moves retain it; re-arming removes it. Absent for immediately trailing orders and older runtimes; never inferred from a path point or creation time." },
+    "trailStartedPointId": { "type": "string", "description": "Display-only id of the admitted trail point that began the current trailing revision, disambiguating activations with the same timestamp. Re-arming removes it. Optional on older runtimes and absent for immediately trailing orders; never authorizes an action." },
+    "firedAt": { "type": "integer", "description": "The engine-recorded trigger timestamp, when one exists; absence is not an inferred trigger." },
+    "timeout": { "type": "integer", "minimum": 0, "description": "Trigger timeout, seconds." },
+    "tif": { "enum": ["gtc", "ioc", "alo"] },
+    "expiresAt": { "type": "integer", "description": "Time in force as a duration (decision 0004, catalogue P11): when the order is cancelled, milliseconds since the epoch." },
+    "size": { "$ref": "#/$defs/decimal", "description": "In the base asset; absent when the order was sized in quote (cost)." },
+    "cost": { "$ref": "#/$defs/decimal" },
+    "filled": { "$ref": "#/$defs/decimal" },
+    "remaining": { "$ref": "#/$defs/decimal" },
+    "averagePrice": { "$ref": "#/$defs/decimal" },
+    "fee": { "$ref": "#/$defs/decimal" },
+    "builderFee": { "$ref": "#/$defs/decimal", "description": "Added 2026-10-17 (0004 amendment note): the part of `fee` that is gcx's platform fee (the fills' builder fee, valued as `fee` is), so the exchange's own part is `fee` − `builderFee`. Absent when none of the row's fills names one (a fill recorded before it was kept, or one the venue charged none on, such as a spot buy); `fee` is then the whole fee." },
+    "feeAsset": { "type": "string" },
+    "realizedPnl": { "$ref": "#/$defs/signed" },
+    "trailGain": { "$ref": "#/$defs/signed", "description": "Added 2026-10-28 (0040 amendment 6): on a grid's trailing exit, its own `gain` as the grid row's `trailing` sums it; what it earned against a limit at its level (`price`) = trailGain + the maker rate × price × filled. Absent on every other order and from older runtimes" },
+    "reduceOnly": { "type": "boolean" },
+    "postOnly": { "type": "boolean" },
+    "createdAt": { "type": "integer", "description": "Milliseconds since the epoch. An exit leg nothing has sent yet carries its parent's (a take-profit or stop-loss of an order the person made) or the time its position's take-profit and stop-loss were attached." },
+    "placedAt": { "type": "integer", "description": "A bot's take-profit, stop-loss or level re-sized or re-levelled by a later send of the same order: when the latest of those sends went (ms). The chart starts the order's line there, as goodcryptoX drew each re-size's new order (MH 285). Absent before such a send, on a person's order and from older runtimes: the line starts at createdAt." },
+    "closedAt": { "type": "integer", "description": "When the order closed (ms): closed by its fills, the exchange's time of its latest fill (0016 amendment 5; recorded before it: when gcx recorded it); a liquidation or ADL row, its last fill's exchange time; an earlier send of a rest series, when its next send left; any other close (a cancel, a refusal), when gcx recorded it." },
+    "whole": { "$ref": "#/$defs/decimal", "description": "Added 2026-10-05 (decision 0016 Amendment 3 d4): on a bot's liquidation or adl row, the sum of the sizes of the fills it was charged in; `size` below it is shown \"Partially attributed\"." },
+    "botsShare": { "$ref": "#/$defs/signed", "description": "Added 2026-10-05 (decision 0016 Amendment 3 d4): on a liquidation or adl row, what the bots on the coin were charged of it, net (each bot's held size × the fill ÷ the exchange's net position, a bot on the other side counting against; MH 214 (b)); the rest is the person's. Absent when no bot was charged." },
+    "error": { "type": "string" },
+    "createdBy": {
+      "$ref": "#/$defs/createdBy"
+    }
+  },
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." },
+    "signed": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "A plain decimal string, negative allowed. Never a JSON number." },
+    "createdBy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "person"
+            },
+            "botId": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "keyId"
+          ],
+          "properties": {
+            "kind": {
+              "const": "key"
+            },
+            "keyId": {
+              "type": "string"
+            },
+            "proposalId": {
+              "type": "string"
+            },
+            "botId": {
+              "type": "string"
+            }
+          }
+        }
+      ],
+      "default": {
+        "kind": "person"
+      }
+    }
+  }
+}

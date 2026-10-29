@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/chart-layout.schema.json",
+  "title": "Chart layout",
+  "description": "A saved layout of the panel's chart (decision 0005 Amendment 1): the chart's own state as the charting library saves it, with a name and what the Load list shows. Named layouts are kept by the runtime (`gcx.db`) and served, for a signed-in person only, by GET /api/v1/chart/layouts (every layout without its content), GET /api/v1/chart/layouts/{id}, POST /api/v1/chart/layouts (make one), POST /api/v1/chart/layouts/{id} (save it again) and POST /api/v1/chart/layouts/{id}/delete. `rev` is the number of times the layout has been saved: a save carries the `rev` it started from and, when the layout was saved elsewhere since, answers 409 with the current one and changes nothing. The two writes that carry a layout accept up to 4 MiB; every other route keeps 256 KiB. With the disk reserve spent, or the disk full, a write answers 507 and writes nothing. The working copy of the chart that this browser keeps (`working`) never reaches the runtime. `content` is the library's format, which gcx does not read or change except to set the main series' symbol and interval when a layout is loaded (docs/panel/chart.md). A field added later has the default written here.",
+  "$defs": {
+    "content": {
+      "description": "What the charting library's save() returned: its own JSON object, opaque to gcx and not validated here. Drawings that gcx draws itself (order lines, position lines, planned levels) are never in it.",
+      "type": "object"
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "name", "savedAt"],
+      "properties": {
+        "format": { "const": 1 },
+        "name": { "type": "string", "minLength": 1, "description": "Read unchanged from stored layouts, including older names over the current write limit." },
+        "savedAt": { "type": "integer", "description": "Unix milliseconds of the save." },
+        "indicators": { "type": "array", "items": { "type": "string" }, "default": [], "description": "The names of the chart's studies at save time, for the Load list. A layout without the field reads as an empty list." },
+        "pinSymbol": { "type": "string", "description": "An instrument id: loading the layout switches the chart to it. Absent: the layout takes the instrument on screen." },
+        "pinInterval": { "$ref": "chart-api.schema.json#/$defs/resolution", "description": "Loading the layout switches the chart to this interval. Absent: the layout takes the interval on screen." }
+      }
+    },
+    "row": {
+      "description": "One layout as the list shows it: never its content.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rev", "meta"],
+      "properties": { "id": { "type": "string" }, "rev": { "type": "integer", "minimum": 1 }, "meta": { "$ref": "#/$defs/meta" } }
+    },
+    "list": { "description": "GET /api/v1/chart/layouts: oldest first.", "type": "array", "items": { "$ref": "#/$defs/row" } },
+    "layout": {
+      "description": "GET /api/v1/chart/layouts/{id}.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rev", "meta", "content"],
+      "properties": { "id": { "type": "string" }, "rev": { "type": "integer", "minimum": 1 }, "meta": { "$ref": "#/$defs/meta" }, "content": { "$ref": "#/$defs/content" } }
+    },
+    "create": {
+      "description": "POST /api/v1/chart/layouts. Answers `created`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["meta", "content"],
+      "properties": { "meta": { "allOf": [{ "$ref": "#/$defs/meta" }, { "type": "object", "properties": { "name": { "type": "string", "maxLength": 50 } } }] }, "content": { "$ref": "#/$defs/content" } }
+    },
+    "created": { "type": "object", "additionalProperties": false, "required": ["id", "rev"], "properties": { "id": { "type": "string" }, "rev": { "const": 1 } } },
+    "save": {
+      "description": "POST /api/v1/chart/layouts/{id}: replaces the layout's meta and content. Answers `saved`; 409 with `conflict` when `baseRev` is not the current rev; 404 for a layout that does not exist.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseRev", "meta", "content"],
+      "properties": { "baseRev": { "type": "integer", "minimum": 1 }, "meta": { "allOf": [{ "$ref": "#/$defs/meta" }, { "type": "object", "properties": { "name": { "type": "string", "maxLength": 50 } } }] }, "content": { "$ref": "#/$defs/content" } }
+    },
+    "saved": { "type": "object", "additionalProperties": false, "required": ["rev"], "properties": { "rev": { "type": "integer", "minimum": 2 } } },
+    "conflict": { "description": "The 409 body: the layout's current rev.", "type": "object", "additionalProperties": false, "required": ["rev"], "properties": { "rev": { "type": "integer", "minimum": 1 } } },
+    "delete": { "description": "POST /api/v1/chart/layouts/{id}/delete: an empty object. Answers an empty object, or 404 for a layout that does not exist.", "type": "object", "additionalProperties": false },
+    "working": {
+      "description": "The chart's working copy, kept by this browser under the local-storage key `gcx.chart.working` and never sent to the runtime: one per browser, shared by every chart place of the panel. The chart follows it at every start, with its main series set to the instrument and interval on screen. `layoutId`, `name` and `rev` are null when no named layout is attached; `changed` is true while the working copy holds edits the attached layout does not. Storage that is empty, blocked or holds anything else means the default chart.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "layoutId", "name", "rev", "changed", "content"],
+      "properties": {
+        "format": { "const": 1 },
+        "layoutId": { "type": ["string", "null"] },
+        "name": { "type": ["string", "null"] },
+        "rev": { "type": ["integer", "null"] },
+        "changed": { "type": "boolean" },
+        "content": { "$ref": "#/$defs/content" }
+      }
+    }
+  }
+}

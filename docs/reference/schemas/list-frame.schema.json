@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/list-frame.schema.json",
+  "title": "List frame",
+  "description": "The `data` of an `orders`, `positions`, `bots` or `my-trades` message on the panel socket: an array of operations applied in one commit, so a modify chain or a provisional fill replaced by the real one is never visible half-applied. There is no remove: rows go terminal. A snapshot replaces the held set of its topic (for orders, the open and armed manual ones; bot orders remain available through bot and order details; terminal orders stay for History and stay closed). A snapshot whose seq is below what the topic already applied is refused, and after a snapshot a streamed row at or below its seq is ignored, so an order the snapshot left out cannot come back. Runtime obligations these rules rely on: a snapshot includes every event at or below its seq; the current order of a modify chain has a higher seq than its predecessor's close; the ledger seq never goes back, and a reset (for example a new database) requires the panel to reload. Mirrors src/panel/model/frames.ts (ListFrame). See decision 0007 part 2 §9.2. The `bots` topic also carries a third op, `refresh` (decision 0019): the unrealized PnL between steps, not a ledger event.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["topic", "ops"],
+  "properties": {
+    "topic": { "enum": ["orders", "positions", "bots", "my-trades"] },
+    "ops": { "type": "array", "minItems": 1 }
+  },
+  "allOf": [
+    { "if": { "type": "object", "properties": { "topic": { "const": "orders" } } }, "then": { "type": "object", "properties": { "ops": { "type": "array", "items": { "$ref": "#/$defs/orderOp" } } } } },
+    { "if": { "type": "object", "properties": { "topic": { "const": "positions" } } }, "then": { "type": "object", "properties": { "ops": { "type": "array", "items": { "$ref": "#/$defs/positionOp" } } } } },
+    { "if": { "type": "object", "properties": { "topic": { "const": "bots" } } }, "then": { "type": "object", "properties": { "ops": { "type": "array", "items": { "$ref": "#/$defs/botOp" } } } } },
+    { "if": { "type": "object", "properties": { "topic": { "const": "my-trades" } } }, "then": { "type": "object", "properties": { "ops": { "type": "array", "items": { "$ref": "#/$defs/tradeOp" } } } } }
+  ],
+  "$defs": {
+    "orderOp": { "oneOf": [
+      { "type": "object", "additionalProperties": false, "required": ["op", "seq", "rows"], "properties": { "op": { "const": "snapshot" }, "seq": { "type": "integer" }, "rows": { "type": "array", "items": { "$ref": "order-row.schema.json" } } } },
+      { "type": "object", "additionalProperties": false, "required": ["op", "row"], "properties": { "op": { "const": "upsert" }, "row": { "$ref": "order-row.schema.json" } } }
+    ] },
+    "positionOp": { "oneOf": [
+      { "type": "object", "additionalProperties": false, "required": ["op", "seq", "rows"], "properties": { "op": { "const": "snapshot" }, "seq": { "type": "integer" }, "rows": { "type": "array", "items": { "$ref": "position-row.schema.json" } }, "recentForcedCloses": {"type": "array", "items": {"$ref": "position-row.schema.json#/$defs/forcedClose"}, "description": "Optional recent forced-close facts; a supplied empty array clears prior facts. Display-only, excluded from all close/increase commands and live balances."} } },
+      { "type": "object", "additionalProperties": false, "required": ["op", "row"], "properties": { "op": { "const": "upsert" }, "row": { "$ref": "position-row.schema.json" } } }
+    ] },
+    "tradeOp": { "oneOf": [
+      { "type": "object", "additionalProperties": false, "required": ["op", "seq", "rows"], "properties": { "op": { "const": "snapshot" }, "seq": { "type": "integer" }, "rows": { "type": "array", "items": { "$ref": "my-trade-row.schema.json" } } } },
+      { "type": "object", "additionalProperties": false, "required": ["op", "row"], "properties": { "op": { "const": "upsert" }, "row": { "$ref": "my-trade-row.schema.json" } } }
+    ] },
+    "botOp": { "oneOf": [
+      { "type": "object", "additionalProperties": false, "required": ["op", "seq", "rows"], "properties": { "op": { "const": "snapshot" }, "seq": { "type": "integer" }, "rows": { "type": "array", "items": { "$ref": "bot-row.schema.json" } } } },
+      { "type": "object", "additionalProperties": false, "required": ["op", "row"], "properties": { "op": { "const": "upsert" }, "row": { "$ref": "bot-row.schema.json" } } },
+      { "type": "object", "additionalProperties": false, "required": ["op", "values"], "description": "The bot's value fields between two steps (decision 0019 d4), computed by the runtime in Dec at its pulse (5 s) and sent only for the bots whose unrealizedPnl changed; the apr travels with it, and (added 2026-10-17, 0016 Amendment 10) investedAverage, ownFundsAverage, aprPeak and aprAverage when the row has them. Never journaled. Each entry names the seq of the row version it refreshes: the panel applies it only to a held row with that same seq, replaces only the value fields it carries, and moves neither the row's seq nor the topic's since or snapshot seq. Entries are under `values`, never `rows` or `row`, so a panel that does not know the op skips it.",
+        "properties": { "op": { "const": "refresh" }, "values": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["id", "seq", "unrealizedPnl", "apr"], "properties": {
+          "id": { "type": "string" }, "seq": { "type": "integer" },
+          "unrealizedPnl": { "$ref": "order-row.schema.json#/$defs/signed" }, "apr": { "$ref": "order-row.schema.json#/$defs/signed" },
+          "investedAverage": { "$ref": "order-row.schema.json#/$defs/decimal" }, "ownFundsAverage": { "$ref": "order-row.schema.json#/$defs/decimal" },
+          "aprPeak": { "$ref": "order-row.schema.json#/$defs/signed" }, "aprAverage": { "$ref": "order-row.schema.json#/$defs/signed" } } } } } }
+    ] }
+  }
+}

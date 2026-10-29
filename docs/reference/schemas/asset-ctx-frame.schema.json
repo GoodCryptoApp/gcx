@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/asset-ctx-frame.schema.json",
+  "title": "Asset context frame",
+  "description": "Hyperliquid's `activeAssetCtx` for one perp as the adapter publishes it: the mark (the price native triggers fire on), the venue's mid (null when a side of the book is empty), the oracle (the index price), the day's notional volume and the hourly funding rate. The venue stamps no time on it: its age is our receipt time. Also the data of the panel socket's `asset-ctx/<instrumentId>` topic (the trade screen's price header). Mirrors src/domain/marketdata/frames.ts (AssetCtxFrame).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "instrument", "mark", "mid", "oracle", "dayNtlVlm", "funding"],
+  "properties": {
+    "venue": { "type": "string" },
+    "instrument": { "type": "string", "description": "The venue's coin name, with the dex prefix on HIP-3." },
+    "mark": { "$ref": "#/$defs/decimal" },
+    "mid": { "oneOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }] },
+    "oracle": { "$ref": "#/$defs/decimal" },
+    "dayNtlVlm": { "$ref": "#/$defs/decimal", "description": "Notional volume over the last 24 hours, in the collateral token." },
+    "funding": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "The current hourly funding rate as a signed fraction (\"0.0000125\" is 0.00125 % an hour): positive, longs pay shorts." }
+  },
+  "$defs": { "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." } }
+}

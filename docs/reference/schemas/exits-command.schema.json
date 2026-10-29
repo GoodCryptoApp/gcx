@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/exits-command.schema.json",
+  "title": "Exits command",
+  "description": "Take-profit and stop-loss on what is already held (decision 0011 d15): `attach` (POST /api/v1/exits) on a futures position or on an order placed by gcx, `edit` (POST /api/v1/exits/{id}/edit), `cancel` (POST /api/v1/exits/{id}/cancel). Every number is a decimal string. The take-profit and stop-loss block is the order form's (order-command.schema.json#/$defs/bracket), every field of it. The runtime deduplicates on requestId, reads the position fresh, and validates with its own last price: a level already crossed is the warning trade.msgImmediateStop, sent anyway through `overrides`. Mirrors src/runtime/api/contract.ts (ExitsCall). New API/MCP exits default to one year independently of panel Settings (MH481); a duration is limited to one year (MH484, HTTP 400 beyond it); a Custom date more than a year after the entry's expiry is the overridable warning trade.bracket.msgExpiryTooLong (HTTP 422 until named in overrides), and one before it is HTTP 400. See docs/trading/tp-sl.md.",
+  "$defs": {
+    "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Caller-minted id (the panel uses a UUID); the runtime answers the same request once." },
+    "overrides": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Keys of the warnings the caller sends anyway: the order form's overridable warnings and the two of a DCA bot on the coin (RULINGS 65). Errors cannot be overridden.",
+      "items": {
+        "enum": [
+          "trade.msgInsufficientFunds",
+          "trade.msgMinNotional",
+          "trade.msgImmediateStop",
+          "trade.msgLimitProtectionBuy",
+          "trade.msgLimitProtectionSell",
+          "trade.msgStopLimitProtectionBuy",
+          "trade.msgStopLimitProtectionSell",
+          "trade.bracket.msgInvalidTpSlRelation",
+          "trade.bracket.msgInvalidTrailDistanceSlTp",
+          "trade.bracket.msgInvalidMtpsSizeBiggerThanMinAmount",
+          "trade.bracket.msgInvalidMtpsValue",
+          "trade.bracket.msgSlMinNotional",
+          "trade.msgMarketSlippage",
+          "trade.msgNoPrice",
+          "trade.msgLimitBand",
+          "trade.bracket.msgExpiryTooLong",
+          "exits.msgBotRuns",
+          "exits.msgBotPart"
+        ]
+      }
+    },
+    "attach": {
+      "description": "Attach a take-profit and stop-loss. On a position: one per account and coin, sized from the position and following it as it changes (reduce-only as `bracket.reduceOnly` says, default true whatever Settings say, MH 520; existing exits retain it); the answer `{id}` names the exits (`x1`, ...). On an order of gcx's: open, partly filled or filled, not a bot's, not an exit; sized from what it filled; the exits take the order's id.",
+      "type": "object", "additionalProperties": false, "required": ["requestId", "subject", "bracket", "overrides"],
+      "properties": {
+        "requestId": { "$ref": "#/$defs/requestId" },
+        "subject": {
+          "oneOf": [
+            { "type": "object", "additionalProperties": false, "required": ["order"], "properties": { "order": { "type": "string", "minLength": 1, "description": "The order's id, as the orders topic gives it." } } },
+            {
+              "type": "object", "additionalProperties": false, "required": ["position"],
+              "properties": { "position": { "type": "object", "additionalProperties": false, "required": ["sourceId", "instrumentId"], "properties": { "sourceId": { "type": "string", "minLength": 1 }, "instrumentId": { "type": "string", "minLength": 1 } } } }
+            }
+          ]
+        },
+        "bracket": { "$ref": "order-command.schema.json#/$defs/bracket" },
+        "overrides": { "$ref": "#/$defs/overrides" }
+      }
+    },
+    "edit": {
+      "description": "Edit TP/SL: the whole block again. Targets are positional: target i of the block is take-profit i, filled ones included, in their place; a take-profit or stop-loss that was cancelled has left the block and is never made again unless sent as a new one. A filled target is never sent again; the rest are re-sized from what is still held. `bracket.reduceOnly` absent: an order's TP/SL keep what they have; sent: it wins; a position's keep the choice made at attach (MH 520).",
+      "type": "object", "additionalProperties": false, "required": ["requestId", "bracket", "overrides"],
+      "properties": { "requestId": { "$ref": "#/$defs/requestId" }, "bracket": { "$ref": "order-command.schema.json#/$defs/bracket" }, "overrides": { "$ref": "#/$defs/overrides" } }
+    },
+    "cancel": {
+      "description": "End every take-profit and stop-loss of these exits that is still working.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": { "requestId": { "$ref": "#/$defs/requestId" } }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/trades-frame.schema.json",
+  "title": "Trades frame",
+  "description": "The `data` of a `trades` topic message on the panel socket: public trades for one venue and instrument, oldest first. The first frame after subscribing is the runtime's ring of recent trades (replay). Prices and sizes are decimal strings. Mirrors src/panel/model/frames.ts (TradesFrame). See decision 0007 §2.14–2.15.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "instrument", "replay", "trades"],
+  "properties": {
+    "venue": { "type": "string" },
+    "instrument": { "type": "string" },
+    "replay": { "type": "boolean", "description": "True for the ring sent on subscribe: it replaces the panel's buffer. Live frames are prepended." },
+    "trades": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["time", "side", "price", "size", "key"],
+        "properties": {
+          "time": { "type": "integer", "description": "Trade time, milliseconds since the epoch." },
+          "side": { "enum": ["buy", "sell"], "description": "The taker's side (Hyperliquid B = buy, A = sell)." },
+          "price": { "$ref": "#/$defs/decimal" },
+          "size": { "$ref": "#/$defs/decimal", "description": "In the base asset." },
+          "key": { "type": "string", "description": "time|tid|side|price|size. Unique per trade; the venue's hash is not." },
+          "own": { "const": true, "description": "Present when our master account is the buyer or the seller." }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/mids-frame.schema.json",
+  "title": "Mids frame",
+  "description": "Mid prices of one venue dex, from Hyperliquid's `allMids` stream (the liveness canary of decision 0006 §2.2). The venue stamps no time on it: its age is our receipt time. Mirrors src/domain/marketdata/frames.ts (MidsFrame).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "dex", "mids"],
+  "properties": {
+    "venue": { "type": "string" },
+    "dex": { "type": "string", "description": "\"\" is the main dex; otherwise the HIP-3 dex name." },
+    "mids": { "type": "object", "description": "Coin name as the venue writes it (`BTC`, `xyz:SPCX`, `@107` for a spot pair) → mid price.", "additionalProperties": { "$ref": "#/$defs/decimal" } }
+  },
+  "$defs": { "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." } }
+}

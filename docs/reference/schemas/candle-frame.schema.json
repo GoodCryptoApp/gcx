@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/candle-frame.schema.json",
+  "title": "Candle frame",
+  "description": "One bar as the venue serves it on its `candle` stream: the forming bar is re-sent as trades arrive; sealing is the runtime's (0006 §2.4). Mirrors src/domain/marketdata/frames.ts (CandleFrame).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "instrument", "interval", "t", "T", "o", "h", "l", "c", "v", "n"],
+  "properties": {
+    "venue": { "type": "string" },
+    "instrument": { "type": "string", "description": "The venue's coin name." },
+    "interval": { "enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w", "1M"] },
+    "t": { "type": "integer", "description": "Open time, ms." },
+    "T": { "type": "integer", "description": "Close time, ms, inclusive (t + interval − 1)." },
+    "o": { "$ref": "#/$defs/decimal" },
+    "h": { "$ref": "#/$defs/decimal" },
+    "l": { "$ref": "#/$defs/decimal" },
+    "c": { "$ref": "#/$defs/decimal" },
+    "v": { "$ref": "#/$defs/decimal", "description": "Volume in the base asset." },
+    "n": { "type": "integer", "minimum": 0, "description": "Number of trades in the bar." }
+  },
+  "$defs": { "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." } }
+}

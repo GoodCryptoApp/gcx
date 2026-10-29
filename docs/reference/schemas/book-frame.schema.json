@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/book-frame.schema.json",
+  "title": "Order book frame",
+  "description": "The `data` of a `book` topic message on the panel socket: a full snapshot of the aggregated book for one venue, instrument and aggregation rung. Prices and sizes are decimal strings. Mirrors src/panel/model/frames.ts (BookFrame). See decision 0007 §2.4.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "instrument", "agg", "venueTime", "bids", "asks"],
+  "properties": {
+    "venue": { "type": "string", "description": "Venue id, e.g. hyperliquid." },
+    "instrument": { "type": "string", "description": "The venue's instrument id, e.g. BTC or xyz:SPCX." },
+    "agg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nSigFigs"],
+      "description": "The venue-native aggregation rung this frame was subscribed with (attributed by connection, never by spacing).",
+      "properties": {
+        "nSigFigs": { "enum": [2, 3, 4, 5, null], "description": "Significant figures; null is the finest book." },
+        "mantissa": { "enum": [1, 2, 5], "description": "Only with nSigFigs 5." }
+      }
+    },
+    "venueTime": { "type": "integer", "description": "The venue's timestamp of the snapshot, milliseconds since the epoch." },
+    "bids": { "$ref": "#/$defs/side", "description": "Best (highest) first." },
+    "asks": { "$ref": "#/$defs/side", "description": "Best (lowest) first." },
+    "spread": { "$ref": "#/$defs/decimal", "description": "The venue's own spread, sent with aggregated books." },
+    "fast": { "const": true, "description": "The fast book: 5 levels about every 0.5 s (default: 20 levels about every 5 s)." }
+  },
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." },
+    "side": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          { "$ref": "#/$defs/decimal", "description": "Price (a bucket edge when aggregated)." },
+          { "$ref": "#/$defs/decimal", "description": "Size in the base asset." },
+          { "type": "integer", "minimum": 0, "description": "Number of orders at the level." }
+        ],
+        "items": false,
+        "minItems": 3
+      }
+    }
+  }
+}

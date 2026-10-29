@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/position-row.schema.json",
+  "title": "Position row",
+  "description": "One venue position as the `positions` topic carries it. A flat position stays with size \"0\". Total PnL = realizedPnlSinceFlat + unrealizedPnl + funding. Mirrors src/panel/model/frames.ts (PositionRow). See decision 0007 part 2 §9.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "seq", "sourceId", "instrumentId", "venue", "side", "size", "entryPrice", "markPrice", "markTime", "unrealizedPnl", "realizedPnlSinceFlat", "funding", "margin", "leverage", "marginMode", "updatedAt"],
+  "properties": {
+    "id": { "type": "string", "description": "Includes the side in hedge mode." },
+    "seq": { "type": "integer", "minimum": 0 },
+    "sourceId": { "type": "string" },
+    "display": { "$ref": "instrument-display.schema.json" },
+    "instrumentId": { "type": "string" },
+    "venue": { "type": "string" },
+    "side": { "enum": ["long", "short"] },
+    "size": { "$ref": "order-row.schema.json#/$defs/decimal" },
+    "entryPrice": { "$ref": "order-row.schema.json#/$defs/decimal" },
+    "markPrice": { "$ref": "order-row.schema.json#/$defs/decimal" },
+    "markTime": { "type": "integer" },
+    "liquidationPrice": { "$ref": "order-row.schema.json#/$defs/decimal" },
+    "unrealizedPnl": { "$ref": "order-row.schema.json#/$defs/signed" },
+    "realizedPnlSinceFlat": { "$ref": "order-row.schema.json#/$defs/signed" },
+    "funding": { "$ref": "order-row.schema.json#/$defs/signed", "description": "Paid negative, received positive." },
+    "fundingSinceChange": { "$ref": "order-row.schema.json#/$defs/signed", "description": "Funding since the position's last change of size, the exchange's own figure; paid negative, received positive. Added 2026-10-06: absent from an older runtime's row." },
+    "returnOnEquity": { "$ref": "order-row.schema.json#/$defs/signed", "description": "Optional venue ROE ratio (not percent), including zero. Older rows omit it; display/sort falls back to entry margin." },
+    "margin": { "$ref": "order-row.schema.json#/$defs/decimal" },
+    "leverage": { "$ref": "order-row.schema.json#/$defs/decimal" },
+    "marginMode": { "enum": ["cross", "isolated"] },
+    "botId": { "type": "string", "description": "The first bot of `bots`: the row's bot badge." },
+    "bots": { "type": "array", "description": "The bots that hold a part of this position and how much each holds (base units; a running bot's open cycle, its close in flight, or a bot stopped without closing that still holds it); empty for a position nobody's bot holds. The person's part is the size less their sum, never below zero (ruling 397). Absent from a runtime older than 2026-10-09.", "items": { "type": "object", "additionalProperties": false, "required": ["botId", "size"], "properties": { "botId": { "type": "string" }, "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "name": { "type": "string", "description": "Optional already-held bot name; absent from older runtimes or an unnamed bot. No Bots subscription is needed." } } } },
+    "botMismatch": { "const": true, "description": "The bot's own position differs from the venue's." },
+    "openedAt": { "type": "integer", "description": "When the position opened, from an opening among the fills the runtime has seen. Absent when it has seen none (a position already open when it first read the account): unknown, never the time of the read. Optional since 2026-10-11; a row of an older runtime always has it." },
+    "updatedAt": { "type": "integer" },
+    "createdBy": {
+      "$ref": "order-row.schema.json#/$defs/createdBy"
+    },
+    "contributors": {
+      "type": "array",
+      "description": "Origins of open own-trades books, not allocated venue size. Absent means legacy attribution.",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "person",
+              "key"
+            ]
+          },
+          "keyId": {
+            "type": "string"
+          },
+          "proposalId": {
+            "type": "string"
+          },
+          "botId": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ]
+          }
+        }
+      }
+    }
+  }
+,
+  "$defs": { "forcedClose": {"type": "object", "additionalProperties": false, "required": ["id", "sourceId", "instrumentId", "venue", "kind", "side", "at", "previousSize", "remainingSize"], "properties": {"id": {"type": "string", "minLength": 1}, "sourceId": {"type": "string", "minLength": 1}, "instrumentId": {"type": "string", "minLength": 1}, "venue": {"const": "hyperliquid"}, "kind": {"enum": ["liquidation", "adl"]}, "side": {"enum": ["long", "short"]}, "at": {"type": "integer", "minimum": 0}, "previousSize": {"type": "string", "pattern": "^\\d+(\\.\\d+)?$"}, "remainingSize": {"type": "string", "pattern": "^\\d+(\\.\\d+)?$"}, "pnl": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"}, "unpricedFee": {"type": "string"}, "appliesToCurrentPosition": {"type": "boolean"}}, "description": "C66 144: display-only facts from existing admitted liquidation/ADL fills in the preceding 24 hours. No live size, entry, leverage or margin is fabricated. pnl is canonical closed PnL less priced fee; absent for unpriced fee. Partial binding requires positive fill-stream episode evidence; absent/false is unknown or a later episode. Older liquidation records without position metadata yield no fact."} }
+}

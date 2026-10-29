@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/notify-api.schema.json",
+  "title": "Telegram routes",
+  "description": "The routes of Settings › Notifications › Telegram (decision 0009 slice B; docs/notifications/telegram.md), a signed-in person's only, never an access key's. All are additions to /api/v1.",
+  "$defs": {
+    "empty": {
+      "description": "The body of POST /api/v1/notify/telegram/pair, /start, /recheck and /disconnect: nothing.",
+      "type": "object", "additionalProperties": false
+    },
+    "token": {
+      "description": "POST /api/v1/notify/telegram/token: the token BotFather gave (d11 (b)). Telegram must accept it (getMe) before it is kept, in the file telegram.token in the data folder, readable by its owner only; it is never answered, logged or stored anywhere else.",
+      "type": "object", "additionalProperties": false, "required": ["token"],
+      "properties": { "token": { "type": "string", "pattern": "^[0-9]{3,20}:[A-Za-z0-9_-]{30,64}$" } }
+    },
+    "state": {
+      "description": "GET /api/v1/notify/telegram, and the answer of POST /recheck: the bot, whether a chat is bound, the link's state, the topics, the outbox's counts and a one-touch set-up in progress.",
+      "type": "object", "additionalProperties": false, "required": ["bot", "bound", "state", "topics", "outbox", "pairing"],
+      "properties": {
+        "bot": { "type": ["string", "null"], "description": "The bot's @username; null when none is kept." },
+        "bound": { "type": "boolean", "description": "A chat was bound by /start <nonce> and messages go to it." },
+        "state": { "enum": ["linked", "blocked", "token-invalid", "polling-stopped", null], "description": "blocked: the owner blocked the bot, sending waits until they write to it; token-invalid: Telegram refused the token; polling-stopped: another copy of the runtime reads this bot (Re-check restarts it)." },
+        "topics": { "type": "boolean", "description": "Messages go to the three topics (Orders, Bots, Account); false: one chat." },
+        "outbox": {
+          "type": "object", "additionalProperties": false, "required": ["held", "pending", "sent", "dropped"],
+          "properties": { "held": { "type": "integer", "minimum": 0 }, "pending": { "type": "integer", "minimum": 0 }, "sent": { "type": "integer", "minimum": 0 }, "dropped": { "type": "integer", "minimum": 0, "description": "Messages given up, each with its reason (the health line)." } }
+        },
+        "pairing": {
+          "description": "The one-touch set-up's state (telegram-relay.schema.json); null where it is not available.",
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "required": ["state"], "properties": { "state": { "enum": ["idle", "waiting", "done", "failed"] } } }
+          ]
+        }
+      }
+    },
+    "paired": {
+      "description": "POST /api/v1/notify/telegram/pair: Telegram's create link to open (d11 (a)). 422 {error, code} when one touch is not available: `code` is `one-touch`.",
+      "type": "object", "additionalProperties": false, "required": ["url"], "properties": { "url": { "type": "string" } }
+    },
+    "linked": {
+      "description": "POST /api/v1/notify/telegram/token: the bot Telegram accepted. 422 {error, code} when it refused the token or did not answer: `code` is `token-invalid` (Telegram refused it), `unknown` (Telegram did not answer) or `not-saved` (the token could not be kept where gcx runs); `error` is the English sentence, `code` is what the panel words.",
+      "type": "object", "additionalProperties": false, "required": ["bot"], "properties": { "bot": { "type": "string" } }
+    },
+    "startLink": {
+      "description": "POST /api/v1/notify/telegram/start: \"Open your bot\": https://t.me/<bot>?start=<nonce>, the nonce single-use for 10 minutes (only its hash is kept). 404 when no bot is kept.",
+      "type": "object", "additionalProperties": false, "required": ["url", "expiresAt"],
+      "properties": { "url": { "type": "string" }, "expiresAt": { "type": "integer", "description": "Unix ms." } }
+    },
+    "sample": {
+      "description": "The body of POST /api/v1/dev/telegram/send (ruling 82, the Internal build only): the template to send with demo data, one of the `template` values of GET /api/v1/dev/telegram/samples.",
+      "type": "object", "additionalProperties": false, "required": ["template"], "properties": { "template": { "type": "string" } }
+    },
+    "samples": {
+      "description": "GET /api/v1/dev/telegram/samples (ruling 82, the Internal build only; 404 on every other tier): every message with demo data, its title and first line in the person's language, in the order of the three groups (manual: Orders, bots: Bots, account: Account).",
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["template", "topic", "title", "line"],
+        "properties": { "template": { "type": "string" }, "topic": { "enum": ["manual", "bots", "account"] }, "title": { "type": "string" }, "line": { "type": "string", "description": "The message's first line of text under its title; titles alone repeat, title and line do not." } }
+      }
+    },
+    "sent": {
+      "description": "POST /api/v1/dev/telegram/send: the sample went into the outbox, to its topic. 422 {error, code} when no chat is linked: `code` is `not-linked`; 404 for an unknown template or on a tier other than Internal.",
+      "type": "object", "additionalProperties": false, "required": ["sent"], "properties": { "sent": { "const": true } }
+    }
+  }
+}

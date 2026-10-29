@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/tick-frame.schema.json",
+  "title": "Tick frame",
+  "description": "The data of the panel socket's `ticks/<instrumentId>` topic (decision 0019 d12): one instrument's last price, and its mark where the runtime has one, sent when either changes; the last one first on subscribe. It flows only while something else holds the instrument's market data (the trade screen's book, trades or price header, a bot, an armed stop): the topic opens no stream of its own. Also the data of the deprecated `ticks` topic, which carries every watched instrument (removed in the release after V1). Mirrors `formTick` in src/domain/marketdata/feed.ts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "instrumentId", "last"],
+  "properties": {
+    "venue": { "type": "string" },
+    "instrumentId": { "type": "string", "description": "The instrument's id, as in the topic." },
+    "last": { "$ref": "#/$defs/decimal", "description": "The last trade's price, else the mid." },
+    "mark": { "$ref": "#/$defs/decimal" }
+  },
+  "$defs": { "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." } }
+}

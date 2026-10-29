@@ -1,0 +1,343 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/access-key.schema.json",
+  "title": "Access key",
+  "description": "An access key for an AI agent or a script (decision 0010 d2, Amendment 1). Sent as `Authorization: Bearer <secret>`. Scope `read` reads; `propose` also proposes orders that a person launches in the panel; `trade` also places, cancels and sets leverage within the limits a person sets on the key (Amendment 1 A1 to A8): it acts on nothing until its limits are set, it closes or sells only what it bought, it never sends past a warning, and a suspended key's writes are refused (403). No key can read a bot's signal URL, or make, change, suspend or revoke a key: those are a signed-in person's. Only the key's SHA-256 is kept; the secret is shown once, when the key is made. Times are Unix milliseconds. See docs/reference/runtime/api.md and docs/agents/trading-api.md.",
+  "$defs": {
+    "scope": { "enum": ["read", "propose", "trade"] },
+    "key": {
+      "description": "One key as GET /api/v1/keys lists it. `lastUsedAt` is the key's last request, null when never used; gcx writes it to disk at most once a minute and at shutdown, so after a crash it can be older than the key's real last use. `revokedAt` is null for a key in use. `limits` and `suspendedAt` (Amendment 1) are always sent by this version.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keyId", "name", "scope", "createdAt", "lastUsedAt", "revokedAt"],
+      "properties": {
+        "keyId": { "type": "string" },
+        "name": { "type": "string" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "createdAt": { "type": "integer" },
+        "lastUsedAt": { "type": ["integer", "null"] },
+        "revokedAt": { "type": ["integer", "null"] },
+        "limits": {
+          "oneOf": [{ "$ref": "#/$defs/limits" }, { "type": "null" }],
+          "description": "A trading key's limits; null until set (it then acts on nothing), and for a key that does not trade. Absent from an answer of a version before keys traded: null."
+        },
+        "suspendedAt": {
+          "type": ["integer", "null"],
+          "description": "When a person suspended the key (A10); null while it runs. Absent from an answer of a version before keys traded: null."
+        },
+        "did": { "$ref": "#/$defs/activity/properties/did" },
+        "used": { "$ref": "#/$defs/activity/properties/used" },
+        "holds": { "$ref": "#/$defs/activity/properties/holds" },
+        "pnl": { "$ref": "#/$defs/activity/properties/pnl" },
+        "proposals": { "$ref": "#/$defs/activity/properties/proposals" },
+        "atLimit": { "$ref": "#/$defs/activity/properties/atLimit" },
+        "notifications": {
+          "$ref": "#/$defs/notifications"
+        },
+        "permissions": {
+          "$ref": "#/$defs/permissions"
+        },
+        "stats": {
+          "$ref": "#/$defs/stats"
+        }
+      }
+    },
+    "list": {
+      "description": "GET /api/v1/keys: every key made on this runtime, revoked ones included, oldest first.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/key" }
+    },
+    "create": {
+      "description": "POST /api/v1/keys: the name the person gives the agent or script, its scope, and for a key of scope `trade` its limits (without them it acts on nothing).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "scope"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "scope": { "$ref": "#/$defs/scope" },
+        "limits": { "$ref": "#/$defs/limits" }
+      }
+    },
+    "created": {
+      "description": "The answer to POST /api/v1/keys: the new key and its secret, which is never shown again.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keyId", "name", "scope", "createdAt", "lastUsedAt", "revokedAt", "secret"],
+      "properties": {
+        "keyId": { "type": "string" },
+        "name": { "type": "string" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "createdAt": { "type": "integer" },
+        "lastUsedAt": { "type": ["integer", "null"] },
+        "revokedAt": { "type": ["integer", "null"] },
+        "secret": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$" },
+        "limits": {
+          "oneOf": [{ "$ref": "#/$defs/limits" }, { "type": "null" }],
+          "description": "A trading key's limits; null until set (it then acts on nothing), and for a key that does not trade. Absent from an answer of a version before keys traded: null."
+        },
+        "suspendedAt": {
+          "type": ["integer", "null"],
+          "description": "When a person suspended the key (A10); null while it runs. Absent from an answer of a version before keys traded: null."
+        }
+      }
+    },
+    "setScope": {
+      "description": "POST /api/v1/keys/{keyId}/scope: the key's new scope, in force from its next request. Answers the key, or 404 for a key that does not exist or is revoked.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope"],
+      "properties": { "scope": { "$ref": "#/$defs/scope" } }
+    },
+    "revoke": {
+      "description": "POST /api/v1/keys/{keyId}/revoke: an empty object. The key is refused (401) from its next request, and, as Suspend does, its resting orders that would open or add to a position are cancelled. Answers the key, or 404 for a key that does not exist or is already revoked.",
+      "type": "object",
+      "additionalProperties": false
+    },
+    "limits": {
+      "description": "A trading key's limits (Amendment 1 A4), set only by a person, in force from the key's next command. `accounts`: the account ids it may trade, or `all` for every account held now or added later. `markets`: the instruments it may trade, each by its exact id (the key form offers every perpetual), or `all` for every market on those accounts, whatever it is quoted in. `perOrder`: the largest order value in USDC at the runtime's price. `per24h`: the most in USDC of what the key's orders that add risk filled in the last 24 hours plus what of them is open now (RULINGS 74 (b): a cancelled order gives its value back). `leverage`: the highest leverage on a market where the key adds risk. Decimal strings; the panel pre-fills 1000, 10000 and 5 (the owner's defaults).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accounts", "markets", "perOrder", "per24h", "leverage"],
+      "properties": {
+        "accounts": { "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "const": "all" }] },
+        "markets": {
+          "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "const": "all" }]
+        },
+        "perOrder": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+        "per24h": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+        "leverage": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" }
+      }
+    },
+    "setLimits": {
+      "description": "POST /api/v1/keys/{keyId}/limits: a trading key's new limits, in force from its next command. Answers the key, or 404 for a key that does not exist or is revoked.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limits"],
+      "properties": { "limits": { "$ref": "#/$defs/limits" } }
+    },
+    "suspend": {
+      "description": "POST /api/v1/keys/{keyId}/suspend and /resume: an empty object. Suspend (Amendment 1 A10, RULINGS 73 (a)): the key's writes are refused (403 \"Suspended by you\") from its next command, its reads continue, and its resting orders that would open or add to a position are cancelled; its take-profits, stop-losses, reduce-only orders and positions stay. Resume lets it write again. Answers the key, or 404 for a key that does not exist or is revoked.",
+      "type": "object",
+      "additionalProperties": false
+    },
+    "did": {
+      "description": "One thing a key did (decision 0010 d12): an order it placed, an order it cancelled, a leverage it set, an order it proposed (with what became of it); newest first. Reads are not logged.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t", "action"],
+      "properties": {
+        "t": { "type": "integer", "description": "When it was journaled, Unix milliseconds." },
+        "action": { "enum": ["place", "cancel", "leverage", "propose"] },
+        "orderId": { "type": "string" },
+        "side": { "enum": ["buy", "sell"] },
+        "size": { "type": "string", "description": "The order's size in the base asset, a decimal string." },
+        "display": { "$ref": "instrument-display.schema.json" },
+        "instrumentId": { "type": "string" },
+        "leverage": { "type": "string" },
+        "sizeUnit": { "enum": ["base", "quote"], "description": "A proposal's size unit: the base asset, or the pair's quote currency." },
+        "outcome": { "enum": ["waiting", "launched", "rejected"], "description": "What became of a proposal." }
+      }
+    },
+    "activity": {
+      "description": "What GET /api/v1/keys adds to each key, from gcx's journal (decision 0010 d12, Amendment 1 A5, A6, A9): absent from a runtime that serves no account yet.",
+      "type": "object",
+      "properties": {
+        "did": { "type": "array", "items": { "$ref": "#/$defs/did" }, "description": "Its last 50 actions, newest first." },
+        "used": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "changes"],
+          "description": "For the 24 hours (RULINGS 74 (b)): what its orders that open or add filled in the last 24 hours plus what of them is open now, in USDC; and its changes (orders, cancels, leverage, bot commands) of the last 24 hours, a count with no cap (MH 2026-10-05, audit line 39).",
+          "properties": {
+            "value": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+            "changes": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "holds": {
+          "type": "array",
+          "description": "What its own orders hold, net, per account and market, a long positive; markets it holds nothing on are left out.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sourceId", "instrumentId", "size"],
+            "properties": {
+              "sourceId": { "type": "string" },
+              "display": { "$ref": "instrument-display.schema.json" },
+              "instrumentId": { "type": "string" },
+              "size": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" }
+            }
+          }
+        },
+        "pnl": {
+          "oneOf": [
+            { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+            { "type": "null" }
+          ],
+          "description": "Realized PnL less fees, in USDC, of the orders it placed and the orders launched from its proposals, since it was made; null while gcx has not read its journal yet (unavailable, never 0)."
+        },
+        "proposals": { "type": "integer", "minimum": 0, "description": "Its proposals waiting for you." },
+        "atLimit": { "const": true, "description": "Added 2026-10-04 (decision 0010 Amendment 1 A9): a command of this key was refused at its per-order, 24-hour or leverage limit, and no command of it has passed that limit since; you were told once. Absent otherwise, and after a restart until it meets a limit again." }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commands"
+      ],
+      "properties": {
+        "commands": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "description": "Optional accepted-command notices; absent means off. Proposals are always notified independently. Retained after revocation."
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "propose",
+        "trade",
+        "manage"
+      ],
+      "properties": {
+        "propose": {
+          "type": "boolean"
+        },
+        "trade": {
+          "type": "boolean"
+        },
+        "manage": {
+          "type": "boolean"
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "at",
+        "stale",
+        "period",
+        "totals",
+        "points"
+      ],
+      "properties": {
+        "reporting": { "$ref": "#/$defs/stats/properties/totals/items" },
+        "missingCurrencies": { "type": "array", "items": { "type": "string" } },
+        "at": {
+          "type": "integer"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "period": {
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year",
+            "all"
+          ]
+        },
+        "totals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "volume",
+              "realized",
+              "unrealized",
+              "total"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string"
+              },
+              "volume": {
+                "type": "string"
+              },
+              "realized": {
+                "type": "string"
+              },
+              "unrealized": {
+                "type": "string"
+              },
+              "total": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "points": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "at",
+              "currency",
+              "realized",
+              "cumulative"
+            ],
+            "properties": {
+              "at": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "realized": {
+                "type": "string"
+              },
+              "cumulative": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows",
+        "more"
+      ],
+      "properties": {
+        "rows": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/key"
+          }
+        },
+        "more": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "activityEvents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["t", "action"],
+        "properties": {
+          "cursor": { "type": "string" },
+          "t": { "type": "integer" },
+          "action": { "enum": ["place", "cancel", "leverage", "propose", "modify", "bot-create", "bot-modify", "bot-stop", "bot-close", "propose-bot"] },
+          "orderId": { "type": "string" }, "botId": { "type": "string" }, "proposalId": { "type": "string" }, "sourceId": { "type": "string" }, "instrumentId": { "type": "string" },
+          "side": { "enum": ["buy", "sell"] }, "size": { "type": "string" }, "sizeUnit": { "enum": ["base", "quote"] }, "leverage": { "type": "string" }, "edited": { "type": "boolean" },
+          "outcome": { "enum": ["waiting", "launched", "rejected"] }
+        }
+      }
+    }
+  }
+}

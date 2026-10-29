@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/bot-entry.schema.json",
+  "title": "Bot entry",
+  "description": "An entry a DCA bot writes to the ledger (decision 0016, slice L2), as the payload of a journal row (journal-row.schema.json). The order engine's fold skips these; the runtime folds them, with the order engine's steps each bot heard, back into its bots. Times are milliseconds since the epoch on the runtime's wall clock; prices and sizes are decimal strings. Mirrors src/runtime/store/store.ts, BotEntry; the reducer's inputs are src/domain/dca/live.ts, BotInput.",
+  "$defs": {
+    "signalSettings": {"type": "object", "properties": {"signal": {"oneOf": [{"type": "null"}, {"type": "array", "minItems": 1, "items": {"oneOf": [{"type": "object", "additionalProperties": false, "required": ["kind", "periods", "states"], "properties": {"kind": {"const": "ta"}, "periods": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w", "1M"]}}, "states": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["strongBuy", "buy", "sell", "strongSell"]}}}}, {"type": "object", "additionalProperties": false, "required": ["kind", "periods", "states"], "properties": {"kind": {"const": "rsi"}, "periods": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w", "1M"]}}, "states": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["rsiOversold", "rsiOverbought"]}}}}, {"type": "object", "additionalProperties": false, "required": ["kind", "periods", "states"], "properties": {"kind": {"const": "macd"}, "periods": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w", "1M"]}}, "states": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["macdBullishCross", "macdBearishCross"]}}}}, {"type": "object", "additionalProperties": false, "required": ["kind", "periods", "states"], "properties": {"kind": {"const": "bollinger"}, "periods": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w", "1M"]}}, "states": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["bollingerLower", "bollingerUpper"]}}}}, {"type": "object", "additionalProperties": false, "required": ["kind", "periods", "states", "pct", "window"], "properties": {"kind": {"const": "priceMove"}, "periods": {"type": "array", "maxItems": 0}, "pct": {"type": "string", "pattern": "^(?=.*[1-9])(\\d+\\.?\\d*|\\.\\d+)$"}, "window": {"type": "object", "additionalProperties": false, "required": ["value", "unit"], "properties": {"value": {"type": "integer", "minimum": 1}, "unit": {"enum": ["minutes", "hours", "days"]}}}, "states": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["rose", "fell"]}}}}]}}]}, "taPeriods": {"type": "array"}, "taSignals": {"type": "array"}, "entryCondition": {"type": "string"}}, "allOf": [{"if": {"required": ["signal"], "properties": {"signal": {}}}, "then": {"required": ["taPeriods", "taSignals"], "allOf": [{"if": {"properties": {"signal": {"type": "array"}}}, "then": {"properties": {"entryCondition": {"const": "ta"}, "taPeriods": {"type": "array", "maxItems": 0}, "taSignals": {"type": "array", "maxItems": 0}}}, "else": {"properties": {"taPeriods": {"type": "array", "minItems": 1}, "taSignals": {"type": "array", "minItems": 1}}}}], "properties": {"taPeriods": {"type": "array"}, "taSignals": {"type": "array"}}}}]},
+    "request": {
+      "description": "Who asked for a command and under which id (decision 0010 d3, d4): the journaled command is its durable request row. principal is person, hook:<id>, key:<id>, link:<id> or runtime; hash is the SHA-256 of the body's canonical JSON; actor as the API derived it (a trading key's, B80: {kind: key, keyId, counted}, counted the quote its command counts against the key's 24 hours).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "principal", "hash", "actor"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "principal": { "type": "string", "minLength": 1 },
+        "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "actor": { "type": "object", "required": ["kind"], "properties": { "kind": { "enum": ["person", "proposal", "signal", "link", "runtime", "key"] } } }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "Bot input",
+      "description": "One input of the bot's reducer that is not an order-engine step: create (with its settings, dca-bot-create.schema.json, the tick it starts from, and on spot `coinFee`, added for ruling 151), command, timer, allowance (the requests left on the account's allowance; `walletUntil`, added for B61, when the account's API wallet expires, absent when not known), position (the account's, the switch on), liquidation (`size` the bot's share, zero for a bot the split does not charge; `whole` the fill's size and `order` the liquidation order's id, both added in L2), venue-flat (the exchange flat on two healthy reads), funding (B64: the bot's share of one funding payment, `usdc` paid negative, `id` the coin and the venue's hour, booked once), released (added 2026-10-03, 0003b d12: its account was removed from gcx; the bot is done as it stands, nothing cancelled or closed, RULINGS 23: stopped, or with `cause` account, added 2026-10-10 for 0003b amendment 3, error with the reason Account removed; an older build ignores it, or reads it without its cause), pause (added 2026-10-04, ruling 73 (a): the trading key that created the bot was suspended or revoked, `on` true, or resumed, `on` false; an older build ignores it), recheck (added 2026-10-04, ruling 170 (b): the runtime's ledger shows room in the trading key's limits for a bot they alone hold; the bot enters as any due cycle does, counted again; an older build ignores it, the bot then waits for Retry as it did), wallet (added 2026-10-04, ruling 164 (b): a fresh read of the account's API wallet giving it more than a day, after a renewal, `walletUntil` its expiry as on allowance; a bot waiting in repair wallet-expiring resumes; an older build ignores it), differs (added 2026-10-05, decision 0016 Amendment 2: the runtime found, on two trusted reads 90 s apart, that the exchange's signed position on the coin, `exchange`, differs from the sum of the bots' records there since `since`, the last agreement, `cause` the likely one (liquidation, gcx, outside, none); with `agrees` true a trusted read agrees again and the item closes; written only for bots with \"Only gcx trades this coin\" on; an older build ignores it), reattach (added 2026-10-05, RULINGS 202 (b): a healthy read shows the exchange holding on the bot's side again while legs of its cycle's take-profit and stop-loss are gone with an earlier position; the bot makes them again, switch on or off, with no item open; an older build ignores it, the bot then runs without those exits as it did), correction (added 2026-10-06, decision 0028 d23: after an adopt whose rebuilt count does not reach the bot's share, what the fills did not reach: `was` and `now` the cycle's {size, cost} before and after, folded by now − was, `price` the figure used (the exchange's entry, or the bot's average), `pnl` \"0\", `between` {from, to} the bracket of the difference, `cause` unexplained or below-minimum, `reach` the oldest time the venue's history served when it did not reach the cycle's start; an older build ignores it and keeps its own cost), foreign (added 2026-10-06, decision 0028 d26: the yellow notice's facts with \"Only this bot trades this pair\" on, `fills` [{id, at, side, size, price}] on the pair not this bot's, `orders` [{id, side, size, price}] resting at the exchange not this bot's, `exchange` the figure of a trusted read when one was made; one episode from its first row to the row with `clear` true; it holds nothing; an older build ignores it), claim-released (added 2026-10-09, ruling 406 b: a fresh trusted read showed the account flat on the coin of a bot stopped without closing that still claims a part of it; the bot lets go of it for good, holding nothing, its P&L, cycle and end as they were, nothing sent; a bot not done ignores it; an older build ignores it, the bot keeping its claim), run (added 2026-10-20, decision 0006 amendment 1 d3: nothing held the bot's coin's trades any more, so the price it heard says nothing about later; `at` is strictly after the last price it heard, and the bot prices nothing until a price of this run, as after a start; an older build folds it the same, through the bot's reducer) or step: a tick the bot heard before a step because its own was older than the runtime's. Since 0028: differs carries `first` (the first read that differed, d24); the command kind keep (\"Bot is right\" on a red item, \"Accept\" on the yellow notice: the switch off, nothing sent); differs adopt carries `rebuild` {fills, was, now} (d22.7: the fills no bot's order made that the rebuild counted, and the cycle's figures at the press and rebuilt; the fold moves each by now − was; `share`, `was` and `price` stay for an older build); modify carries `wholePosition`, applied at once. Since 0017 A1: signal is an additive authoritative nonempty condition list with both legacy TA arrays explicitly empty; one atomic Modify carries all three fields, signal:null restores single TA; accepted arms remain facts. Since 0016 Amendment 7 (MH 669): modify carries `taPeriods` and `taSignals`, and its `from` is written exactly when a field waited for the next cycle (a cycle open at the press); an older build folds both the same. Since 0016 Amendment 9: the command kind modify-clear sets maxCycles, endAt, atEnd, slPct or slEnabled and removes maxCycles, endAt (with atEnd) or slLossPct (`clear`), the only command that sets or moves the end; an older build ignores it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "botId", "input"],
+      "properties": {
+        "type": { "const": "bot" },
+        "botId": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "required": ["type", "at"],
+          "properties": {
+            "type": { "enum": ["create", "step", "command", "timer", "allowance", "liquidation", "position", "venue-flat", "funding", "released", "pause", "recheck", "wallet", "differs", "reattach", "correction", "foreign", "claim-released", "run", "leverage"] },
+            "config": { "$ref": "#/$defs/signalSettings" },
+            "command": { "type": "object", "properties": {
+              "fields": { "$ref": "#/$defs/signalSettings" },
+              "entryConditions": {
+                "description": "E5: optional facts captured when a TA arm is accepted, before allowance. Side is pre-Inverse. Absent on old arms means no condition detail; never inferred from current settings. Previous builds ignore this additive field.",
+                "type": "object", "additionalProperties": false, "required": ["blocks", "side"],
+                "properties": {
+                  "blocks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/signalSettings/properties/signal/oneOf/1/items" } },
+                  "side": { "enum": ["buy", "sell"] }
+                }
+              }
+            } },
+            "account": { "type": ["string", "null"], "description": "A2 d61: held account value on allowance or d100(b) leverage input; null before a value has ever been held; no send-time or replay read" },
+            "accountStale": { "type": "boolean" },
+            "scale": { "type": "string", "description": "A2 d69 / d100(b): the resolved cycle factor on allowance or leverage; old leverage rows without it remain display-only, old allowances without it retain the typed ladder" },
+            "counted": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "On allowance only, added 2026-10-04 (ruling 109 2 (a)): a trading key's bot, what the cycle entering now counts against the key's 24 hours (its ladder at the bot's last price, in USDC). Absent for a bot no key created." },
+            "keyOver": { "const": true, "description": "On allowance only, added 2026-10-04 (ruling 109 2 (a)): the trading key's limits leave no room for this cycle; nothing is sent and the bot waits in repair key-limit. An older build reading it would enter the cycle; it never has such a bot." },
+            "against": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "On allowance only, added 2026-10-04 (ruling 172 (b)): a trading key's bot, the size the account holds on the other side of the cycle entering now, read with the allowance; its orders reduce it (one position per coin and account) and the bot reports it once. Absent when none. An older build ignores it." },
+            "marginMode": { "enum": ["isolated", "cross"], "description": "MH 2026-10-25, M1: mode read with allowance/leverage, selecting the recorded account-sizing factor; absent preserves previous arithmetic" },
+            "leverage": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "On allowance and leverage inputs (d100(b)), added 2026-10-17 (MH 623 (c)-(e)): a perpetual bot whose stop is the expected loss (settings slLossPct), the account's leverage on the coin, read with the allowance; the cycle entering now works its stop out at it and keeps it. Absent when not read, and for every other bot: the cycle's stop is then the bot's slPct. An older build ignores it." },
+            "on": { "type": "boolean", "description": "On pause only: true pauses, false resumes." },
+            "cause": { "type": "string", "description": "Differs and correction carry their own cause (described above). On released, added 2026-10-10 (0003b amendment 3 d2, ruling 413.4): the bot's account was removed from gcx; the bot ends done error, its row's `released` account. Absent, as every older row: done stopped. An older build ignores it (done stopped)." },
+            "kind": { "const": "adl", "description": "On liquidation only, added 2026-10-05 (decision 0016 Amendment 3 d5): the fill was the exchange's auto-deleveraging; the bot ends done (adl). Absent: a liquidation, as every older row. Its `size` is the bot's share of the fill (held over the exchange's position), as it always was the amount charged." },
+            "fee": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "On liquidation only, added 2026-10-05 (decision 0016 Amendment 3 d2): the bot's share of the fill's fee in quote (fee × share ÷ the sum of the sizes every party was charged, the bots' and the person's; on one side fee × share ÷ fill; MH ruling 226 a), booked into its realized PnL and fees. Absent: none, as every older row. An older build ignores it." },
+            "at": { "type": "integer", "minimum": 0 },
+            "coinFee": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "On create only, added 2026-10-03 (ruling 151): on a spot pair whose buys pay their fee in the coin bought, the account's spot taker rate as a fraction, read when the bot was created (the venue's highest standard rate, Hyperliquid 0.0007, when the read failed); the bot's fee top-up is on from its first entry, and the first fill's own rate takes over. Absent (perpetuals, and every create written before): the top-up is off until a fill shows a fee in the coin." }
+          }
+        },
+        "request": { "$ref": "#/$defs/request" }
+      }
+    },
+    {
+      "title": "Notification switches",
+      "description": "The bot's notification switches (decision 0009 d2): stops, TP and SL fills, entry and averaging fills from a level.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "botId", "notify", "at", "request"],
+      "properties": {
+        "type": { "const": "bot.notify" },
+        "botId": { "type": "string", "minLength": 1 },
+        "notify": { "$ref": "lists-api.schema.json#/$defs/notify" },
+        "at": { "type": "integer", "minimum": 0 },
+        "request": { "$ref": "#/$defs/request" }
+      }
+    },
+    {
+      "title": "A difference the person knows about",
+      "description": "'I know why' on the line 'Bot · Exchange' (catalogue Q8): the exchange's size then; the line stays quiet until the difference grows past it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "botId", "known", "at", "request"],
+      "properties": {
+        "type": { "const": "bot.mismatch" },
+        "botId": { "type": "string", "minLength": 1 },
+        "known": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+        "at": { "type": "integer", "minimum": 0 },
+        "request": { "$ref": "#/$defs/request" }
+      }
+    }
+  ]
+}

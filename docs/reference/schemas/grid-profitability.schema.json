@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/grid-profitability.schema.json",
+  "title": "Grid profitability buckets",
+  "type": "array",
+  "description": "G12 producer for G11: full snapshot without profitAfter; replacement values for changed hours/days with it. Funding is already inside realized. UTC hour starts for the newest 30 days, UTC day starts before.",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "at",
+      "realized"
+    ],
+    "properties": {
+      "at": {
+        "type": "integer"
+      },
+      "realized": {
+        "type": "string",
+        "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+      },
+      "current": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$", "description": "A4 Current at this bucket’s latest step, never a running maximum."},
+      "invested": {
+        "type": "string",
+        "pattern": "^[0-9]+(\\.[0-9]+)?$"
+      },
+      "heldPeak": {
+        "type": "string",
+        "pattern": "^[0-9]+(\\.[0-9]+)?$"
+      },
+      "heldArea": {
+        "description": "Incremental quote × ms since the preceding recorded bucket update, accumulated within this bucket; never add this replacement twice.",
+        "type": "string",
+        "pattern": "^[0-9]+(\\.[0-9]+)?$"
+      }
+    }
+  }
+}

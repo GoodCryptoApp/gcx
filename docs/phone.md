@@ -26,6 +26,10 @@ Each device in the list has a switch: **Can trade** does everything you can; **R
 
 There is no other limit. Your keys never leave the machine goodcryptoX runs on. A device keeps goodcryptoX's own code after its first visit, so later visits open faster.
 
+## The menu on a phone
+
+On a phone the menu is a bar at the bottom of the screen with three pages: Dashboard, Trade and Settings. The Documentation book is at the top right of the Dashboard and of Settings and its pages.
+
 ## On the home screen
 
 goodcryptoX is not an app from a store. Saved to your home screen, it opens and feels like one, full screen, with no browser bar. After the phone sleeps, it comes back by itself.

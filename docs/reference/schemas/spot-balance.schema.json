@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/spot-balance.schema.json",
+  "title": "Spot balance",
+  "description": "One row of Hyperliquid's spot clearinghouse state (REST `spotClearinghouseState` or the `spotState` stream) as the adapter parses it (src/venues/hyperliquid/account.ts, SpotBalance). `token` is the spot token's `index` field, never an array position; outcome rows (`+n`, `on`) carry none.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["coin", "total", "hold", "entryNtl"],
+  "properties": {
+    "token": { "type": "integer", "minimum": 0 },
+    "coin": { "type": "string" },
+    "total": { "$ref": "#/$defs/canonical" },
+    "hold": { "$ref": "#/$defs/canonical" },
+    "entryNtl": { "$ref": "#/$defs/canonical" }
+  },
+  "$defs": { "canonical": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$", "description": "A canonical decimal string. Never a JSON number." } }
+}

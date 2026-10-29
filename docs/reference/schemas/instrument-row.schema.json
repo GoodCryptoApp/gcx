@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/instrument-row.schema.json",
+  "title": "Instrument row",
+  "description": "One instrument as GET /api/v1/instruments?venue serves it: the domain Instrument record (its trading rules) as strings, plus display fields and the 24-hour stats. The whole response is $defs/list, with a version so the panel does not refetch on every open. Mirrors src/panel/model/instruments.ts (InstrumentRow, InstrumentList). See decision 0007 part 3 decision 9.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "venue", "pair", "base", "quote", "baseId", "quoteId", "szDecimals", "minNotional", "maxLeverage", "marginModes", "isDelisted", "priceRule", "rungs", "volume24h", "change24h"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "description": "The venue's instrument id, with the dex prefix on HIP-3 (xyz:SPCX)." },
+    "kind": { "enum": ["perp", "spot"] },
+    "venue": { "type": "string", "minLength": 1 },
+    "pair": { "type": "string", "minLength": 1, "description": "Display name, e.g. BTC-USDC." },
+    "base": { "type": "string", "minLength": 1 },
+    "quote": { "type": "string", "minLength": 1, "description": "The quote asset; on perps the settlement asset of the notional." },
+    "baseId": { "type": "string" },
+    "quoteId": { "type": "string" },
+    "dex": { "type": "string", "description": "HIP-3 dex name." },
+    "szDecimals": { "type": "integer", "minimum": 0, "description": "Sizes are floored to 10^-szDecimals (a count, not money)." },
+    "minNotional": { "$ref": "#/$defs/decimal", "description": "Minimum order value in quote; \"0\" = none." },
+    "maxLeverage": { "$ref": "#/$defs/decimal" },
+    "marginModes": { "type": "array", "uniqueItems": true, "items": { "enum": ["cross", "isolated"] }, "description": "[\"isolated\"] on an isolated-only instrument; [] on spot." },
+    "isDelisted": { "type": "boolean" },
+    "limitBandPct": { "$ref": "#/$defs/decimal", "description": "Added 2026-10-04 (ruling 158): the exchange refuses a limit order priced further than this percent from its reference price (Hyperliquid perpetuals: 80; venue-caps.schema.json limitBandPct). The DCA form warns of a planned order beyond it, less a 1 % cushion, before Launch; the runtime refuses such a bot. Absent: no bound (spot)." },
+    "priceRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sigFigs", "maxDecimals"],
+      "description": "A price has at most sigFigs significant figures and maxDecimals decimals; an integer is always valid (Hyperliquid: 5 and 6 - szDecimals).",
+      "properties": { "sigFigs": { "type": "integer", "minimum": 1 }, "maxDecimals": { "type": "integer", "minimum": 0 } }
+    },
+    "rungs": {
+      "type": "array",
+      "description": "The order book's aggregation rungs (0007 part 1).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nSigFigs"],
+        "properties": { "nSigFigs": { "enum": [2, 3, 4, 5, null] }, "mantissa": { "enum": [1, 2, 5] } }
+      }
+    },
+    "volume24h": { "$ref": "#/$defs/decimal", "description": "24-hour volume, a quote notional." },
+    "change24h": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "24-hour Hyperliquid mark-price change versus prevDayPx, percent; used by the selector column, sorts and Gainers/Losers (MH ruling 373)" }
+  },
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
+    "list": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["venue", "version", "caps", "rows"],
+      "properties": {
+        "venue": { "type": "string" },
+        "version": { "type": "string", "minLength": 1, "description": "Changes when any row changes." },
+        "caps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["spot", "types", "flags"],
+          "description": "What the venue offers the form. The first order type is the venue's default, used when a carried type is not offered.",
+          "properties": {
+            "spot": { "type": "boolean", "description": "Spot orders can be sent (true under `gcx run` since E15). When false, the form still shows Buy and Sell on a spot market and the runtime refuses the order." },
+            "spotListed": { "type": "boolean", "description": "Spot markets are listed: the selector's Spot tab, their chart, book and trades. Optional; when absent it is the value of `spot`. Kept for compatibility; under `gcx run` it equals `spot`." },
+            "types": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["market", "gc-market", "limit", "stop-market", "stop-limit", "trailing-stop", "trailing-stop-limit", "trailing-reverse", "trailing-reverse-limit"] } },
+            "flags": { "type": "array", "uniqueItems": true, "items": { "enum": ["postOnly", "reduceOnly", "improveOnly"] } },
+            "maxTimeInForce": { "type": "string", "pattern": "^\\d+$", "description": "The venue's longest time in force, milliseconds." },
+            "trailStartImproveOnly": { "type": "boolean" }
+          }
+        },
+        "rows": { "type": "array", "items": { "$ref": "#" } }
+      }
+    }
+  }
+}

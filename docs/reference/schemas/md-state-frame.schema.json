@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/md-state-frame.schema.json",
+  "title": "Market-data state frame",
+  "description": "The data of the panel socket's `md-state/<instrumentId>` topic (decision 0007 §2.16): how fresh the order book and the trades on screen are, as the runtime's liveness classifier (decision 0006 §2.2-2.3) sees them. One frame per channel on subscribe and on every change. The panel keeps no clock of its own on venue data: STALE greys the view with 'delayed since', ABSENT greys retained data with 'no data', except pending first frames; trades never grey on their own silence (QUIET). Mirrors src/panel/model/frames.ts (MdStateFrame) and src/runtime/marketdata/marketdata.ts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "instrument", "channel", "state", "since"],
+  "properties": {
+    "venue": { "type": "string" },
+    "instrument": { "type": "string", "description": "The instrument id, as in the topic." },
+    "channel": { "enum": ["book", "trades"], "description": "book: the worst current book lease, with pending first frames below LIVE/QUIET; trades: the tape." },
+    "state": { "enum": ["LIVE", "QUIET", "STALE", "ABSENT"], "description": "LIVE: fresh; QUIET: the timer channels are fresh and nobody traded lately; STALE: a check failed, the last value is kept with its age; ABSENT: no usable value." },
+    "pending": { "type": "boolean", "description": "Optional, true only for ABSENT while a newly opened lease awaits its first frame within 30 seconds. Keep retained data without a no-data notice. Omitted/false retains the existing ABSENT behavior; noFirstFrame and staleTooLong are never pending. Additive; nothing is stored or journaled." },
+    "since": { "type": "integer", "description": "Wall milliseconds. STALE: the last fresh frame (\"delayed since\"). LIVE or QUIET: when the run began. ABSENT: when the wait began." }
+  }
+}

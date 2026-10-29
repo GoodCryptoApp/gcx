@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/notify-settings.schema.json",
+  "title": "Notification settings",
+  "description": "The notification settings the runtime keeps (decision 0009; docs/notifications/telegram.md). Fields of the panel's settings (runtime-api.schema.json#/$defs/settings): GET /api/v1/settings answers them, POST /api/v1/settings writes the ones it carries and leaves the others as they were. A field never written answers its default.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "telegramButtons": {
+      "type": "boolean", "default": true,
+      "description": "Shortcut buttons under gcx's Telegram messages (0009 Amendment 1): Stop bot, Close position, Retry, Retry order, Relaunch, the three TP/SL shortcuts. Off: new messages carry the panel link only, and a press on an older message answers \"Shortcut buttons are off in Settings\" and does nothing."
+    },
+    "telegramConfirm": {
+      "type": "boolean", "default": true,
+      "description": "\"Ask before a Telegram shortcut acts\": the first press shows what the button will do, with Confirm and Cancel, for one minute; off, the first press acts. One switch for every button. A guard against a mistaken tap, not against another person."
+    },
+    "notifyManual": {
+      "type": "boolean", "default": true,
+      "description": "Settings › Alerts › Manual orders placed from gcx (rulings 46): the Telegram message of a manual order's fill and of its trigger or trailing start. Off: those messages are not sent. A manual order's repair and alerts are always sent."
+    },
+    "notifyOutside": {
+      "type": "boolean", "default": true,
+      "description": "Settings › Alerts › Orders placed outside gcx (rulings 46): a fill of an order placed outside gcx (the venue's own app or another tool) on a gcx account sends \"fill (external)\". Off: it does not. Seen while the account's stream is open."
+    },
+    "notifyBotDefaults": {
+      "type": "object", "additionalProperties": false, "required": ["stops", "tpSl", "fills", "fromLevel"],
+      "default": { "stops": true, "tpSl": true, "fills": true, "fromLevel": 0 },
+      "description": "Settings › Alerts › For new bots (rulings 46; 0009 d2): the notification switches a DCA bot gets when it is created, which the form shows and the person may change for that bot. Written whole. stops: bot stops or errors; tpSl: take-profit and stop-loss fills; fills: entry and averaging fills; fromLevel: those fills from this level on (0 is the entry order).",
+      "properties": {
+        "stops": { "type": "boolean" }, "tpSl": { "type": "boolean" }, "fills": { "type": "boolean" },
+        "fromLevel": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    }
+  }
+}

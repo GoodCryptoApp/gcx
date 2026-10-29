@@ -1,0 +1,561 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/bot-row.schema.json",
+  "title": "Bot row",
+  "description": "One DCA bot as the `bots` topic carries it (decision 0016 \u00a73.1, \u00a78.2; roadmap B9): its state as the reducer holds it (src/domain/dca/live.ts), its own position and PnL, its counters and settings, written by the runtime from the bot's fold (src/runtime/bots/view.ts). Total PnL = realizedPnl + unrealizedPnl + funding. Mirrors src/panel/model/frames.ts (BotRow).",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "seq",
+        "type",
+        "sourceId",
+        "instrumentId",
+        "venue",
+        "state",
+        "position",
+        "realizedPnl",
+        "unrealizedPnl",
+        "funding",
+        "fees",
+        "platformFees",
+        "invested",
+        "apr",
+        "counters",
+        "settings",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "const": "dca"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "removed": {
+          "const": true,
+          "description": "Added 2026-10-10 (0003b amendment 3 d1, rulings 339 and 413.3): the row's account is being removed from gcx or was removed with its trading history kept; the bot takes no command. Absent otherwise."
+        },
+        "account": {
+          "type": "string",
+          "description": "Added 2026-10-10 (0003b amendment 3 d1): with `removed`, the account's name (shown \"<name> (Account removed)\"), since its row in the accounts list is gone."
+        },
+        "released": {
+          "const": "account",
+          "description": "Added 2026-10-10 (0003b amendment 3 d2, ruling 413.4): with done error, the bot's account was removed from gcx; its line reads Account removed. Absent otherwise."
+        },
+        "display": {
+          "$ref": "instrument-display.schema.json"
+        },
+        "instrumentId": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "long",
+            "short"
+          ],
+          "description": "The cycle's side, or the one the settings fix; absent for a signal bot before its first signal."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "The person's name for the bot (catalogue E11): set at creation (B8), changed by modify (B65)."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "The person's note on the bot."
+        },
+        "state": {
+          "enum": [
+            "waiting-start",
+            "waiting-entry",
+            "entering",
+            "in-position",
+            "closing",
+            "cooldown",
+            "done"
+          ],
+          "description": "Decision 0016 \u00a73.1."
+        },
+        "done": {
+          "enum": [
+            "tp",
+            "sl",
+            "stopped",
+            "closed",
+            "ended",
+            "liquidated",
+            "dust",
+            "error",
+            "adl"
+          ],
+          "description": "Why a done bot ended. adl (added 2026-10-05, decision 0016 Amendment 3): stopped by the exchange's auto-deleveraging, as liquidated by its liquidation. error (added 2026-10-05, MH audit line 13): the exchange refused one of its orders for the account's API wallet (expired or no longer approved) and the bot stopped as goodcryptoX's error stop did, its text in `error`. dust (added 2026-10-02): a spot buy's fee taken in the coin left less than one size step, nothing more was to be bought, and the bot ended holding it."
+        },
+        "error": {
+          "type": "string",
+          "description": "Added 2026-10-05 (MH audit line 13): with done error, the exchange's text that stopped the bot; also (RULINGS 218 b) while the bot waits in repair on the exchange's refusal of its spot sale of the rest, that refusal's text."
+        },
+        "why": {
+          "type": "string",
+          "description": "Added 2026-10-05 (ruling 203): with `error`, our explanation of what the error was, in the person's language (the `language` setting; English when none is chosen or the language has no text for it); the exchange's own words stay raw in `error`. Absent without `error`; a reader that does not know it shows `error` alone."
+        },
+        "paused": {
+          "const": true,
+          "description": "Added 2026-10-04 (ruling 73 (a)): the trading key that created the bot is suspended or revoked; the bot adds nothing (its entry and averaging orders cancelled, a new cycle waits) and keeps its take-profit, stop-loss and closes. Absent: not paused."
+        },
+        "repair": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reasons",
+            "orders"
+          ],
+          "description": "0016 d15: new risk withheld until the person chooses: the bot's own reasons and its orders the order reducer holds in REPAIR. Absent: not in repair.",
+          "properties": {
+            "reasons": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "entry-refused",
+                  "allowance",
+                  "venue-flat",
+                  "wallet-expiring",
+                  "key-limit",
+                  "differs"
+                ]
+              },
+              "description": "key-limit (added 2026-10-04): the trading key that created the bot cannot start the next cycle: its limits have no room for it (the 24 hours, the largest order, the account or the market; rulings 109 2 (a), 171 (a)); the bot goes on by itself as soon as they have room (ruling 170 (b)). differs (added 2026-10-05, decision 0016 Amendment 2): the exchange's position differs from the bots' records and the item is open (`attention`)."
+            },
+            "orders": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "waitingPrice": {
+          "const": true,
+          "description": "Added 2026-10-05 (MH's audit list line 4 iii): gcx has had no price of the bot's coin since it started or woke, and the bot's entry, averaging orders or timer wait for one; it goes on by itself at the first price. A status, not a repair. Absent: not waiting for a price."
+        },
+        "attention": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "key",
+            "exchange",
+            "since"
+          ],
+          "description": "Deprecated with 0028 d18 (stream 2, 2026-10-06; never in a public release, but it is in the test dmgs 6145 and 6272; the Dashboard shows no bot item, no exit-rest row of a bot and no waiting rest of the person until stream 3): no longer sent; the runtime topic's `bot` row carries every item of the bot, this one included. A runtime before it: added 2026-10-05 (decision 0016 Amendment 2, replacing the warning of MH's audit list line 33): \"Only gcx trades this coin\" is on and the exchange's position on the coin (on spot, the holding) differs from the sum of gcx's bots' records there on two trusted reads 90 s apart: the bot paused its new orders and waits for the person's choice. key: the episode's (the Dashboard's Needs your attention row; POST /api/v1/attention/done); exchange: the exchange's signed size as confirmed; since: the last agreement; done: the Dashboard row was hidden by its Done (the bot stays paused). Absent while nothing differs and on a done bot.",
+          "properties": {
+            "kind": {
+              "const": "position"
+            },
+            "key": {
+              "type": "string"
+            },
+            "exchange": {
+              "$ref": "order-row.schema.json#/$defs/signed"
+            },
+            "since": {
+              "type": "integer"
+            },
+            "done": {
+              "const": true
+            }
+          }
+        },
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size"
+          ],
+          "description": "The bot's own count of its current cycle (0016 d11), not the exchange's.",
+          "properties": {
+            "size": {
+              "$ref": "order-row.schema.json#/$defs/decimal"
+            },
+            "vwap": {
+              "$ref": "order-row.schema.json#/$defs/decimal"
+            },
+            "average": {
+              "type": "string"
+            },
+            "leverage": {
+              "type": "string"
+            },
+            "margin": {
+              "type": "string"
+            },
+            "marginMode": {
+              "type": "string"
+            },
+            "liquidationPrice": {
+              "type": "string"
+            }
+          }
+        },
+        "realizedPnl": {
+          "$ref": "order-row.schema.json#/$defs/signed",
+          "description": "Every cycle's, fees included."
+        },
+        "unrealizedPnl": {
+          "$ref": "order-row.schema.json#/$defs/signed",
+          "description": "The cycle's position at the runtime's latest price against its average."
+        },
+        "funding": {
+          "$ref": "order-row.schema.json#/$defs/signed",
+          "description": "Paid negative, received positive: the sum of its cycles' funding (src/domain/dca/live.ts Iteration.funding), each payment on its account and coin split by the bot's share of the account's position (0016 Amendment 1 B64)."
+        },
+        "fees": {
+          "$ref": "order-row.schema.json#/$defs/signed",
+          "description": "Exchange fees of every fill of the bot's orders: the venue's fee less the part that is gcx's platform fee (platformFees). Negative for a maker whose rebate (Hyperliquid pays rebates as negative fees) is larger than the exchange's part."
+        },
+        "platformFees": {
+          "$ref": "order-row.schema.json#/$defs/decimal",
+          "description": "Added in A46. gcx's platform fee of every fill of the bot's orders (Hyperliquid's builderFee, src/domain/dca/live.ts Iteration.platformFees). The venue's fee includes it, so realizedPnl already has both fees and platformFees taken out."
+        },
+        "invested": {
+          "$ref": "order-row.schema.json#/$defs/decimal",
+          "description": "goodcryptoX's Invested (EN algo.dcaInvestedInfo): the largest notional of a cycle's entry and averaging orders, over every cycle; the base of the percentages."
+        },
+        "apr": {
+          "$ref": "order-row.schema.json#/$defs/signed",
+          "description": "goodcryptoX's APR: the realized PnL including funding (exchange and platform fees already inside trading PnL) over Invested, a year's worth at the rate since the bot was made, in percent, as of the row."
+        },
+        "investedPeak": {
+          "$ref": "order-row.schema.json#/$defs/decimal",
+          "description": "Added 2026-10-17 (0016 Amendment 10, Max reached): the most the bot had at one time in its position (its cycles' cost at their entry prices, the current cycle and the parts still to close, fees outside) and in its entry and averaging orders resting on the exchange (each at its price \u00d7 what is left of it; a take-profit or a stop-loss counts for nothing). Absent while not positive."
+        },
+        "investedAverage": {
+          "$ref": "order-row.schema.json#/$defs/decimal",
+          "description": "Added 2026-10-17 (0016 Amendment 10, Average): what the bot had in its position and its resting entry and averaging orders (as investedPeak counts them) on average over its running time (from its creation to its end, else the row's time); time with nothing counts as nothing. Moves with time: also in the bots topic's refresh. Absent while not positive."
+        },
+        "aprPeak": {
+          "$ref": "order-row.schema.json#/$defs/signed",
+          "description": "Added 2026-10-17 (0016 Amendment 10): `apr` on investedPeak instead of Invested. Moves with time: also in the refresh. Absent with investedPeak, and while no time ran."
+        },
+        "aprAverage": {
+          "$ref": "order-row.schema.json#/$defs/signed",
+          "description": "Added 2026-10-17 (0016 Amendment 10): `apr` on investedAverage instead of Invested; the running time cancels, so it is the yearly rate while money was held, unmoved while the bot holds nothing. Moves with time: also in the refresh. Absent with investedAverage."
+        },
+        "ownFunds": {
+          "$ref": "order-row.schema.json#/$defs/decimal",
+          "description": "Added 2026-10-17 (0016 Amendment 10): Invested in own funds, the largest of a cycle's entry and averaging orders' notional divided by that cycle's leverage (read at its entry; a cycle before the bot's first known leverage takes that one). Perpetuals only; absent on spot, before any leverage is known, and while not positive."
+        },
+        "ownFundsPeak": {
+          "$ref": "order-row.schema.json#/$defs/decimal",
+          "description": "Added 2026-10-17 (0016 Amendment 10): investedPeak in own funds, each cycle's cost and resting orders divided by its leverage. As ownFunds, absent on spot, before any leverage is known, and while not positive."
+        },
+        "ownFundsAverage": {
+          "$ref": "order-row.schema.json#/$defs/decimal",
+          "description": "Added 2026-10-17 (0016 Amendment 10): investedAverage in own funds. Moves with time: also in the refresh. As ownFunds, absent on spot, before any leverage is known, and while not positive."
+        },
+        "breakeven": {
+          "const": true,
+          "description": "B18: the current cycle's take-profit was moved to break-even (its average plus the fees paid so far)."
+        },
+        "change": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requestId",
+            "outcome"
+          ],
+          "properties": {
+            "requestId": {
+              "type": "string"
+            },
+            "outcome": {
+              "enum": [
+                "applied",
+                "reverted",
+                "failed"
+              ]
+            }
+          },
+          "description": "Added 2026-10-18 (MH 726 (e)): the current cycle's take-profit's `change` (order-row.schema.json): the last command since the runtime started that moved it (Move to break even) and how it ended at the exchange. Absent while not known, and after a restart."
+        },
+        "counters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "iteration",
+            "cycles",
+            "averagingFilled",
+            "averagingPlanned",
+            "averagingFailed"
+          ],
+          "properties": {
+            "iteration": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cycles": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Cycles that reached zero (0016 \u00a73.1)."
+            },
+            "averagingFilled": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "averagingPlanned": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "averagingFailed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "scale": {
+          "type": "string",
+          "description": "A2 d69: the current cycle's journaled sizing factor; absent in older rows means one"
+        },
+        "settings": {
+          "$ref": "dca-bot-create.schema.json"
+        },
+        "createdAt": {
+          "type": "integer"
+        },
+        "startedAt": {
+          "type": "integer",
+          "description": "Added 2026-10-17 (MH 706 (a)): when the bot really started: at its creation with no start time, else when its start time came or Start now was pressed. Absent only while it waits for its start (derived by the fold, so a bot any build started has it)."
+        },
+        "endedAt": {
+          "type": "integer"
+        },
+        "cycleAt": {
+          "type": "integer",
+          "description": "When the current iteration's first entry was made."
+        },
+        "pastStop": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "from",
+            "to"
+          ],
+          "properties": {
+            "from": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "to": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "spot": {
+              "const": true
+            }
+          },
+          "description": "Added 2026-10-17 (MH 623 (f)): the current cycle's stop, worked out from the expected loss (settings slLossPct), comes before averaging orders `from` to `to`, which the cycle does not place; `spot` on a spot pair, where no leverage moves it. Absent otherwise. The details and the Dashboard's Worth a look name them."
+        },
+        "accountPosition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size"
+          ],
+          "properties": {
+            "size": {
+              "type": "string"
+            },
+            "average": {
+              "type": "string"
+            },
+            "side": {
+              "enum": [
+                "long",
+                "short"
+              ]
+            },
+            "leverage": {
+              "type": "string"
+            },
+            "margin": {
+              "type": "string"
+            },
+            "marginMode": {
+              "enum": [
+                "cross",
+                "isolated"
+              ]
+            },
+            "liquidationPrice": {
+              "type": "string"
+            }
+          }
+        },
+        "reinvested": {
+          "type": "string"
+        },
+        "createdBy": {
+          "$ref": "order-row.schema.json#/$defs/createdBy"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "state",
+        "position",
+        "gridProfit",
+        "total"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "const": "grid"
+        },
+        "endedAt": {"type": "integer"},
+        "leverage": {"type": "string", "description": "d100(b): the last recorded grid leverage, served even while its position is flat; absent on spot or an older grid"},
+        "state": {
+          "enum": [
+            "waiting-activation",
+            "waiting-signal",
+            "starting",
+            "running",
+            "closing",
+            "done"
+          ]
+        },
+        "settings": {
+          "type": "object"
+        },
+        "gridProfit": {
+          "type": "string"
+        },
+        "gridProfitUnit": {
+          "enum": [
+            "base",
+            "quote"
+          ],
+          "description": "Unit of Grid profit; absent in older rows means quote"
+        },
+        "gridProfitCoin": {
+          "type": "string",
+          "description": "Retained coin from completed round trips; absent means zero"
+        },
+        "gridProfitQuote": {
+          "type": "string",
+          "description": "Quote ledger contribution used in Total"
+        },
+        "trailing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gain", "value"],
+          "properties": { "gain": { "type": "string" }, "value": { "type": "string" } },
+          "description": "Added 2026-10-28 (0040 amendment 6): the trailing exits' running sums, decimal strings in the quote: `gain` = Σ per fill of a trailing exit (fill − level) × size in the exit's favour − the fee paid + the platform fee × level ÷ fill; `value` = Σ level × size. What trailing earned against limit exits = gain + the account's maker rate × value. Absent until a trailing exit fills (both zero)"
+        },
+        "total": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "position": {
+          "type": "object"
+        },
+        "orders": {
+          "type": "array"
+        },
+        "seq": {
+          "type": "integer"
+        },
+        "accountPosition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size"
+          ],
+          "properties": {
+            "size": {
+              "type": "string"
+            },
+            "average": {
+              "type": "string"
+            },
+            "side": {
+              "enum": [
+                "long",
+                "short"
+              ]
+            },
+            "leverage": {
+              "type": "string"
+            },
+            "margin": {
+              "type": "string"
+            },
+            "marginMode": {
+              "enum": [
+                "cross",
+                "isolated"
+              ]
+            },
+            "liquidationPrice": {
+              "type": "string"
+            }
+          }
+        },
+        "reinvested": {
+          "type": "string"
+        },
+        "investedCurrent": {
+          "type": "string"
+        },
+        "coinFeePct": {
+          "type": "string",
+          "description": "Grid on spot: the coin-fee percent a buy level's size is grossed up by (the size the grid rests for that level is the plan divided by one minus this); absent means the default rate. Additive: the previous build ignores it and reads the row as before"
+        },
+        "aprCurrent": {
+          "type": "string"
+        },
+        "ownFunds": {
+          "type": "string"
+        },
+        "ownFundsCurrent": {
+          "type": "string"
+        },
+        "ownFundsAverage": {
+          "type": "string"
+        },
+        "filledOrders": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "endedAt": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "First transition to done, retained on replay; absent on older rows"
+        },
+        "createdBy": {
+          "$ref": "order-row.schema.json#/$defs/createdBy"
+        }
+      }
+    }
+  ]
+}

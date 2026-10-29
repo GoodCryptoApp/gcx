@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/order-intent.schema.json",
+  "title": "Order intent",
+  "description": "What the order reducer asks the runtime to do. The reducer never calls a venue: the runtime journals a place with a fresh cloid (intent.recorded) before sending it and never sends it twice, sends the intents of one step in the order they were emitted and delivers timers back as inputs. Every price and size is a decimal string; numbers are only counts and millisecond timestamps. Mirrors src/domain/orders/wire.ts (Intent). See decision 0004 and docs/reference/orders/primitives.md.",
+  "oneOf": [
+    { "$ref": "#/$defs/place" },
+    { "$ref": "#/$defs/cancel" },
+    { "$ref": "#/$defs/timer" }
+  ],
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string." },
+    "id": { "type": "string", "minLength": 1 },
+    "attempt": { "type": "integer", "minimum": 1, "description": "1, 2, …: one per send of the order; with orderId the key the runtime journals." },
+    "time": { "type": "integer", "minimum": 0, "description": "Milliseconds since the epoch." },
+    "place": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "orderId", "attempt", "instrumentId", "side", "size", "type", "reduceOnly", "postOnly"],
+      "properties": {
+        "kind": { "const": "place" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "instrumentId": { "$ref": "#/$defs/id" },
+        "side": { "enum": ["buy", "sell"] },
+        "size": { "$ref": "#/$defs/decimal", "description": "Base size, already a multiple of the size step." },
+        "type": { "enum": ["market", "limit", "stop"], "description": "market: Ioc priced from the book, at most capPct % through the touch. limit: rests at price. stop: the venue's native stop-loss at trigger; with price a limit trigger, without it a market trigger whose limit price the adapter sets capPct % through the trigger." },
+        "price": { "$ref": "#/$defs/decimal" },
+        "trigger": { "$ref": "#/$defs/decimal" },
+        "capPct": { "$ref": "#/$defs/decimal", "description": "Market: 1 for an entry (not read when book is given); 2, 5, 10 across the attempts of a protective order. A native market stop: 10, the venue's own market-trigger slippage." },
+        "book": { "type": "object", "additionalProperties": false, "properties": { "ceilingPct": { "$ref": "#/$defs/decimal" } }, "description": "Ruling 141: a market entry priced from the book at its send, max(10 %, 1.5 × the distance its size reaches), at most ceilingPct when given (absent: a person sent the warning anyway). A spot market buy sized in quote has none: it is sent at capPct (1 %) through the ask (MH's ruling (b), 2026-10-02)." },
+        "quote": { "$ref": "#/$defs/decimal", "description": "A spot market buy sized in quote (MH's ruling (b)): the amount. The runtime sends at most quote ÷ the price it sends at, floored to the lot, so the venue never holds more than the amount when the ask rose after the size was set. Absent: the size as planned (every other place, and every place written before this field)." },
+        "reduceOnly": { "type": "boolean" },
+        "postOnly": { "type": "boolean" },
+        "expiresAt": { "$ref": "#/$defs/time", "description": "Time in force: the engine cancels the order at this time; a venue with good-till-date may use it natively." }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "market" } } }, "then": { "required": ["capPct"], "properties": { "capPct": { "$ref": "#/$defs/decimal" }, "price": false, "trigger": false } } },
+        { "if": { "properties": { "type": { "const": "limit" } } }, "then": { "required": ["price"], "properties": { "price": { "$ref": "#/$defs/decimal" }, "trigger": false, "capPct": false } } },
+        { "if": { "properties": { "type": { "const": "stop" } } }, "then": { "required": ["trigger"], "properties": { "trigger": { "$ref": "#/$defs/decimal" } }, "oneOf": [{ "required": ["price"], "properties": { "price": { "$ref": "#/$defs/decimal" }, "capPct": false } }, { "required": ["capPct"], "properties": { "capPct": { "$ref": "#/$defs/decimal" }, "price": false } }] } }
+      ]
+    },
+    "cancel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "orderId", "attempt"],
+      "description": "Cancel one sent attempt, by the cloid the runtime journaled for it; an imported send (an order placed outside gcx, taken into the book on its first change, 0004 amendment 3 d4), which has no cloid, by the venue's order id. Exactly one of the two.",
+      "oneOf": [{ "required": ["cloid"], "properties": { "cloid": true } }, { "required": ["oid"], "properties": { "oid": true } }],
+      "properties": {
+        "kind": { "const": "cancel" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "cloid": { "$ref": "#/$defs/id" },
+        "oid": { "type": "string", "pattern": "^\\d+$", "description": "An imported send's order id at the venue." }
+      }
+    },
+    "timer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "orderId", "gen", "deadline", "purpose"],
+      "description": "Deliver a timer input with this generation at the deadline. A newer timer of the order makes an older one stale; the reducer ignores stale generations. After a restart the runtime re-arms every timer found in the state.",
+      "properties": {
+        "kind": { "const": "timer" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "gen": { "type": "integer", "minimum": 1 },
+        "deadline": { "$ref": "#/$defs/time" },
+        "purpose": { "enum": ["delay", "trigger", "expiry", "native", "resend", "late", "bound"], "description": "delay: timed placement; trigger: the trigger timeout's end point; expiry: time in force; native: a native stop's fill check after our feed crossed it; resend: no longer armed (0013 Amendment 1 d13), kept for old journals; bound: two minutes from when a send was due (an unknown send goes to repair then; an exit held behind its sibling goes to the missed list); late: a late-fill window, a bracket parent's or that of an Ioc whose acknowledged execution its fills do not yet show." }
+      }
+    }
+  }
+}

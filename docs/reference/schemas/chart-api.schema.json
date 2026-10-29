@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/chart-api.schema.json",
+  "title": "Chart API",
+  "description": "What the runtime serves the panel's chart (decision 0005 §1.4, 0006 §2.4): GET /api/v1/chart/config, GET /api/v1/chart/symbol/{instrumentId}, GET /api/v1/chart/candles?instrument=&resolution=&from=&to=&countBack=, and the forming bar on the panel socket topic candles/{instrument}/{resolution}. Prices and volumes are decimal strings, times epoch milliseconds. Mirrors src/panel/model/chart/candles.ts.",
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^-?(\\d+\\.?\\d*|\\.\\d+)$" },
+    "resolution": { "enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w", "1M"], "description": "Hyperliquid's own intervals; no seconds." },
+    "config": {
+      "type": "object", "additionalProperties": false, "required": ["resolutions"],
+      "properties": { "resolutions": { "type": "array", "items": { "$ref": "#/$defs/resolution" }, "minItems": 1 } }
+    },
+    "symbol": {
+      "description": "The instrument id is opaque (a HIP-3 id holds a colon). priceDecimals is 6 − szDecimals on Hyperliquid perps and 8 − szDecimals on spot, from the domain's precision rule; the chart's price scale is 10^priceDecimals.",
+      "type": "object", "additionalProperties": false, "required": ["instrumentId", "venue", "name", "description", "kind", "quote", "priceDecimals"],
+      "properties": {
+        "instrumentId": { "type": "string" }, "venue": { "type": "string" }, "name": { "type": "string" }, "description": { "type": "string" },
+        "kind": { "enum": ["perp", "spot"] }, "quote": { "type": "string" }, "priceDecimals": { "type": "integer", "minimum": 0, "maximum": 8 }
+      }
+    },
+    "bar": {
+      "description": "One bar, opened at t. Also the data of a candles/{instrument}/{resolution} message (the forming bar).",
+      "type": "object", "additionalProperties": false, "required": ["t", "o", "h", "l", "c", "v"],
+      "properties": {
+        "t": { "type": "integer" }, "o": { "$ref": "#/$defs/decimal" }, "h": { "$ref": "#/$defs/decimal" }, "l": { "$ref": "#/$defs/decimal" },
+        "c": { "$ref": "#/$defs/decimal" }, "v": { "$ref": "#/$defs/decimal" }
+      }
+    },
+    "candles": {
+      "description": "Oldest first, no duplicate t. noData once the range lies beyond what the venue serves (its most recent 5,000 bars per interval).",
+      "type": "object", "additionalProperties": false, "required": ["bars", "noData"],
+      "properties": { "bars": { "type": "array", "items": { "$ref": "#/$defs/bar" } }, "noData": { "type": "boolean" } }
+    }
+  }
+}

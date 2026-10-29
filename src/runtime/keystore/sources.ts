@@ -8,10 +8,10 @@
  */
 import { spawn } from "node:child_process";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { open, readFile, rm } from "node:fs/promises";
 import { hostname, userInfo } from "node:os";
-import { join, win32 } from "node:path";
+import { dirname, join, win32 } from "node:path";
 import { writeAtomic } from "../fs/atomic.js";
 import { KeystoreError } from "./format.js";
 
@@ -142,27 +142,31 @@ export const DPAPI_OWNER = "unlock.dpapi.owner";
 const ownerHere = (): string => createHash("sha256").update(`gcx-dpapi-owner:${userInfo().username}@${hostname()}`).digest("hex");
 
 /**
- * Windows: a DPAPI current-user blob in `<data>/unlock.dpapi`, through PowerShell `ProtectedData`, secret and blob on
- * stdin and stdout. Only with the user's profile loaded (exit 3 otherwise): the "at log on" task, never "run whether
- * user is logged on or not". A blob opens only for the Windows account (and computer) that sealed it: `DPAPI_OWNER` says
- * whose it is, written with the blob and at a read that opens one without it or with another (unlock-retry), so a data folder
- * copied to another account or computer is known as such (`elsewhere`) instead of tried again for ever.
+ * Windows: a DPAPI current-user blob in `<data>/unlock.dpapi`, through gcx-dpapi.exe beside this Node, or PowerShell
+ * when the tool is absent (0024 amendment 5). Both use ProtectedData, no entropy and binary stdin/stdout. Only with the
+ * user's profile loaded (exit 3 otherwise, from either tool): the "at log on" task, never "run whether user is logged on
+ * or not". A blob opens only for the Windows account (and computer) that sealed it: `DPAPI_OWNER` says whose it is,
+ * written with the blob and at a read that opens one without it or with another (unlock-retry), so a data folder copied
+ * to another account or computer is known as such (`elsewhere`) instead of tried again for ever.
  */
 export function dpapi(dataDir: string): StoringSource {
   const kind = "dpapi";
   const blobPath = join(dataDir, "unlock.dpapi"), ownerPath = join(dataDir, DPAPI_OWNER);
   const note = (): string | null => { try { return readFileSync(ownerPath, "utf8"); } catch { return null; } };
-  const ps = (op: "Protect" | "Unprotect", input: Buffer, limitMs?: number) => runTool(kind, powershell(), ["-NoProfile", "-NonInteractive", "-Command", DPAPI(op)], input, limitMs);
+  const tool = join(dirname(process.execPath), "gcx-dpapi.exe");
+  const transform = (op: "Protect" | "Unprotect", input: Buffer, limitMs?: number) => existsSync(tool)
+    ? runTool(kind, tool, [op.toLowerCase()], input, limitMs)
+    : runTool(kind, powershell(), ["-NoProfile", "-NonInteractive", "-Command", DPAPI(op)], input, limitMs);
   return {
     kind,
     async store(secret, limitMs) {
-      await writeAtomic(blobPath, await ps("Protect", secret, limitMs));
+      await writeAtomic(blobPath, await transform("Protect", secret, limitMs));
       await writeAtomic(ownerPath, Buffer.from(ownerHere()));
     },
     async read(limitMs) {
       let blob: Buffer;
       try { blob = await readFile(blobPath); } catch { throw new KeystoreError("unavailable", `${kind}: no unlock.dpapi in the data folder`); }
-      const secret = secretOf(kind, await ps("Unprotect", blob, limitMs));
+      const secret = secretOf(kind, await transform("Unprotect", blob, limitMs));
       // The account that opened the blob owns it: a missing note, or one that differs (a renamed PC or user), is written (judge Opus, finding 6).
       if (note() !== ownerHere()) await writeAtomic(ownerPath, Buffer.from(ownerHere())).catch(() => undefined);
       return secret;

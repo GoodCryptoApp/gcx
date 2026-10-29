@@ -11,6 +11,13 @@
 - [Moving goodcryptoX](install/moving.md)
 - [Roadmap](https://goodcrypto.app/roadmap?utm_source=docs&utm_medium=sidebar&utm_campaign=roadmap-3-0)
 
+- [DCA bot](bots/dca.md)
+- [Features & setup](bots/dca-setup.md)
+- [Running the bot](bots/dca-running.md)
+- [Grid bot](bots/grid.md)
+- [Grid setup](bots/grid-setup.md)
+- [Running a Grid](bots/grid-running.md)
+
 ## Legal
 
 - [Terms of service](legal/terms.md)

@@ -1,0 +1,658 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/lists-api.schema.json",
+  "title": "Lists API",
+  "description": "The other shapes of the lists contract (decision 0007 part 2 §9.3–9.10): the `account-state` topic, a History page, the order and bot details objects, the bot command, the cancel body and the close command. Each is a definition under $defs. Mirrors src/panel/model/frames.ts.",
+  "$defs": {
+    "activityDetails": {"type": "object", "additionalProperties": false, "required": ["seq", "activity", "activityAfter", "nextLimit"], "properties": {"seq": {"type": "integer"}, "activity": {"$ref": "#/$defs/activityPage/properties/activity"}, "activityAfter": {"type": ["string", "null"]}, "nextLimit": {"type": "integer", "minimum": 30}}},
+      "activityPage": {"type": "object", "additionalProperties": false, "required": ["activity", "activityAfter", "nextLimit"], "properties": {"activity": {"type": "array", "items": {"oneOf": [{"type": "object", "additionalProperties": false, "required": ["kind", "id", "at", "order"], "properties": {"kind": {"const": "order"}, "id": {"type": "string"}, "at": {"type": "integer"}, "order": {"$ref": "order-row.schema.json"}}}, {"type": "object", "additionalProperties": false, "required": ["kind", "id", "at", "usdc"], "properties": {"kind": {"const": "funding"}, "id": {"type": "string"}, "at": {"type": "integer"}, "usdc": {"type": "string"}}}, {"type": "object", "additionalProperties": false, "required": ["kind", "id", "at", "leverage"], "properties": {"kind": {"const": "leverage"}, "id": {"type": "string"}, "at": {"type": "integer"}, "leverage": {"type": "string"}}}]}}, "activityAfter": {"type": ["string", "null"]}, "nextLimit": {"type": "integer", "minimum": 30}}},
+      "gridModifyFields": {"type": "object", "additionalProperties": false, "minProperties": 1, "properties": {"investment": {"$ref": "grid-bot-create.schema.json#/properties/investment"}, "exitType": {"$ref": "grid-bot-create.schema.json#/properties/exitType"}, "distance": {"$ref": "grid-bot-create.schema.json#/properties/distance"}, "rule": {"$ref": "grid-bot-create.schema.json#/properties/rule"}, "mode": {"$ref": "grid-bot-create.schema.json#/properties/mode"}, "sizing": {"$ref": "grid-bot-create.schema.json#/properties/sizing"}, "reinvest": {"$ref": "grid-bot-create.schema.json#/properties/reinvest"}, "stops": {"$ref": "grid-bot-create.schema.json#/properties/stops"}, "name": {"$ref": "grid-bot-create.schema.json#/properties/name"}, "wholePosition": {"$ref": "grid-bot-create.schema.json#/properties/wholePosition"}, "note": {"$ref": "grid-bot-create.schema.json#/properties/note"}, "profitInCoin": {"$ref": "grid-bot-create.schema.json#/properties/profitInCoin"}, "followUp": {"$ref": "grid-bot-create.schema.json#/properties/followUp"}, "followDown": {"$ref": "grid-bot-create.schema.json#/properties/followDown"}, "useHeld": {"$ref": "grid-bot-create.schema.json#/properties/useHeld"}, "upTo": {"$ref": "grid-bot-create.schema.json#/properties/upTo"}, "downTo": {"$ref": "grid-bot-create.schema.json#/properties/downTo"}, "entry": {"$ref": "grid-bot-create.schema.json#/properties/entry"}, "band": {"type": "object", "additionalProperties": false, "minProperties": 1, "properties": {"top": {"$ref": "grid-bot-create.schema.json#/properties/band/properties/top"}, "bottom": {"$ref": "grid-bot-create.schema.json#/properties/band/properties/bottom"}, "count": {"$ref": "grid-bot-create.schema.json#/properties/band/properties/count"}, "log": {"$ref": "grid-bot-create.schema.json#/properties/band/properties/log"}, "upTo": {"$ref": "grid-bot-create.schema.json#/properties/band/properties/upTo"}, "downTo": {"$ref": "grid-bot-create.schema.json#/properties/band/properties/downTo"}}}, "signal": {"$ref": "grid-bot-create.schema.json#/properties/signal"}}},
+    "listPage": {
+      "description": "C64 explicit whole-store display read. Held names feed exactly the same bulk predicate. No query runs on a live-row event. Cursor boundaries retain comparison facts rather than promising a frozen live snapshot.",
+      "type": "object", "additionalProperties": false,
+      "required": ["seq", "rows", "state", "total", "open", "names", "stale"],
+      "properties": {
+        "recentForcedCloses": {"type": "array", "items": {"$ref": "position-row.schema.json#/$defs/forcedClose"}, "description": "Optional recent forced-close facts; a supplied empty array clears prior facts. Display-only, excluded from all close/increase commands and live balances."},
+        "seq": {"type": "integer", "minimum": 0},
+        "rows": {"type": "array", "items": {"oneOf": [{"$ref": "order-row.schema.json"}, {"$ref": "position-row.schema.json"}, {"$ref": "bot-row.schema.json"}]}},
+        "state": {"enum": ["waiting", "live", "stale", "unavailable"]},
+        "waitingFor": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Optional pending first-read account IDs for venue-backed lists. Omitted for known data and local Bots/History owners; absence does not authorize client metadata reconstruction."},
+        "nextCursor": {"type": "string", "description": "Present when another page exists; authoritative for newest-first History, which does not count the whole query."}, "stale": {"type": "boolean"}, "total": {"type": "integer", "minimum": 0, "description": "Matching-row count; a visited-match lower bound for default newest-first History pages, an exact count for explicitly requested other sorts."},
+        "names": {"type": "object", "additionalProperties": false, "required": ["accounts", "instruments"], "properties": {"accounts": {"type": "object", "additionalProperties": {"type": "string"}}, "instruments": {"type": "object", "additionalProperties": {"type": "string"}}}},
+        "open": {"type": "object", "additionalProperties": false, "required": ["count", "accounts", "bots", "partly"], "properties": {"count": {"type": "integer", "minimum": 0}, "accounts": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}, "bots": {"type": "integer", "minimum": 0}, "partly": {"type": "integer", "minimum": 0}}}
+      }
+    },
+    "cancelBody": {
+      "description": "POST /api/v1/orders/{id}/cancel from a list row. The runtime deduplicates on requestId; the row says 'cancel requested' until the order is terminal.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": { "requestId": { "type": "string", "minLength": 1 } }
+    },
+    "cancelAllBody": {
+      "description": "POST /api/v1/orders/cancel-all (MH 2026-10-05: \"Cancel all / Stop all, applied to whatever is filtered in the list\"; \"also in the API and MCP, with filters\"): every open order the filter matches, as the Open orders list shows them (src/domain/lists/filter.ts), each cancelled as its own cancel would be (one request per order, under requestId/<order id>), orders placed outside gcx included when they match. A bot's order is never cancelled here: it is listed in refused (\"This order is a bot's: stop the bot to cancel its orders.\"), as its row has no Cancel; the bot's Stop cancels it. Every filter field is optional; without one, every order the caller may see: a person's every open order, a trading key's only the orders it placed. Answers allAnswer.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "sourceId": { "type": "string", "description": "The account (the list's scope: this exchange)." },
+        "instrumentId": { "type": "string", "description": "The pair (the list's scope: this pair)." },
+        "side": { "enum": ["buy", "sell"] },
+        "type": { "enum": ["market", "limit", "stop-market", "trailing", "liquidation"], "description": "The list's type filter: a family of order types." },
+        "status": { "enum": ["planned", "sending", "open", "unknown"], "description": "The order row's status." },
+        "source": { "enum": ["ours", "external"], "description": "Placed by gcx, or outside it." },
+        "q": { "type": "string", "maxLength": 128, "description": "The list's search text." },
+        "children": { "type": "boolean", "description": "Legacy child-order filter, still accepted by the API. The panel no longer exposes a Child orders toggle. Absent: true." },
+        "agentOnly": {
+          "type": "boolean",
+          "default": false
+        },
+        "keyId": {
+          "type": "string"
+        }
+      }
+    },
+    "stopAllBody": {
+      "description": "POST /api/v1/bots/stop-all (MH 2026-10-05): every bot not done that the filter matches, as the Bots list shows them, each stopped as its own Stop would be (bot command stop, under requestId/<bot id>; a stopped bot cancels its own orders and closes per its close-on-stop setting). Every filter field is optional; without one, every bot the caller may see: a person's every bot, a trading key's only the bots it created. Answers allAnswer.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "sourceId": { "type": "string", "description": "The account." },
+        "instrumentId": { "type": "string", "description": "The pair." },
+        "side": { "enum": ["buy", "sell"], "description": "buy: long bots; sell: short bots." },
+        "type": { "enum": ["dca"] },
+        "status": { "enum": ["waiting-start", "waiting-entry", "entering", "in-position", "closing", "cooldown"], "description": "The bot's state." },
+        "agentOnly": { "type": "boolean", "default": false },
+        "keyId": { "type": "string" },
+        "q": { "type": "string", "maxLength": 128, "description": "The list's search text." }
+      }
+    },
+    "closeAllBody": {
+      "description": "POST /api/v1/positions/close-all (MH 2026-10-09, the third of Cancel all and Stop all): every position the filter matches, as the Positions list shows them, read from the exchange now, each closed as its own Close would be (a reduce-only market order for the whole position as the exchange reports it, under requestId/<account id>:<instrument>). Every filter field is optional; without one, every position the caller may see: a person's every account's, a trading key's only the accounts ticked for it (a key with no limits: 422 key.noLimits). A bot's part of a position (a running bot's, or a bot's stopped without closing that still holds it) is never sold from under it (ruling 397, MH 2026-10-09): with bots keep it is left, listed in refused with the code bot-position, and the rest of that position (a mixed one, partly the person's) is closed as a reduce-only Close of the position as gcx reads it at the send less what the bots hold, rounded down to the size step, or refused with the code below-minimum when that part is under the exchange's minimum order value; with bots stop the person's part closes the same way, then each bot is stopped with its position closed (a stopped one force-closed), a trading key's only the bots it created. An account whose positions could not be read is listed in refused under its account id; nothing is closed there. A position row's own Close on a bot's position sends this with the row's account and pair (ruling 401 a). Answers allAnswer.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "sourceId": { "type": "string", "description": "The account (the list's scope: this exchange)." },
+        "instrumentId": { "type": "string", "description": "The pair (the list's scope: this pair)." },
+        "side": { "enum": ["buy", "sell"], "description": "buy: long positions; sell: short positions." },
+        "agentOnly": { "type": "boolean", "default": false },
+        "keyId": { "type": "string" },
+        "q": { "type": "string", "maxLength": 128, "description": "The list's search text." },
+        "bots": { "enum": ["keep", "stop"], "description": "What to do with a bot's part of a position: keep (the bots' parts stay, the bots keep running) or stop (each bot closes its position and ends). Absent: keep. Added 2026-10-09." }
+      }
+    },
+    "allAnswer": {
+      "description": "Cancel all's, Stop all's and Close all's answer: what was cancelled, stopped or closed (each order's, bot's or position's own command accepted) and what was refused, with its sentence. count 0 and ids [] when the filter matched nothing: nothing was done.",
+      "type": "object", "additionalProperties": false, "required": ["count", "ids", "refused"],
+      "properties": {
+        "count": { "type": "integer", "minimum": 0, "description": "How many were cancelled, stopped or closed: ids' length." },
+        "ids": { "type": "array", "items": { "type": "string" } },
+        "refused": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "text"], "properties": { "id": { "type": "string" }, "text": { "type": "string", "description": "The sentence, in English." }, "code": { "type": "string", "description": "Names the refusal where one is known: `bot-order` (a bot's own order: its bot's Stop cancels it) or `bot-position` (a position a running bot holds: the bot's Close pos. or Stop closes it; added 2026-10-09) or `below-minimum` (Close all's part of a position bots hold part of is under the exchange's minimum order value, `text` names it; added 2026-10-09). Absent for a refusal with no code, and from a runtime older than this field; a client says the code in its own language and shows `text` for one it does not know. Added 2026-10-05." } } } },
+        "bots": { "type": "array", "description": "Close all with bots stop: each bot whose Stop (or a stopped one's Force close) was accepted. Absent otherwise, and from a runtime older than this field. Added 2026-10-09.", "items": { "type": "object", "additionalProperties": false, "required": ["botId"], "properties": { "botId": { "type": "string" } } } }
+      }
+    },
+    "resendBody": {
+      "description": "POST /api/v1/orders/{id}/resend (the docs judge's G1): a manual order in repair (its row's status unknown, with why) sent again, the order as it stands (0013 amendment 1's Re-place; an unanswered cancel of it is sent again instead). Journaled with the request before anything is sent; the same request answers the same. Answers {accepted: true}; 422 {rejected, text} when the order is no longer in repair, while a send of it has no answer yet, for a missed order (it takes execute-now or place-back), or for a bot's order; 503 when an order that adds risk cannot be sent now. The runtime deduplicates on requestId, per order and per action. Added 2026-10-04.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": { "requestId": { "type": "string", "minLength": 1 } }
+    },
+    "sendNowBody": {
+      "description": "POST /api/v1/orders/{id}/send-now (the docs judge's G2; 0013 ruling 1): a send gcx holds for the person (its row's held says why) sent now, once. The request is journaled before the send; the same request answers the same. Answers {accepted: true}; 422 {rejected, text} when nothing of the order is held, when its position changed while it waited (cancel it and place it again), or for a bot's order; 503 when an order that adds risk cannot be sent now (Hyperliquid's maintenance, a full disk, gcx starting or stopping). The runtime deduplicates on requestId, per order and per action. Added 2026-10-04.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": { "requestId": { "type": "string", "minLength": 1 } }
+    },
+    "closeCommand": {
+      "description": "Close position from a list row: POST /api/v1/orders with the exit variant of the order command, the same command the form sends. No side and no size: the runtime sizes it from the position when it sends it.",
+      "$ref": "order-command.schema.json#/$defs/close"
+    },
+    "accountState": {
+      "description": "The `account-state` topic, per venue account. unavailable: the venue read failed; the lists say 'unavailable', never 0.",
+      "type": "object", "additionalProperties": false, "required": ["sourceId", "state", "since"],
+      "properties": { "sourceId": { "type": "string" }, "state": { "enum": ["live", "stale", "unavailable"] }, "since": { "type": "integer" } }
+    },
+    "historyPage": {
+      "description": "GET /api/v1/history?…&cursor: terminal orders by (closedAt, id), newest first, with the list's filter applied by the same predicate the panel uses. Defaults to manual orders across all pairs and accounts; an explicit botId retains access to that bot’s terminal orders. No query or row field is removed. Never sorted by a money column.",
+      "type": "object", "additionalProperties": false, "required": ["rows"],
+      "properties": { "rows": { "type": "array", "items": { "$ref": "order-row.schema.json" } }, "nextCursor": { "type": "string" }, "order": { "const": "changedAt", "description": "Only for order=changedAt: confirms indexed same-account/pair marker history sorted by the factual last-change timestamp, the person's rows, or with botId that bot's (MH 285); older servers omit it and ignore botId in this mode." } }
+    },
+    "orderDetails": {
+      "description": "GET /api/v1/orders/{id}: the details object, with its own seq; re-read when the order's row changes.",
+      "type": "object", "additionalProperties": false, "required": ["seq", "order", "children", "chain", "events"],
+      "properties": {
+        "seq": { "type": "integer" },
+        "chart": { "type": "object", "additionalProperties": false, "required": ["mode", "cursor"], "properties": { "mode": { "enum": ["snapshot", "delta"] }, "cursor": { "type": "string" }, "reset": { "const": true } }, "description": "Only with chartAfter: cold/reset snapshot or newly appended facts. Cursor binds ledger and target, never timestamp." },
+        "bracket": { "type": "object", "additionalProperties": false, "required": ["id", "spec", "anchor", "armed", "tps", "past"], "properties": { "id": { "type": "string" }, "spec": { "$ref": "order-command.schema.json#/$defs/bracket" }, "anchor": { "$ref": "order-row.schema.json#/$defs/decimal" }, "entry": { "$ref": "order-row.schema.json#/$defs/decimal", "description": "The levels' base: a position's entry; an order's fills' average once its bracket is armed (added 2026-10-18; absent before the full fill, when the levels follow the anchor)." }, "armed": { "type": "boolean" }, "armedAt": { "type": "integer" }, "tps": { "type": "array", "items": { "type": "string" } }, "sl": { "type": "string" }, "past": { "type": "array", "items": { "type": "string" } }, "parentId": { "type": "string" } }, "description": "Existing canonical bracket spec and leg membership/state, copied read-only; never reconstructed from rendered prices." },
+        "order": { "$ref": "order-row.schema.json" },
+        "openPrice": { "$ref": "order-row.schema.json#/$defs/decimal", "description": "The market price when the order was created." },
+        "feeRates": { "type": "object", "description": "Added 2026-10-28 (0040 amendment 6): on a grid order, the account's fee rates as the bot's details serve them (`maker`, `taker` fractions, `at` the read's time or null for the venue's base rates); a trailing exit's Price improvement compares with a limit at the maker rate. Absent on other orders and from older runtimes." },
+        "platformFee": { "$ref": "order-row.schema.json#/$defs/decimal", "deprecated": true, "description": "Deprecated 2026-10-17 (0004 amendment note): never set by any runtime; the order row's `builderFee` carries the platform fee. To be removed in a later release." },
+        "parent": { "description": "0034: derived from the row’s botId or known order parentId. Absent means no known parent order or bot; a position exit has none here.", "type": "object", "additionalProperties": false, "required": ["kind", "id"], "properties": { "kind": { "enum": ["bot", "order"] }, "id": { "type": "string" } } },
+        "parentRow": { "$ref": "order-row.schema.json", "description": "0034: optional canonical parent order row. Omitted by older runtimes or when the parent is absent; then the card uses only a held parent row." },
+        "chartOrders": { "type": "object", "additionalProperties": { "$ref": "#/$defs/orderDetails" }, "description": "Optional recorded child facts, keyed by actual current child/rest ID. Parent snapshot replaces; parent delta updates only named child groups with their own snapshot/delta marker." },
+        "children": { "type": "array", "items": { "$ref": "order-row.schema.json" }, "description": "Every served child/rest row; empty means none." },
+        "chain": { "type": "array", "items": { "$ref": "order-row.schema.json" } },
+        "events": { "type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["time", "kind"],
+          "properties": {
+            "id": { "type": "string", "description": "Stable admitted display fact ID; not a tradable order ID." }, "attempt": { "type": "integer", "minimum": 1 },
+            "time": { "type": "integer" },
+            "kind": { "enum": ["created", "triggered", "fill", "filled", "child-activated", "modified", "cancelled", "rejected", "expired"] },
+            "price": { "$ref": "order-row.schema.json#/$defs/decimal" }, "size": { "$ref": "order-row.schema.json#/$defs/decimal" },
+            "triggerPrice": { "$ref": "order-row.schema.json#/$defs/decimal", "description": "Optional on modified facts: the preceding admitted stop/trigger, independent of the old limit price." },
+            "activationPrice": { "anyOf": [{ "$ref": "order-row.schema.json#/$defs/decimal" }, { "type": "null" }], "description": "Optional on modified trail facts: preceding admitted activation. Null means known absent; older omitted facts do not authorize reconstructed marks." },
+            "fired": { "type": "boolean", "description": "Optional on modified facts: the preceding admitted triggered state. False is positively not yet triggered; older omission is unknown, never inferred by comparing venue and admission times." },
+            "trailPhase": { "enum": ["wait", "trail"], "description": "Optional on modified trail facts: the preceding admitted phase, not today's row phase." },
+            "trailStartedAt": { "type": "integer", "description": "Optional on modified facts: the preceding revision’s admitted trailing activation timestamp. Never copied from a later activation or inferred when absent." },
+            "trailStartedPointId": { "type": "string", "description": "Optional on modified facts: the preceding revision’s admitted activation point id, distinguishing equal-timestamp revisions. Never copied from a later activation." },
+            "improveOnlyPrice": { "$ref": "order-row.schema.json#/$defs/decimal", "description": "Optional on modified facts: the preceding admitted improve-only activation guide, distinct from command Start after trailing begins. Absence remains unknown, never reconstructed from today's row." },
+            "improveOnly": { "type": "boolean", "description": "Optional on modified trail facts: the preceding admitted improve-only setting, for its activation label." },
+            "marketPrice": { "$ref": "order-row.schema.json#/$defs/decimal" }, "venueOrderId": { "type": "string" }, "childId": { "type": "string" }, "reason": { "type": "string" }
+          }
+        } },
+        "trail": {
+          "description": "Trailing orders once the trail started: the engine's journaled stop history, oldest first (first = initial trigger, last = current), and the best price since the start (decision 0005 §1.3a). The chart draws it as a step path.",
+          "type": "object", "additionalProperties": false, "required": ["points"],
+          "properties": {
+            "points": { "type": "array", "items": {
+              "type": "object", "additionalProperties": false, "required": ["t", "stop"],
+              "properties": { "id": { "type": "string" }, "t": { "type": "integer" }, "stop": { "$ref": "order-row.schema.json#/$defs/decimal" } }
+            } },
+            "extreme": { "$ref": "order-row.schema.json#/$defs/decimal" }
+          }
+        }
+      }
+    },
+    "fundingRows": {
+      "description": "GET /api/v1/funding?sourceId=&instrumentId=: every hourly funding payment gcx journaled on a coin of an account, oldest first, the rows of a position's details. `usdc` received positive, paid negative. Missed payments are added after successful fill and funding recovery from the account tracking boundary. `bots`: what each bot on the coin was charged of the payment, by what it held that hour; the rest is the person's.",
+      "type": "object", "additionalProperties": false, "required": ["rows"],
+      "properties": { "rows": { "type": "array", "items": {
+        "type": "object", "additionalProperties": false, "required": ["time", "usdc", "bots"],
+        "properties": {
+          "time": { "type": "integer", "description": "The venue's hour of the payment." }, "usdc": { "$ref": "order-row.schema.json#/$defs/signed" },
+          "bots": { "type": "array", "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "usdc"],
+            "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "usdc": { "$ref": "order-row.schema.json#/$defs/signed" } }
+          } }
+        }
+      } } }
+    },
+    "item": {
+      "description": "Added with 0028 d11, d18 (stream 2): one open item, whatever gcx cannot settle by itself and waits for a person's answer, derived from the bot's or the order's records (src/domain/repair/items.ts), never stored. The runtime topic's `attention` rows and GET /api/v1/bots/{id} carry the same. id: `<bot>:<cause>` or `<orderId>:order`; key: `<id>:<episode>`, the handle of Telegram's message, of POST /api/v1/attention/silence and of a new episode (a refusal of the answer's act opens a new one); cause: the catalogue's code (0028 d15); level: red holds (the bot's new risk, d3), yellow is the notice, which holds nothing (RULINGS 319 a); holds: new-risk, nothing, or order (only that order waits); answers: the codes of the existing commands, in order (adopt Exchange is right, keep Bot is right on red and Accept on yellow, restore Retry of a refused sale, match Make the exchange match the bot, free Cancel that order, retry Retry, close Close position, cancel Cancel order, stop Stop bot, level Retry order, renew and limits open Settings, accept-venue older journals); since: the episode's time; acting: an answer's act is out (match); orderId: the order it is about; words: the exchange's own words; preview (GET /api/v1/bots/{id} only, on the items Exchange is right answers, d22.8, RULINGS 330 a): what the bot will count after Exchange is right, figured as the press figures it from the venue's history and a read of the exchange, read again when the item shows a new exchange figure (size and cost after the correction, what the fills found realize, the correction's size, and the fills at the venue's time), or failed: they could not be read and gcx reads them again every minute and at the press. A newer cause or answer may appear; a reader shows what it knows.",
+      "type": "object", "additionalProperties": false, "required": ["id", "key", "cause", "level", "holds", "answers", "since"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 }, "key": { "type": "string", "minLength": 1 },
+        "cause": { "type": "string", "minLength": 1 },
+        "level": { "enum": ["red", "yellow"] }, "holds": { "enum": ["new-risk", "nothing", "order"] },
+        "answers": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "since": { "type": "integer", "minimum": 0 }, "acting": { "const": "match" }, "orderId": { "type": "string", "minLength": 1 }, "words": { "type": "string" },
+        "facts": {
+          "description": "Added with 0028 d15, d26 (repair-item-facts): what the item shows beside it and the records give. refused-held (C2h): `orders`, the person's resting sells on the pair that hold the coins the bot's sale needs (the venue's id, or a gcx order's own); foreign (the yellow notice): `fills`, the trades by others since the last agreement (the venue's time), and `orders`, the resting orders by others. Absent on every other item.",
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "fills": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["at", "side", "size", "price"], "properties": { "at": { "type": "integer" }, "side": { "enum": ["buy", "sell"] }, "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "price": { "$ref": "order-row.schema.json#/$defs/decimal" } } } },
+            "orders": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "side", "size", "price"], "properties": { "id": { "type": "string", "minLength": 1 }, "side": { "enum": ["buy", "sell"] }, "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "price": { "$ref": "order-row.schema.json#/$defs/decimal" } } } }
+          }
+        },
+        "preview": {
+          "oneOf": [
+            { "type": "object", "additionalProperties": false, "required": ["size", "cost", "realized", "fills"], "properties": {
+              "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "cost": { "$ref": "order-row.schema.json#/$defs/decimal" }, "realized": { "$ref": "order-row.schema.json#/$defs/signed" },
+              "correction": { "$ref": "order-row.schema.json#/$defs/decimal", "description": "Added with RULINGS 330 a: the size the correction moves the count by, for what the fills do not reach (0 for none); `size` and `cost` are the cycle after it." },
+              "fills": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["at", "side", "size", "price"], "properties": { "at": { "type": "integer" }, "side": { "enum": ["buy", "sell"] }, "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "price": { "$ref": "order-row.schema.json#/$defs/decimal" } } } }
+            } },
+            { "type": "object", "additionalProperties": false, "required": ["failed"], "properties": { "failed": { "const": true } } }
+          ]
+        }
+      }
+    },
+    "correction": {
+      "description": "Added with 0028 d23.4 (stream 2): one correction row of the cycle, what the fills did not reach after Exchange is right (or the rest below the minimum left to the person): the cycle's size and cost before and after, nothing realized (pnl 0), the price used (the exchange's entry, or the bot's average; never a last price), the bracket of the difference, the cause, and reach: the oldest time the venue's history served when it did not reach the cycle's start.",
+      "type": "object", "additionalProperties": false, "required": ["at", "was", "now", "price", "pnl", "between", "cause"],
+      "properties": {
+        "at": { "type": "integer" },
+        "was": { "type": "object", "additionalProperties": false, "required": ["size", "cost"], "properties": { "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "cost": { "$ref": "order-row.schema.json#/$defs/decimal" } } },
+        "now": { "type": "object", "additionalProperties": false, "required": ["size", "cost"], "properties": { "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "cost": { "$ref": "order-row.schema.json#/$defs/decimal" } } },
+        "price": { "$ref": "order-row.schema.json#/$defs/decimal" }, "pnl": { "$ref": "order-row.schema.json#/$defs/signed" },
+        "between": { "type": "object", "additionalProperties": false, "required": ["from", "to"], "properties": { "from": { "type": "integer" }, "to": { "type": "integer" } } },
+        "cause": { "enum": ["unexplained", "below-minimum"] }, "reach": { "type": "integer" }
+      }
+    },
+    "botDetails": {"anyOf": [{"$ref": "#/$defs/dcaDetails"}, {"$ref": "#/$defs/gridDetails"}, {"$ref": "#/$defs/activityDetails"}]},
+    "gridDetails": {
+      "type": "object", "additionalProperties": false,
+      "required": ["seq", "bot", "items", "profitability", "profitAfter", "profitabilityRemoved"],
+      "properties": {"modifiedByPerson": {"type": "boolean", "description": "An accepted personal Modify after creation, projected incrementally; absent means no known personal modification"}, "volume": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["currency", "volume"], "properties": {"currency": {"type": "string"}, "volume": {"type": "string"}}}},
+      "nextLimit": {"type": "integer", "minimum": 30},
+      "activityAfter": {"type": ["string", "null"]},
+      "activity": {"$ref": "#/$defs/activityPage/properties/activity"},
+        "seq": {"type": "integer"},
+        "bot": {"$ref": "bot-row.schema.json"},
+        "children": {"type": "array", "items": {"$ref": "order-row.schema.json"}, "description": "The grid's open orders the chart draws, from the open index; ended children use indexed viewport history"},
+        "items": {"type": "array", "items": {"$ref": "#/$defs/item"}},
+        "feeRates": {"type": "object"},
+        "profitAfter": {"type": "string", "description": "Opaque grid-bound revision cursor. Omit on a details page's first read; pass back for changed buckets only."},
+        "profitabilityRemoved": {"type": "array", "items": {"type": "integer"}, "description": "Delete these old hour timestamps before upserting profitability. A day bucket may replace an hour at the same timestamp."},
+        "profitability": {"$ref": "grid-profitability.schema.json"}
+      }
+    },
+    "dcaDetails": {
+      "description": "GET /api/v1/bots/{id}?iteration=n: the details object, with its own seq (decision 0016 §8.2; roadmap B9). `planned` and `activity` are one iteration's (the current one unless asked); `cycles` every started cycle's realized PnL, the one under way included, oldest first (B68).",
+      "type": "object", "additionalProperties": false, "required": ["seq", "bot", "planned", "iteration", "iterations", "activity", "cycles", "notify", "held"],
+      "properties": {"modifiedByPerson": {"type": "boolean", "description": "An accepted personal Modify after creation, projected incrementally; absent means no known personal modification"}, "volume": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["currency", "volume"], "properties": {"currency": {"type": "string"}, "volume": {"type": "string"}}}},
+      "activityPage": {"$ref": "#/$defs/activityPage"},
+        "seq": { "type": "integer" },
+        "chart": { "$ref": "#/$defs/orderDetails/properties/chart" },
+        "chartOrders": { "type": "object", "additionalProperties": { "$ref": "#/$defs/orderDetails" }, "description": "Optional recorded facts: snapshot replaces; delta updates only named orders in this exact bot/cycle. Canonical activity stays complete." },
+        "chartCycle": { "type": "object", "additionalProperties": false, "required": ["iteration", "side", "started", "open", "entryEnded", "position"], "description": "Optional selected-cycle recorded facts for chart properties. iteration equals this details iteration; bot remains the current overview and permissions source. Older runtimes omit this field.", "properties": {
+          "iteration": { "type": "integer" }, "side": { "enum": ["buy", "sell"] }, "started": { "type": "boolean" }, "open": { "type": "boolean" }, "entryEnded": { "type": "boolean" },
+          "position": { "type": "object", "additionalProperties": false, "required": ["size"], "properties": { "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "vwap": { "$ref": "order-row.schema.json#/$defs/decimal" } } }
+        } },
+        "bot": { "$ref": "bot-row.schema.json" },
+        "planned": { "type": "array", "description": "The iteration's orders as planned: the entry at its average, each averaging level with its status, the stop-loss and the take-profit.", "items": {
+          "type": "object", "additionalProperties": false, "required": ["role", "side", "price", "size", "cost"],
+          "properties": {
+            "role": { "enum": ["entry", "avg", "tp", "sl"] }, "level": { "type": "integer" }, "side": { "enum": ["buy", "sell"] },
+            "price": { "$ref": "order-row.schema.json#/$defs/decimal" }, "size": { "$ref": "order-row.schema.json#/$defs/decimal" }, "cost": { "$ref": "order-row.schema.json#/$defs/decimal" },
+            "status": { "enum": ["below-minimum", "waiting", "live", "filled", "failed", "cancelled"], "description": "An averaging level's: below the exchange's minimum, not sent (0016 d4); waiting for its trigger; sent; filled; failed (Fix failed restores it); cancelled." }
+          }
+        } },
+        "iteration": { "type": "integer" },
+        "iterations": { "type": "array", "items": { "type": "integer" } },
+        "activity": { "type": "array", "items": { "$ref": "order-row.schema.json" } },
+        "funding": { "type": "array", "description": "The iteration's funding payments, oldest first: the bot's share of each hourly payment on its coin, paid negative, received positive, at the venue's hour. Listed among `activity` by time as \"Funding received\" / \"Funding paid\"; display only, the bot's funding figure already is their sum. Absent while the iteration has none.", "items": {
+          "type": "object", "additionalProperties": false, "required": ["id", "at", "usdc"],
+          "properties": { "id": { "type": "string" }, "at": { "type": "integer" }, "usdc": { "$ref": "order-row.schema.json#/$defs/signed" } }
+        } },
+        "cycles": { "type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["n", "realized"],
+          "properties": {
+            "n": { "type": "integer" }, "realized": { "$ref": "order-row.schema.json#/$defs/signed" },
+            "funding": { "$ref": "order-row.schema.json#/$defs/signed", "description": "Added 2026-10-14 (MH 8956 comment 190 b): the funding the cycle booked (the bot's share, paid negative); absent while it booked none. The cycle's realised PnL including funding (0007 amendment 8) is realized + funding. The previous build ignores it." },
+            "fundingDays": { "type": "array", "description": "Added 2026-10-26 (MH item 26, the Profitability chart books funding in the week it was paid): `funding` summed by UTC day, oldest first, each at the time of that day's last payment; their sum is `funding`. Absent while the cycle has no payments, and from an older runtime: the chart then books `funding` at `closedAt`. The previous build ignores it.", "items": {
+              "type": "object", "additionalProperties": false, "required": ["at", "usdc"],
+              "properties": { "at": { "type": "integer" }, "usdc": { "$ref": "order-row.schema.json#/$defs/signed" } }
+            } },
+            "invested": { "$ref": "order-row.schema.json#/$defs/signed", "description": "C91: the closed cycle’s recorded entry cost plus levels cost, projected from the held iteration alongside realized and funding. Optional for older runtimes; not a timestamped history of the running cycle’s capital." },
+            "heldPeak": { "$ref": "order-row.schema.json#/$defs/decimal", "description": "Added 2026-10-18 (MH 736 (4)), on a closed cycle beside `invested`: the most the bot had on the exchange (its position at entry prices and its entry and averaging orders resting there, as the row's `investedPeak` counts it) while this was its current cycle. The chart's Max reached. Absent while it had nothing there, and from an older runtime: the chart then takes `invested`. The previous build ignores it." },
+            "heldArea": { "$ref": "order-row.schema.json#/$defs/decimal", "description": "Added 2026-10-18 (MH 736 (4)), on a closed cycle beside `invested`: the same figure summed over the time it was the current cycle, in quote × milliseconds (the cycles' sum over the running time is the row's `investedAverage`). The chart's Average. Absent as `heldPeak`: the chart then takes `invested` over the time since the previous close. The previous build ignores it." },
+            "closedAt": { "type": "integer", "description": "Added 2026-10-09 (RULINGS 370 a; the Returns chart's daily bars): when the cycle closed, ms since the epoch: the exchange's time of the latest exit fill (take-profit, stop-loss, close) or liquidation fill of the cycle; a cycle recorded before 0016 amendment 5: when gcx recorded it. Derived from the book, not stored. Absent on the cycle under way and on one that closed without an exit fill. The previous build ignores it." }
+          }
+        } },
+        "notify": { "$ref": "#/$defs/notify" },
+        "beside": {
+          "type": "object", "additionalProperties": false, "required": ["bot", "exchange"],
+          "description": "Q8: the bots' size on this coin and the exchange's, while they differ and the person has not said they know why.",
+          "properties": { "bot": { "$ref": "order-row.schema.json#/$defs/signed" }, "exchange": { "$ref": "order-row.schema.json#/$defs/signed" } }
+        },
+        "attention": {
+          "type": "object", "additionalProperties": false, "required": ["kind", "key", "bot", "since", "opened", "cause", "fills"],
+          "description": "Added 2026-10-05 (decision 0016 Amendment 2 §5, §6): the bot's position differs from the exchange's and the item is open (the bot paused its new orders until the person chooses). bot: the bot's own count, signed; exchange: the exchange's position (on spot the holding), signed, as confirmed on two trusted reads; since: the last agreement; opened: when the item opened; cause: the likely one (liquidation, gcx: a person's order in gcx, outside: a trade not placed by gcx, none: no trade seen); fills: the account's fills on the coin since the last agreement that are not a bot's, newest first; restoring: a restore of the coin is out, only Stop is offered. Absent when nothing differs and on a done bot. Cause refused (added 2026-10-05, RULINGS 218 b): on spot the exchange refused the bot's sale of the rest of its exit for want of coins; the item opened on that refusal, so exchange is absent until a read gives it, and the choices finish the exit (the account's coins counted and sold; the rest sent once more).",
+          "properties": {
+            "kind": { "const": "position" }, "key": { "type": "string" }, "bot": { "$ref": "order-row.schema.json#/$defs/signed" }, "exchange": { "$ref": "order-row.schema.json#/$defs/signed" },
+            "since": { "type": "integer" }, "opened": { "type": "integer" }, "cause": { "enum": ["liquidation", "gcx", "outside", "none", "refused"] }, "restoring": { "const": true },
+            "fills": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["at", "side", "size", "price", "source"], "properties": { "at": { "type": "integer" }, "side": { "enum": ["buy", "sell"] }, "size": { "type": "string" }, "price": { "type": "string" }, "source": { "enum": ["liquidation", "gcx", "outside"] } } } }
+          }
+        },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" }, "description": "Added with 0028 d18 (stream 2): the bot's open items in d17's order (what leaves a position unprotected first; then the count; then other stuck orders; then what blocks a start; then the yellow notice; Retry order last), beside the older `attention`. Absent while none." },
+        "corrections": { "type": "array", "items": { "$ref": "#/$defs/correction" }, "description": "Added with 0028 d23.4 (stream 2): the iteration's correction rows, oldest first; the trades list shows each as one row Correction. Absent while none." },
+        "released": { "type": "integer", "description": "Added 2026-10-09 (ruling 406 b): when the bot, stopped without closing, let go of the iteration's part because a fresh read showed the account flat on the coin (sold outside gcx), ms since the epoch; the activity shows it as one row. Absent before, and for a bot that never did." },
+        "held": { "type": "array", "description": "The bot's sends held for the person (RULINGS 96).", "items": {
+          "type": "object", "additionalProperties": false, "required": ["orderId", "why", "since"],
+          "properties": { "orderId": { "type": "string" }, "why": { "enum": ["stopped", "disk", "maintenance"], "description": "Added in E11: maintenance, held while the exchange was in maintenance; it goes by itself when the maintenance ends (0013 amendment 3)." }, "since": { "type": "integer" } }
+        } },
+        "pending": {
+          "description": "Settings changed while a cycle runs, not yet in force (0016 Amendment 1 B46; the bot's `next`): the details show them with \"applies from the next cycle\". Absent when none wait. `clear` added with 0016 Amendment 9: the settings removed from the next cycle (today slLossPct, the stop back to its distance), absent when none; `settings` may then be empty.",
+          "type": "object", "additionalProperties": false, "required": ["settings", "from"],
+          "properties": { "settings": { "anyOf": [{ "$ref": "#/$defs/modifyFields" }, { "type": "object", "maxProperties": 0 }] }, "from": { "const": "next-cycle" }, "clear": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["maxCycles", "endAt", "slLossPct"] } } }
+        }
+      }
+    },
+    "notify": {
+      "description": "Catalogue Q14: bot stops or errors; TP and SL fills; entry and averaging fills from level fromLevel (0 = all).",
+      "type": "object", "additionalProperties": false, "required": ["stops", "tpSl", "fills", "fromLevel"],
+      "properties": { "stops": { "type": "boolean" }, "tpSl": { "type": "boolean" }, "fills": { "type": "boolean" }, "fromLevel": { "type": "integer", "minimum": 0 } }
+    },
+    "modifyFields": { "type": "object", "additionalProperties": false, "minProperties": 1, "description": "Any setting of dca-bot-create.schema.json but the entry condition and the end time (0016 Amendment 1 B46; the TA periods and signals added by 0016 Amendment 7, MH 669: a TA bot's only, 422 on another; startAt and atEnd added by its d9, MH 709 (a), 710 (a): startAt only while the bot waits for its start, 422 otherwise, its start timer moved to the new time; atEnd, what happens when the days end, at once). goodcryptoX's five (closeOnStop, repeatOnTp, repeatOnSl, tpFixedFromEntry, cooldownMs; 0016 d16; a cooldown changed during the cooldown counts from its start), wholePosition (\"Only this bot trades this pair\", 0028 d21.6: on is refused while another bot that is not done trades the pair; off closes the bot's open count item and yellow notice) and the bot's name and note (B65, the limits of the create's; also on a stopped bot) apply at once; every other field at once while no cycle is open (waiting to start, for its signal, in its cooldown, closing, or held before its entry is sent; the details serve the current cycle's chartCycle.open) and from the next cycle while one is: the open cycle keeps its ladder and exits. The answer's applied says which. The runtime validates the settings the next cycle will run on as at creation (422 with the reason).",
+            "properties": { "investment": {"type": "object", "additionalProperties": false, "required": ["unit", "amount"], "properties": {"unit": {"enum": ["quote", "account"]}, "amount": {"type": "string", "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"}}}, "reinvest": {"type": "boolean"}, "closeOnStop": { "type": "boolean" }, "repeatOnTp": { "type": "boolean" }, "repeatOnSl": { "type": "boolean" }, "tpFixedFromEntry": { "type": "boolean" }, "wholePosition": { "type": "boolean" },
+              "cooldownMs": { "type": "integer", "minimum": 0 },
+              "name": { "type": "string", "maxLength": 50 }, "note": { "type": "string", "maxLength": 500 },
+              "entrySide": {"enum": ["buy", "sell", "direct", "inverse"]}, "entryOrderType": {"enum": ["market", "limit", "trailing"]}, "entryDistancePct": {"type": "string", "pattern": "^((\\d|[1-8]\\d|9[0-8])(\\.\\d*)?|99(\\.0*)?|\\.\\d+)$"}, "sizingMode": {"enum": ["cost", "size"]}, "entryAmount": {"type": "string", "pattern": "^(\\d+\\.?\\d*|\\.\\d+)$"}, "avgCount": {"type": "integer", "minimum": 0, "maximum": 100}, "averaging": {"enum": ["one", "all"]}, "postOnly": {"type": "boolean"}, "level1Amount": {"type": "string", "pattern": "^(\\d+\\.?\\d*|\\.\\d+)$"}, "level1PricePct": {"type": "string", "pattern": "^((\\d|[1-8]\\d|9[0-8])(\\.\\d*)?|99(\\.0*)?|\\.\\d+)$"}, "sizeCostMultiplier": {"type": "string", "pattern": "^(\\d(\\.\\d*)?|10(\\.0*)?|\\.\\d+)$"}, "avgPriceStepPct": {"type": "string", "pattern": "^((\\d|[1-8]\\d|9[0-8])(\\.\\d*)?|99(\\.0*)?|\\.\\d+)$"}, "priceStepMultiplier": {"type": "string", "pattern": "^(\\d(\\.\\d*)?|10(\\.0*)?|\\.\\d+)$"}, "tpEnabled": {"type": "boolean"}, "tpType": {"enum": ["market", "limit", "trailing"]}, "tpPct": {"type": "string", "pattern": "^((\\d|[1-8]\\d|9[0-8])(\\.\\d*)?|99(\\.0*)?|\\.\\d+)$"}, "tpTrailingDistancePct": {"type": "string", "pattern": "^((\\d|[1-8]\\d|9[0-8])(\\.\\d*)?|99(\\.0*)?|\\.\\d+)$"}, "slEnabled": {"type": "boolean"}, "slPct": {"type": "string", "pattern": "^((\\d|[1-8]\\d|9[0-8])(\\.\\d*)?|99(\\.0*)?|\\.\\d+)$"}, "slLossPct": {"type": "string", "pattern": "^(\\d+\\.?\\d*|\\.\\d+)$"}, "maxCycles": {"type": "integer", "minimum": 1}, "startAt": {"type": "integer", "minimum": 0}, "atEnd": {"enum": ["finish", "exit", "keep"]}, "signal": {"$ref": "dca-bot-create.schema.json#/properties/signal"}, "taPeriods": {"type": "array", "uniqueItems": true, "items": {"enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "3d", "1w", "1M"]}}, "taSignals": {"type": "array", "uniqueItems": true, "items": {"enum": ["buy", "sell", "strongBuy", "strongSell"]}} }, "allOf": [{"if": {"required": ["signal"]}, "then": {"required": ["taPeriods", "taSignals"], "allOf": [{"if": {"properties": {"signal": {"type": "array"}}}, "then": {"properties": {"taPeriods": {"type": "array", "maxItems": 0}, "taSignals": {"type": "array", "maxItems": 0}}}, "else": {"properties": {"taPeriods": {"type": "array", "minItems": 1}, "taSignals": {"type": "array", "minItems": 1}}}}]}, "else": {"properties": {"taPeriods": {"type": "array", "minItems": 1}, "taSignals": {"type": "array", "minItems": 1}}}}] },
+    "botCommand": {
+  "description": "POST /api/v1/bots/{id}/command with decision 0016 \u00a77.1's command kinds (src/domain/dca/live.ts BotCommand, plus mismatch and notify, which the runtime keeps). The runtime deduplicates on requestId. Nothing is edited by writing a row.",
+  "type": "object",
+  "required": [
+    "requestId",
+    "kind"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "kind": {
+      "enum": [
+        "stop",
+        "end-iteration",
+        "force-close",
+        "restore-level",
+        "modify",
+        "modify-clear",
+        "arm",
+        "move-tp-breakeven",
+        "start-now",
+        "repair",
+        "differs",
+        "keep",
+        "mismatch",
+        "notify",
+        "add-top",
+        "remove-top",
+        "add-low",
+        "remove-low"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "enum": [
+            "add-top",
+            "remove-top",
+            "add-low",
+            "remove-low"
+          ]
+        },
+        "anyway": {
+          "const": true
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cloid"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "restore-level"
+        },
+        "anyway": {
+          "const": true
+        },
+        "cloid": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "close"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "stop"
+        },
+        "close": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "keep (0028 d4): \"Bot is right\" on a red item, \"Accept\" on the yellow notice: nothing sent, \"Only this bot trades this pair\" turned off; a person's only.",
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "enum": [
+            "stop",
+            "end-iteration",
+            "force-close",
+            "move-tp-breakeven",
+            "start-now",
+            "keep"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "restore-level"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fields"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "modify"
+        },
+        "fields": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/modifyFields"
+            },
+            {
+              "$ref": "#/$defs/gridModifyFields"
+            }
+          ]
+        },
+        "anyway": {
+          "const": true
+        },
+        "ruleSeen": {
+          "anyOf": [
+            {
+              "$ref": "grid-rule.schema.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "from": {
+          "const": "next-cycle",
+          "description": "The scope of the fields that are not goodcryptoX's five: from the next cycle, the only scope in V1 (V1.1 adds this-cycle). Optional and ignored in a request; the runtime journals it when a field waits for the next cycle (a cycle open at the press, 0016 Amendment 7), and an older runtime whenever such a field was present."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fields",
+        "clear"
+      ],
+      "description": "Added with 0016 Amendment 9: the Run row's and the stop row's change that removes a value, the only command that sets or moves the end. `fields` sets, `clear` removes: maxCycles (Run until stopped), endAt with its atEnd (no end), slLossPct (the stop back to its distance, slPct, from the next cycle while a cycle is open; a later modify setting slLossPct cancels it); nothing is both set and removed. The end applies at once and moves its timer; days count from the bot's real start. Refused 422 like modify, and when maxCycles is below the cycles done or endAt has passed. An older runtime ignores the row.",
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "modify-clear"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxCycles": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "endAt": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "atEnd": {
+              "enum": [
+                "finish",
+                "exit",
+                "keep"
+              ]
+            },
+            "slPct": {
+              "type": "string",
+              "pattern": "^((\\d|[1-8]\\d|9[0-8])(\\.\\d*)?|99(\\.0*)?|\\.\\d+)$"
+            },
+            "slEnabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "clear": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "maxCycles",
+              "endAt",
+              "slLossPct"
+            ]
+          }
+        },
+        "from": {
+          "const": "next-cycle",
+          "description": "As modify's: journaled when a set or removed field waits for the next cycle."
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "side"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "arm"
+        },
+        "side": {
+          "enum": [
+            "buy",
+            "sell"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "choice"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "repair"
+        },
+        "choice": {
+          "enum": [
+            "re-place",
+            "accept-venue",
+            "close"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "choice",
+        "exchange"
+      ],
+      "description": "0016 Amendment 2: the person's choice on a bot whose position differs from the exchange's (a person's only; a key is refused 403). `exchange`: the exchange's signed size the person saw; the runtime reads the exchange again at the press and asks again (409 with the new figures) when it changed. `restore` also carries the size the person confirmed (the difference), and `anyway` once ruling 141's warning was passed.",
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "differs"
+        },
+        "choice": {
+          "enum": [
+            "adopt",
+            "restore",
+            "free"
+          ]
+        },
+        "exchange": {
+          "type": "string",
+          "pattern": "^-?(\\d+\\.?\\d*|\\.\\d+)$"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^(\\d+\\.?\\d*|\\.\\d+)$"
+        },
+        "anyway": {
+          "const": true
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "choice"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "mismatch"
+        },
+        "choice": {
+          "enum": [
+            "known",
+            "report"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "notify"
+      ],
+      "properties": {
+        "requestId": true,
+        "kind": {
+          "const": "notify"
+        },
+        "notify": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/notify"
+            },
+            {
+              "$ref": "grid-bot-create.schema.json#/properties/notify/oneOf/1"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+  }
+}

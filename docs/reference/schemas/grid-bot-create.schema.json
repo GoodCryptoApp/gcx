@@ -1,0 +1,667 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/grid-bot-create.schema.json",
+  "title": "Grid settings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode",
+    "sizing",
+    "reinvest"
+  ],
+  "if": {
+    "properties": {
+      "exitType": {
+        "const": "trailing-stop"
+      }
+    },
+    "required": [
+      "exitType"
+    ]
+  },
+  "then": {
+    "required": [
+      "distance"
+    ]
+  },
+  "properties": {
+    "investment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "amount"
+      ],
+      "description": "A3 d100: absent means quote. Quote is form metadata. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+      "properties": {
+        "unit": {
+          "enum": [
+            "quote",
+            "account"
+          ]
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        }
+      }
+    },
+    "exitType": {
+      "enum": [
+        "limit",
+        "trailing-stop"
+      ],
+      "default": "limit"
+    },
+    "distance": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+      "description": "Trailing exit distance in percent. Required and positive for trailing-stop exits."
+    },
+    "rule": {
+      "$ref": "grid-rule.schema.json"
+    },
+    "mode": {
+      "enum": [
+        "long",
+        "neutral",
+        "short"
+      ]
+    },
+    "sizing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "amount"
+      ],
+      "properties": {
+        "unit": {
+          "enum": [
+            "base",
+            "quote"
+          ]
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        }
+      }
+    },
+    "reinvest": {
+      "type": "boolean"
+    },
+    "stops": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "countOpenPosition": {
+          "$ref": "stop-rules.schema.json#/properties/countOpenPosition"
+        },
+        "target": {
+          "$ref": "stop-rules.schema.json#/properties/target"
+        },
+        "loss": {
+          "$ref": "stop-rules.schema.json#/properties/loss"
+        },
+        "drawdown": {
+          "$ref": "stop-rules.schema.json#/properties/drawdown"
+        },
+        "stopInNeutral": {
+          "$ref": "stop-rules.schema.json#/properties/stopInNeutral"
+        },
+        "closeOnStop": {
+          "$ref": "stop-rules.schema.json#/properties/closeOnStop"
+        },
+        "above": {
+          "$ref": "stop-rules.schema.json#/properties/above"
+        },
+        "below": {
+          "$ref": "stop-rules.schema.json#/properties/below"
+        },
+        "activation": {
+          "$ref": "stop-rules.schema.json#/properties/activation"
+        },
+        "aboveDistance": {
+          "$ref": "stop-rules.schema.json#/properties/aboveDistance"
+        },
+        "belowDistance": {
+          "$ref": "stop-rules.schema.json#/properties/belowDistance"
+        }
+      }
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 50
+    },
+    "wholePosition": {
+      "type": "boolean",
+      "default": true
+    },
+    "notify": {
+      "oneOf": [
+        {
+          "description": "Catalogue Q14: bot stops or errors; TP and SL fills; entry and averaging fills from level fromLevel (0 = all).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stops",
+            "tpSl",
+            "fills",
+            "fromLevel"
+          ],
+          "properties": {
+            "stops": {
+              "type": "boolean"
+            },
+            "tpSl": {
+              "type": "boolean"
+            },
+            "fills": {
+              "type": "boolean"
+            },
+            "fromLevel": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "activate",
+            "finish",
+            "pnl",
+            "range",
+            "orders"
+          ],
+          "properties": {
+            "activate": {
+              "type": "boolean"
+            },
+            "finish": {
+              "type": "boolean"
+            },
+            "pnl": {
+              "type": "boolean"
+            },
+            "range": {
+              "type": "boolean"
+            },
+            "orders": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "profitInCoin": {
+      "type": "boolean",
+      "default": false,
+      "description": "Spot only: closing orders recover the opening quote and both fees, retaining the profit in coin."
+    },
+    "followUp": {
+      "type": "boolean",
+      "default": false,
+      "description": "Follow the price up (0040 a1 d34). Absent means off: a grid stored without it never moves. Supported with quote or coin sizing."
+    },
+    "followDown": {
+      "type": "boolean",
+      "default": false,
+      "description": "Follow the price down (0040 a1 d34). Absent means off. Supported with quote or coin sizing."
+    },
+    "useHeld": {
+      "type": "boolean",
+      "default": false,
+      "description": "Spot: the start uses the free coins of the pair the account holds and buys only the rest (0040 a1 d33)."
+    },
+    "upTo": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+      "default": null,
+      "description": "The highest price the band moves to; null or absent is no limit (0040 a1 d37)."
+    },
+    "downTo": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+      "default": null,
+      "description": "The lowest price the band moves to; null or absent is no limit (0040 a1 d37)."
+    },
+    "band": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "top",
+        "bottom",
+        "count",
+        "log"
+      ],
+      "properties": {
+        "top": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "bottom": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100
+        },
+        "log": {
+          "type": "boolean"
+        },
+        "upTo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "downTo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "manual",
+            "price",
+            "signal"
+          ]
+        },
+        "pct": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "signal"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "pct"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "signal": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "periods",
+              "state"
+            ],
+            "properties": {
+              "kind": {
+                "const": "ta"
+              },
+              "periods": {
+                "$ref": "#/$defs/signalPeriods"
+              },
+              "state": {
+                "enum": [
+                  "strongBuy",
+                  "buy",
+                  "sell",
+                  "strongSell"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "periods",
+              "state"
+            ],
+            "properties": {
+              "kind": {
+                "const": "rsi"
+              },
+              "periods": {
+                "$ref": "#/$defs/signalPeriods"
+              },
+              "state": {
+                "enum": [
+                  "rsiOversold",
+                  "rsiOverbought"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "periods",
+              "state"
+            ],
+            "properties": {
+              "kind": {
+                "const": "macd"
+              },
+              "periods": {
+                "$ref": "#/$defs/signalPeriods"
+              },
+              "state": {
+                "enum": [
+                  "macdBullishCross",
+                  "macdBearishCross"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "periods",
+              "state"
+            ],
+            "properties": {
+              "kind": {
+                "const": "bollinger"
+              },
+              "periods": {
+                "$ref": "#/$defs/signalPeriods"
+              },
+              "state": {
+                "enum": [
+                  "bollingerLower",
+                  "bollingerUpper"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "periods",
+              "state",
+              "pct",
+              "window"
+            ],
+            "properties": {
+              "kind": {
+                "const": "priceMove"
+              },
+              "periods": {
+                "type": "array",
+                "maxItems": 0
+              },
+              "state": {
+                "enum": [
+                  "rose",
+                  "fell"
+                ]
+              },
+              "pct": {
+                "type": "string",
+                "pattern": "^(?=.*[1-9])(\\d+\\.?\\d*|\\.\\d+)$"
+              },
+              "window": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "value",
+                  "unit"
+                ],
+                "properties": {
+                  "value": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "unit": {
+                    "enum": [
+                      "minutes",
+                      "hours",
+                      "days"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "not": {
+        "allOf": [
+          {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "strongBuy",
+                    "buy",
+                    "rsiOversold",
+                    "macdBullishCross",
+                    "bollingerLower",
+                    "fell"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            }
+          },
+          {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": [
+                    "strongSell",
+                    "sell",
+                    "rsiOverbought",
+                    "macdBearishCross",
+                    "bollingerUpper",
+                    "rose"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "required": [
+            "rule"
+          ]
+        },
+        {
+          "required": [
+            "band"
+          ]
+        }
+      ]
+    },
+    {
+      "if": {
+        "properties": {
+          "entry": {
+            "properties": {
+              "kind": {
+                "const": "signal"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "entry"
+        ]
+      },
+      "then": {
+        "properties": {
+          "stops": {
+            "properties": {
+              "activation": {
+                "type": "null"
+              }
+            },
+            "type": "object"
+          }
+        }
+      },
+      "else": {
+        "required": [
+          "rule"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "entry": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "price"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "entry"
+        ]
+      },
+      "then": {
+        "required": [
+          "stops"
+        ],
+        "properties": {
+          "stops": {
+            "type": "object",
+            "required": [
+              "activation"
+            ],
+            "properties": {
+              "activation": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "entry": {
+            "properties": {
+              "kind": {
+                "const": "signal"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "entry"
+        ]
+      },
+      "then": {
+        "required": [
+          "signal"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "signal"
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "signalPeriods": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "1m",
+          "3m",
+          "5m",
+          "15m",
+          "30m",
+          "1h",
+          "2h",
+          "4h",
+          "8h",
+          "12h",
+          "1d",
+          "3d",
+          "1w",
+          "1M"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/proposal-api.schema.json",
+  "title": "Proposals",
+  "description": "An agent's proposals (decision 0010 d6): an agent with a key of scope `propose` (or `trade`) proposes an order; you review it in the panel's own order form, filled with it and priced live, and launch it from there or reject it. Nothing an agent proposes is sent until you press the form's button. A proposal waits with no expiry; at most 20 wait per key. Lowering a key to `read`, or revoking it, rejects its waiting proposals. See docs/agents/README.md.",
+  "$defs": {
+    "propose": {
+      "description": "POST /api/v1/proposals: the agent's own `requestId` (new for each proposal, the same when retrying: the same body answers the same proposal, another body 409), and the order command. The command's own `requestId` is not kept, nor `expected`; `overrides` are kept empty: you decide on warnings in the form. A `close` is refused (422): propose a reduce-only order instead.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "kind", "command"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "kind": { "const": "order" },
+        "command": { "$ref": "order-command.schema.json" }
+      }
+    },
+    "proposed": {
+      "description": "The answer to POST /api/v1/proposals.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposalId"],
+      "properties": { "proposalId": { "type": "string" } }
+    },
+    "proposal": {
+      "description": "One proposal waiting for you, as GET /api/v1/proposals lists it: the key that proposed it, the order command as the form will show it, when it came (Unix milliseconds).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposalId", "keyId", "kind", "command", "createdAt"],
+      "properties": {
+        "proposalId": { "type": "string" },
+        "keyId": { "type": "string" },
+        "kind": {
+          "enum": [
+            "order",
+            "bot-create"
+          ]
+        },
+        "command": { "type": "object" },
+        "createdAt": { "type": "integer" },
+        "closedAt": { "type": ["integer", "null"] },
+        "outcome": { "enum": ["waiting", "launched", "rejected"] }
+      }
+    },
+    "list": {
+      "description": "GET /api/v1/proposals: the proposals waiting, oldest first.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/proposal" }
+    },
+    "reject": {
+      "description": "POST /api/v1/proposals/{proposalId}/reject: an empty object.",
+      "type": "object",
+      "additionalProperties": false
+    },
+    "proposeBot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "kind",
+        "command"
+      ],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "const": "bot-create"
+        },
+        "command": {
+          "oneOf": [
+            {
+              "description": "POST /api/v1/bots (decision 0016 §7.2, slice L2): create a DCA bot on one account and instrument. Leverage and margin mode are set on the exchange before the bot starts (0016 d7); after that the exchange's value wins. A person, or a trading key within its limits (0016 Amendment 1 B80). Answers 200 {id, warning?} (`warning`, a sentence, only when a TA bot on spot that a sell signal can arm is created while the coin for a full sell ladder is not free or could not be read), 422 {rejected, text}, 409 a requestId reused with another body, 503 a process state.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sourceId",
+                "instrumentId",
+                "settings"
+              ],
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The account."
+                },
+                "instrumentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "marginMode": {
+                  "enum": [
+                    "cross",
+                    "isolated"
+                  ],
+                  "default": "isolated",
+                  "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated."
+                },
+                "leverage": {
+                  "type": "string",
+                  "pattern": "^[1-9]\\d*$",
+                  "default": "5",
+                  "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x."
+                },
+                "settings": {
+                  "$ref": "dca-bot-create.schema.json"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 50,
+                  "description": "The person's name for the bot (catalogue E11). Added in B8."
+                },
+                "note": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "description": "The person's note on the bot (catalogue E11; 500 characters as 0007 d22's notes). Added in B8."
+                },
+                "notify": {
+                  "$ref": "lists-api.schema.json#/$defs/notify",
+                  "description": "The bot's notification switches from the start (0009 d2), journaled with it; absent, every switch on from the entry. Added in B8."
+                },
+                "anyway": {
+                  "const": true,
+                  "description": "Additive (MH 2026-10-05, audit line 14): a venue read the create needs failed (the API wallet's expiry; on spot, the coin a short bot sells), or, since MH 690 (d), an order of the ladder is beyond the venue's price band or a spot short lacks the coin, and the person saw the warning: the bot is created anyway. Without it a person's create is answered 422 `unread` with the warning and nothing is set or journaled; a trading key's create is never asked and carries the warning in its answer."
+                },
+                "kind": {
+                  "const": "dca",
+                  "description": "Absent means DCA, preserving older create bodies."
+                }
+              }
+            },
+            {
+              "description": "0040 Grid botCreate",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sourceId",
+                "instrumentId",
+                "settings",
+                "kind"
+              ],
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "The account."
+                },
+                "instrumentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "marginMode": {
+                  "enum": [
+                    "cross",
+                    "isolated"
+                  ],
+                  "default": "isolated",
+                  "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated."
+                },
+                "leverage": {
+                  "type": "string",
+                  "pattern": "^[1-9]\\d*$",
+                  "default": "5",
+                  "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x."
+                },
+                "settings": {
+                  "$ref": "grid-bot-create.schema.json"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 50,
+                  "description": "The person's name for the bot (catalogue E11). Added in B8."
+                },
+                "note": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "description": "The person's note on the bot (catalogue E11; 500 characters as 0007 d22's notes). Added in B8."
+                },
+                "notify": {
+                  "$ref": "grid-bot-create.schema.json#/properties/notify",
+                  "description": "Grid notification switches, journaled from creation: activation, finish, PnL and range on by default; orders off (0040 d21)."
+                },
+                "anyway": {
+                  "const": true,
+                  "description": "Additive (MH 2026-10-05, audit line 14): a venue read the create needs failed (the API wallet's expiry; on spot, the coin a short bot sells), or, since MH 690 (d), an order of the ladder is beyond the venue's price band or a spot short lacks the coin, and the person saw the warning: the bot is created anyway. Without it a person's create is answered 422 `unread` with the warning and nothing is set or journaled; a trading key's create is never asked and carries the warning in its answer."
+                },
+                "kind": {
+                  "const": "grid"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "description": "Propose a DCA or Grid create body for a person to review. Nothing trades before Launch. Shares the existing twenty waiting proposals per key."
+    },
+    "launch": {
+      "oneOf": [
+        {
+          "$ref": "order-command.schema.json"
+        },
+        {
+          "$ref": "runtime-api.schema.json#/$defs/botCreate"
+        }
+      ]
+    }
+  }
+}

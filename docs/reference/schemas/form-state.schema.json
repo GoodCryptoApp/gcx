@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/form-state.schema.json",
+  "title": "Trade form state",
+  "description": "What the manual trade form remembers per viewer (browser storage key gcx.form.manual), never reset by an instrument change, a venue change, the Manual | Bots switch or a submit. Every number is a cell: the string as typed with its tag, which decides what an instrument change does to it (relative: kept; price: kept for its instrument in memory and cleared elsewhere; base: converted at the new instrument's first price; quote: kept within one quote asset). Leverage is never here: it is the venue's. Mirrors src/panel/model/form.ts (FormState). See decision 0007 part 3 decision 3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "mode", "bot", "preview", "closeNoConfirm", "at", "form", "memory"],
+  "properties": {
+    "v": { "const": 1 },
+    "mode": { "enum": ["manual", "bots"] },
+    "bot": { "enum": ["dca", "grid"] },
+    "preview": { "enum": ["buy", "sell"], "description": "The side the chart lines, warnings and description follow." },
+    "closeNoConfirm": { "type": "boolean" },
+    "at": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["venue", "instrumentId", "quote", "szDecimals"],
+          "description": "The instrument the absolute values belong to.",
+          "properties": { "venue": { "type": "string" }, "instrumentId": { "type": "string" }, "quote": { "type": "string" }, "szDecimals": { "type": "integer", "minimum": 0 } }
+        }
+      ]
+    },
+    "memory": {
+      "type": "object",
+      "description": "Absolute prices per venue|instrument, by field path, restored when you return to that instrument.",
+      "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } }
+    },
+    "form": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "extra", "unit", "size", "price", "trigger", "trailStart", "distance", "distanceUnit", "flags", "triggerTimeout", "tif", "delay", "tp", "sl", "bracketReduceOnly"],
+      "properties": {
+        "type": { "$ref": "#/$defs/type" },
+        "extra": { "$ref": "#/$defs/type" },
+        "unit": { "enum": ["base", "quote"] },
+        "size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "description": "What was typed: an amount in unit, a percent of available, Max, or a percent of the position; resolved per side at press.",
+          "properties": { "kind": { "enum": ["amount", "percent", "max", "position"] }, "value": { "$ref": "#/$defs/cell" } }
+        },
+        "price": { "$ref": "#/$defs/cell" },
+        "trigger": { "$ref": "#/$defs/cell" },
+        "trailStart": { "$ref": "#/$defs/cell" },
+        "distance": { "$ref": "#/$defs/cell" },
+        "distanceUnit": { "enum": ["percent", "quote"] },
+        "flags": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["postOnly", "reduceOnly", "improveOnly"],
+          "properties": { "postOnly": { "type": "boolean" }, "reduceOnly": { "type": "boolean" }, "improveOnly": { "type": "boolean" } }
+        },
+        "triggerTimeout": { "$ref": "#/$defs/millis" },
+        "tif": { "$ref": "#/$defs/millis", "description": "\"\": the default from settings." },
+        "delay": { "$ref": "#/$defs/millis" },
+        "sendAt": { "type": "string", "pattern": "^\\d*$", "description": "Added for Send at (0011 d14): the moment to send, ms since the epoch, \"\" none; sent instead of the delay. Absent in an older saved form: none." },
+        "cancelAt": { "type": "string", "pattern": "^\\d*$", "description": "Added for Cancel at (0011 d14): the moment to cancel an order still open, ms since the epoch, \"\" none; sent instead of the time in force. Absent in an older saved form: none." },
+        "tp": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["on", "type", "mode", "targets", "distance", "share", "minProfit"],
+          "properties": {
+            "on": { "type": "boolean" },
+            "type": { "enum": ["market", "limit", "trailing"] },
+            "mode": { "enum": ["percent", "quoted", "price"] },
+            "targets": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "object", "additionalProperties": false, "required": ["value", "share"], "properties": { "value": { "$ref": "#/$defs/cell" }, "share": { "type": "string" } } }
+            },
+            "distance": { "type": "string" },
+            "share": { "type": "string" },
+            "minProfit": { "type": "string" }
+          }
+        },
+        "sl": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["on", "type", "mode", "value", "follow", "triggerTimeout", "distance"],
+          "properties": {
+            "on": { "type": "boolean" },
+            "type": { "enum": ["market", "trailing"] },
+            "mode": { "enum": ["percent", "quoted", "price", "loss"] },
+            "value": { "$ref": "#/$defs/cell" },
+            "follow": { "enum": ["off", "breakeven", "tp"] },
+            "triggerTimeout": { "$ref": "#/$defs/millis" },
+            "distance": { "type": "string" }
+          }
+        },
+        "bracketReduceOnly": { "type": "boolean" },
+        "bracketTif": { "$ref": "#/$defs/millis", "description": "Added 2026-10-05 (audit list 24): the TP/SL's duration from the order's full fill; empty uses the Settings default for a new form." },
+        "bracketCancelAt": { "type": "string", "pattern": "^\\d*$", "description": "C79: explicit custom TP/SL cancellation moment, UTC ms; empty uses a duration. Optional for older saved forms; never restored as the next order's default." }
+      }
+    }
+  },
+  "$defs": {
+    "type": { "enum": ["market", "gc-market", "limit", "stop-market", "stop-limit", "trailing-stop", "trailing-stop-limit", "trailing-reverse", "trailing-reverse-limit"] },
+    "millis": { "type": "string", "pattern": "^\\d*$", "description": "Milliseconds as a string; empty or \"0\" is none." },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["v", "t"],
+      "properties": {
+        "v": { "type": "string", "description": "As typed; validated when a command is built." },
+        "t": { "enum": ["relative", "price", "base", "quote"] },
+        "source": { "enum": ["typed", "filled"], "description": "Stepping provenance; absent on older drafts means typed." },
+        "q": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A base size waiting for the new instrument's first price: the quote value it had." }
+      }
+    }
+  }
+}

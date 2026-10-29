@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/venue-event.schema.json",
+  "title": "Venue event",
+  "description": "What the venue said about one sent attempt, as the runtime feeds it to the order reducer, attributed to (orderId, attempt) through the cloid it journaled. The same event may arrive twice; a fill is identified by the venue's fill id. Every price and size is a decimal string; at is the time the runtime received it (milliseconds since the epoch, the runtime's clock); a fill's time alone is the venue's. The adapter's error classes map as follows, nothing dropped: REJECTED_TERMINAL → rejected/terminal; NO_LIQUIDITY (Hyperliquid 'Order could not immediately match against any resting orders' and 'No liquidity available for market order') → rejected/no-liquidity; PRICE_RACE → rejected/price-race; ALREADY_FLAT → rejected/already-flat; NOT_FOUND → unknown (on a cancel: unknown with action cancel, never cancelled); AUTH, MAINTENANCE, NONCE, RATE_IP, RATE_ADDRESS after the adapter's own retries → rejected/terminal when nothing left, unknown when the send may have left; UNKNOWN → rejected/unclassified, which pages. Mirrors src/domain/orders/wire.ts (VenueEvent). See decisions 0003 §2.8, §2.13 and 0004, and docs/reference/orders/primitives.md.",
+  "oneOf": [
+    { "$ref": "#/$defs/accepted" },
+    { "$ref": "#/$defs/rejected" },
+    { "$ref": "#/$defs/fill" },
+    { "$ref": "#/$defs/cancelled" },
+    { "$ref": "#/$defs/unknown" },
+    { "$ref": "#/$defs/lookup" },
+    { "$ref": "#/$defs/notPlaced" },
+    { "$ref": "#/$defs/reported" }
+  ],
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string." },
+    "signedDecimal": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "A plain decimal string, negative allowed." },
+    "id": { "type": "string", "minLength": 1 },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "time": { "type": "integer", "minimum": 0 },
+    "accepted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "size", "at"],
+      "description": "The venue holds the order. size: what it accepted after rounding, the size the attempt's fills are measured against: the adapter's own wire-rounded size at send time, else the venue's origSz from its order update.",
+      "properties": {
+        "type": { "const": "accepted" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "size": { "$ref": "#/$defs/decimal" },
+        "at": { "$ref": "#/$defs/time" },
+        "nativeTriggerState": { "enum": ["waiting", "triggered"], "description": "Optional MH141 display fact from an acknowledged native trigger order. The reducer ignores it. Absent on older events: no phase is inferred. Replayed into an incremental read index, never a reason to place, cancel or retry an order." }
+      }
+    },
+    "rejected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "reason", "message", "at"],
+      "properties": {
+        "type": { "const": "rejected" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "reason": { "enum": ["price-race", "no-liquidity", "already-flat", "terminal", "unclassified"], "description": "The adapter's error class (0003 §2.13): price-race (post-only would have matched), no-liquidity (an Ioc that matched nothing, a market order with no liquidity), already-flat (reduce-only would increase the position), terminal (anything else that will not succeed as sent), unclassified (the adapter's UNKNOWN: pages, the order goes to repair)." },
+        "message": { "type": "string", "description": "The venue's own text, shown to the user." },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "fill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "fillId", "size", "price", "fee", "at"],
+      "description": "One fill. Counted once by fillId, at any time, also after a cancel or after the order closed. Only real fills with the venue's id (Hyperliquid: tid from userFills); the send reply's provisional filled {totalSz, avgPx} has no id and is never a fill.",
+      "properties": {
+        "type": { "const": "fill" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "fillId": { "$ref": "#/$defs/id" },
+        "size": { "$ref": "#/$defs/decimal" },
+        "price": { "$ref": "#/$defs/decimal" },
+        "fee": { "$ref": "#/$defs/signedDecimal", "description": "In quote; negative for a maker rebate (Hyperliquid pays rebates as negative fees). In the base coin when feeIn is base." },
+        "feeIn": { "const": "base", "description": "Added in 0016 L6. The fee was charged in the instrument's base coin (a spot buy on a venue that charges the coin received: the account got size minus fee). Absent: the fee is in quote, as on every perpetual." },
+        "builderFee": { "$ref": "#/$defs/decimal", "description": "Added in A46. The part of fee that is gcx's platform fee (Hyperliquid's builderFee, in the same coin as fee; the venue's fee includes it). Absent: zero (Hyperliquid leaves it out when zero; a journal from before A46 never carried it)." },
+        "time": { "$ref": "#/$defs/time", "description": "Added in 0016 amendment 5. The exchange's time of the fill (ms; Hyperliquid's time). Absent: a fill recorded before it; at is then the only time." },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "cancelled": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "reason", "at"],
+      "description": "The attempt is no longer live. A cancel-by-cloid answer of NOT_FOUND is not this event: it is unknown (resolve by cloid, fills first).",
+      "properties": {
+        "type": { "const": "cancelled" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "reason": { "enum": ["requested", "ioc-remainder", "reduce-only", "margin", "liquidation", "venue"], "description": "requested: our cancel confirmed. ioc-remainder: the unfilled rest of an Ioc, which the venue does not report; the adapter emits it from its classification of 'filled x of y'. reduce-only: the venue removed a resting reduce-only order because the position closed (reduceOnlyCanceled). margin, liquidation: marginCanceled, liquidatedCanceled. venue: any other removal by the venue." },
+        "executed": { "$ref": "#/$defs/decimal", "description": "ioc-remainder only: the size the send's reply said executed (Hyperliquid filled.totalSz). Evidence, never a fill: the fills arrive as fill events, and the reducer re-sends the rest only once they account for this size." },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "unknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "action", "expiresAfter", "resigned", "at"],
+      "description": "The send (or the cancel) has no known outcome: a timeout, a transport failure, a restart with a journaled send and no answer. Never taken as 'not placed'.",
+      "properties": {
+        "type": { "const": "unknown" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "action": { "enum": ["place", "cancel"] },
+        "expiresAfter": { "$ref": "#/$defs/time", "description": "After this time the venue refuses the action (0003 §2.7)." },
+        "resigned": { "type": "boolean", "description": "Its cloid was signed again (0013 d1 step 6)." },
+        "proof": { "const": true, "description": "The send path runs the venue's proof for this send (0013 Amendment 1 d14): no repair before two minutes from when it was due. Absent (every journal before it): the order goes to repair at once and is never sent again by itself." },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "lookup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "found", "healthy", "expiresAfter", "resigned", "at"],
+      "description": "One resolution read by cloid (0003 §2.8) for an unknown attempt, or, after a restart, for a recorded one without an outcome (no unknown event needed): found on the venue, or not; healthy false for a read that failed.",
+      "properties": {
+        "type": { "const": "lookup" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "found": { "type": "boolean" },
+        "healthy": { "type": "boolean" },
+        "expiresAfter": { "$ref": "#/$defs/time", "description": "The send's deadline, from the journal." },
+        "resigned": { "type": "boolean", "description": "The send's nonce was re-signed, from the journal." },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "notPlaced": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "evidence", "at"],
+      "description": "The venue's proof that this send never reached it (0013 Amendment 1 d2, d3), journaled once: the only way an unknown send ends 'never placed'. Whenever it comes, the order still wanted is sent again as a new attempt under a new cloid (at most three times, then repair); a send not flagged for a proof, or one while another send of the order lives, waits in repair (never-placed) for Re-place (0013 Amendment 3 d4).",
+      "properties": {
+        "type": { "const": "not-placed" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "measured": { "type": "boolean", "description": "The proof's wait comes from a recorded measurement of the venue (pin U1). Kept for the audit; it decides nothing (ruling 179 (b), MH 2026-10-05)." },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lookups", "openOrders", "fills"],
+          "description": "For the audit; the reducer never reads it. The healthy negative reads the verdict rested on, per witness, each its own request.",
+          "properties": {
+            "lookups": { "type": "integer", "minimum": 0, "description": "Lookups by cloid that answered 'unknown order'." },
+            "openOrders": { "type": "integer", "minimum": 0, "description": "Open-orders reads without the order." },
+            "fills": { "type": "integer", "minimum": 0, "description": "Fills reads without a fill of it." }
+          }
+        },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "reported": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "origSz", "sz", "at"],
+      "description": "An imported send's figure as the venue reports it (an order update, an open-orders row, a lookup by its order id; 0004 amendment 3 d5): its size when placed and what is left. The send's filled amount becomes the larger of what it counted and origSz − sz; its fills are never the engine's (they stay on the outside path). How it ended comes as the other events (cancelled). Added 2026-10-18; an older build skips the row.",
+      "properties": {
+        "type": { "const": "reported" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "origSz": { "$ref": "#/$defs/decimal" },
+        "sz": { "$ref": "#/$defs/decimal" },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    }
+  }
+}

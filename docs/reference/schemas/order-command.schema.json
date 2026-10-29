@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/order-command.schema.json",
+  "title": "Order command",
+  "description": "What the panel and the agent surface send to place an order (POST /api/v1/orders). Every number is a decimal string, never a JSON number. One variant per order type; a field of another type is refused. The runtime dedups on requestId and re-validates with its own tick, balances, position and leverage. Mirrors src/domain/orders/command.ts (OrderCommand). See decisions 0004 §1 and 0007 part 3 decision 4, and docs/reference/orders/validation.md.",
+  "oneOf": [
+    { "$ref": "#/$defs/market" },
+    { "$ref": "#/$defs/gc-market" },
+    { "$ref": "#/$defs/limit" },
+    { "$ref": "#/$defs/stop-market" },
+    { "$ref": "#/$defs/stop-limit" },
+    { "$ref": "#/$defs/trailing-stop" },
+    { "$ref": "#/$defs/trailing-stop-limit" },
+    { "$ref": "#/$defs/trailing-reverse" },
+    { "$ref": "#/$defs/trailing-reverse-limit" },
+    { "$ref": "#/$defs/close" }
+  ],
+  "$defs": {
+    "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string." },
+    "millis": { "type": "string", "pattern": "^\\d+$", "description": "A duration in milliseconds, as a string." },
+    "timeInForce": { "$ref": "#/$defs/millis", "not": { "type": "string", "pattern": "^0+$" }, "description": "Resting orders: cancel if still open this long after placement; above zero (zero is refused, HTTP 400). Absent with no cancelAt: one year (31536000000 ms), the API/MCP product default, independent of panel Settings (MH481)." },
+    "instant": { "type": "string", "pattern": "^\\d+$", "description": "A moment, in milliseconds since the epoch (UTC), as a string." },
+    "cancelAt": { "$ref": "#/$defs/instant", "description": "Added in E16 (0011 d14): cancel the order if still open at this moment; not with timeInForce. The runtime journals it as the time in force from the order's send. Absent (and no timeInForce): one year for new API/MCP submissions, independent of panel Settings. Old journal rows retain no expiry." },
+    "exitTimeInForce": {"type":"string","not":{"type":"string","pattern":"^0+$"},"pattern":"^0*(?:[0-9]{1,10}|[12][0-9]{10}|30[0-9]{9}|31[0-4][0-9]{8}|315[0-2][0-9]{7}|3153[0-5][0-9]{6}|31536000000)$","default":"31536000000","description":"MH484: above zero and at most one year, 31536000000 milliseconds; over the limit is HTTP 400 with the house limit message, never silently cut."},
+    "oneTime": { "type": "object", "description": "A moment or a duration, never both (0011 d14).", "not": { "anyOf": [{ "type": "object", "properties": { "sendAt": true, "delay": true }, "required": ["sendAt", "delay"] }, { "type": "object", "properties": { "cancelAt": true, "timeInForce": true }, "required": ["cancelAt", "timeInForce"] }] } },
+    "base": {
+      "type": "object",
+      "required": ["requestId", "sourceId", "instrumentId", "type", "overrides"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Caller-minted id (the panel uses a UUID); the runtime makes one order per id." },
+        "sourceId": { "type": "string", "minLength": 1, "description": "The source the order is for: a venue account or a wallet, never the caller" },
+        "instrumentId": { "type": "string", "minLength": 1, "description": "The instrument id, e.g. BTC or xyz:SPCX." },
+        "type": { "type": "string", "description": "The order type; each variant below fixes it and allows only that type's fields." },
+        "overrides": {
+          "type": "array",
+          "uniqueItems": true,
+          "description": "Keys of the warnings the user chose to send anyway. Only overridable warnings can be listed; errors cannot be overridden. A trading key's order is sent with its warnings whatever it lists here (RULINGS 75).",
+          "items": {
+            "enum": [
+              "trade.msgInsufficientFunds",
+              "trade.msgMinNotional",
+              "trade.msgImmediateStop",
+              "trade.msgLimitProtectionBuy",
+              "trade.msgLimitProtectionSell",
+              "trade.msgStopLimitProtectionBuy",
+              "trade.msgStopLimitProtectionSell",
+              "trade.bracket.msgInvalidTpSlRelation",
+              "trade.bracket.msgInvalidTrailDistanceSlTp",
+              "trade.bracket.msgInvalidMtpsSizeBiggerThanMinAmount",
+              "trade.bracket.msgInvalidMtpsValue",
+              "trade.bracket.msgSlMinNotional",
+              "trade.msgMarketSlippage",
+              "trade.msgNoPrice",
+              "trade.msgLimitBand",
+              "trade.bracket.msgExpiryTooLong"
+            ]
+          }
+        }
+      }
+    },
+    "open": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/base" }, { "$ref": "#/$defs/oneTime" }],
+      "required": ["side", "size", "sizeUnit"],
+      "properties": {
+        "side": { "enum": ["buy", "sell"] },
+        "size": { "$ref": "#/$defs/decimal", "description": "Amount in sizeUnit." },
+        "sizeUnit": { "enum": ["base", "quote"], "description": "base: the base asset; quote: the quote asset (on perps the notional, never the margin). A quote size is converted to base by the engine and floored to the size step; on spot a market buy's at the ask plus the 1 % entry cap, its limit at the exchange, so it never costs more than the amount." },
+        "reduceOnly": { "type": "boolean", "description": "Only reduce the position. On a perpetual an order whose side and size close the position exactly, as gcx reads it when the order arrives, is sent reduce-only without it too, and gets no minimum-order-value warning (since 2026-10-05). On spot, which has no position, it is dropped and the order sent without it (since 2026-10-05; refused before)." },
+        "delay": { "$ref": "#/$defs/millis", "description": "Timed placement: send after this long." },
+        "sendAt": { "$ref": "#/$defs/instant", "description": "Added in E16 (0011 d14): send at this moment; not with delay. The runtime journals it as the delay from its receipt; a moment not ahead of the runtime's clock is refused. Absent (and no delay): sent now." },
+        "bracket": { "$ref": "#/$defs/bracket" },
+        "expected": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["leverage", "marginMode"],
+          "deprecated": true,
+          "description": "Deprecated (MH 2026-10-05): accepted and ignored. The order goes at the leverage and margin mode the exchange has when it is sent; set them with POST /api/v1/leverage. Until 2026-10-05 an order was refused when this differed from the exchange's.",
+          "properties": {
+            "leverage": { "$ref": "#/$defs/decimal" },
+            "marginMode": { "enum": ["cross", "isolated"] }
+          }
+        }
+      }
+    },
+    "market": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/open" }],
+      "properties": { "type": { "const": "market" } },
+      "unevaluatedProperties": false
+    },
+    "gc-market": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/open" }],
+      "description": "Market, cancelled if not filled within the venue's wait (legacy GC-Market). On an Ioc venue such as Hyperliquid it behaves as market.",
+      "properties": { "type": { "const": "gc-market" } },
+      "unevaluatedProperties": false
+    },
+    "limit": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/open" }],
+      "required": ["price"],
+      "properties": {
+        "type": { "const": "limit" },
+        "price": { "$ref": "#/$defs/decimal" },
+        "postOnly": { "type": "boolean" },
+        "timeInForce": { "$ref": "#/$defs/timeInForce" },
+        "cancelAt": { "$ref": "#/$defs/cancelAt" }
+      },
+      "unevaluatedProperties": false
+    },
+    "stop-market": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/open" }],
+      "required": ["triggerPrice"],
+      "properties": {
+        "type": { "const": "stop-market" },
+        "triggerPrice": { "$ref": "#/$defs/decimal" },
+        "triggerTimeout": { "$ref": "#/$defs/millis", "description": "After the first crossing, wait this long and fire only if the price is still across." },
+        "timeInForce": { "$ref": "#/$defs/timeInForce" },
+        "cancelAt": { "$ref": "#/$defs/cancelAt" }
+      },
+      "unevaluatedProperties": false
+    },
+    "stop-limit": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/open" }],
+      "required": ["triggerPrice", "price"],
+      "properties": {
+        "type": { "const": "stop-limit" },
+        "triggerPrice": { "$ref": "#/$defs/decimal" },
+        "price": { "$ref": "#/$defs/decimal", "description": "The limit price sent when the trigger fires." },
+        "postOnly": { "type": "boolean", "description": "The limit sent at the trigger rests post-only (the DCA bot's averaging orders)." },
+        "triggerTimeout": { "$ref": "#/$defs/millis" },
+        "timeInForce": { "$ref": "#/$defs/timeInForce" },
+        "cancelAt": { "$ref": "#/$defs/cancelAt" }
+      },
+      "unevaluatedProperties": false
+    },
+    "trailing": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/open" }],
+      "required": ["distance", "distanceUnit"],
+      "properties": {
+        "distance": { "$ref": "#/$defs/decimal" },
+        "distanceUnit": { "enum": ["percent", "quote"] },
+        "trailStart": { "$ref": "#/$defs/decimal", "description": "Trailing starts when the price reaches this level; absent: from placement." },
+        "timeInForce": { "$ref": "#/$defs/timeInForce" },
+        "cancelAt": { "$ref": "#/$defs/cancelAt" }
+      }
+    },
+    "trailing-stop": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/trailing" }],
+      "properties": { "type": { "const": "trailing-stop" }, "improveOnly": { "type": "boolean" } },
+      "unevaluatedProperties": false
+    },
+    "trailing-stop-limit": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/trailing" }],
+      "properties": { "type": { "const": "trailing-stop-limit" }, "improveOnly": { "type": "boolean" } },
+      "unevaluatedProperties": false
+    },
+    "trailing-reverse": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/trailing" }],
+      "properties": { "type": { "const": "trailing-reverse" } },
+      "unevaluatedProperties": false
+    },
+    "trailing-reverse-limit": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/trailing" }],
+      "properties": { "type": { "const": "trailing-reverse-limit" } },
+      "unevaluatedProperties": false
+    },
+    "close": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "description": "The exit order: market, reduce-only, sized by the runtime from the position. No side and no size.",
+      "properties": { "type": { "const": "close" } },
+      "unevaluatedProperties": false
+    },
+    "bracket": {
+      "description": "Take-profit targets and one stop-loss attached to the order, placed on its fills. Every combination is valid here, including a limit take-profit with a stop-loss, by hand or from the DCA bot, on perps and on spot (ruling 381 b); on spot gcx's own stop-loss cancels the resting take-profit first and sells once the exchange confirmed the cancel (ruling 296 c).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reduceOnly": { "type": "boolean", "default": true, "description": "The take-profit and stop-loss only reduce the position (perpetuals). Default true: absent, the take-profit and stop-loss are reduce-only, whatever Settings › Trading says (MH 520); a received value is honoured. Spot has no reduce-only." },
+        "tp": { "oneOf": [{ "$ref": "#/$defs/tpMarket" }, { "$ref": "#/$defs/tpLimit" }, { "$ref": "#/$defs/tpTrailing" }] },
+        "sl": { "$ref": "#/$defs/sl" },
+        "timeInForce": { "$ref": "#/$defs/exitTimeInForce", "description": "Added 2026-10-05 (MH, audit list 24): the take-profit and stop-loss's own time in force, one for both, counted from the order's full fill (on a position, from when they are set); at its end every one still open is cancelled, with one notice. Absent with no cancelAt: one year (31536000000 ms) for new API/MCP submissions, independent of panel Settings (MH481). Old journal rows retain no expiry. An older build ignores it." },
+        "cancelAt": { "$ref": "#/$defs/instant", "description": "C79 B2/B4: cancel both TP/SL legs at this UTC moment, not with timeInForce. MH480, MH484 (500 (1)): not before the entry's expiry and (a market or gc-market entry expires at its send; on a position or an order already filled, counted from acceptance): before the entry's expiry is HTTP 400, equality accepted; more than one year after it is the overridable warning trade.bracket.msgExpiryTooLong (HTTP 422 until named in overrides). A late full fill retains this end; the old journal failure path expires elapsed exits without placing. Older readers ignore this field and do not support absolute TP/SL expiry." }
+      },
+      "not": { "type":"object", "properties":{"timeInForce":true,"cancelAt":true}, "required": ["timeInForce", "cancelAt"] }
+    },
+    "tpMarket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "mode", "targets"],
+      "properties": { "type": { "const": "market" }, "mode": { "$ref": "#/$defs/levelMode" }, "targets": { "$ref": "#/$defs/targets" } }
+    },
+    "tpLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "mode", "targets"],
+      "properties": { "type": { "const": "limit" }, "mode": { "$ref": "#/$defs/levelMode" }, "targets": { "$ref": "#/$defs/targets" } }
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "share"],
+        "properties": {
+          "value": { "$ref": "#/$defs/decimal", "description": "Percent, quote distance or price, per mode." },
+          "share": { "$ref": "#/$defs/decimal", "description": "Percent of the parent's filled size this target closes." }
+        }
+      }
+    },
+    "tpTrailing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "distance", "share"],
+      "properties": {
+        "type": { "const": "trailing" },
+        "distance": { "$ref": "#/$defs/decimal", "description": "Trailing distance, percent." },
+        "share": { "$ref": "#/$defs/decimal" },
+        "minProfit": { "$ref": "#/$defs/decimal", "description": "Percent; activation waits until this profit (improve-only)." }
+      }
+    },
+    "sl": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "mode", "value"],
+          "properties": {
+            "type": { "const": "market" },
+            "mode": { "enum": ["percent", "quoted", "price", "loss"], "description": "loss: value is the expected loss in quote." },
+            "value": { "$ref": "#/$defs/decimal" },
+            "follow": { "enum": ["breakeven", "tp"], "description": "Follow TPs: move to break-even at the first target, or to the previous target at each. Off when absent." },
+            "triggerTimeout": { "$ref": "#/$defs/millis" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "distance"],
+          "properties": {
+            "type": { "const": "trailing" },
+            "distance": { "$ref": "#/$defs/decimal", "description": "Trailing distance, percent." }
+          }
+        }
+      ]
+    },
+    "levelMode": { "enum": ["percent", "quoted", "price"], "description": "percent or quoted: a distance from the parent's price; price: an absolute level." }
+  }
+}

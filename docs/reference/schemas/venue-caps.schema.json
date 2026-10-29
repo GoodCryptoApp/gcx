@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/venue-caps.schema.json",
+  "title": "Venue capabilities, per instrument kind",
+  "description": "What a venue offers for one kind of instrument (perpetual or spot), as the venue port declares it (src/venues/port.ts, Caps; Hyperliquid's values in src/venues/hyperliquid/port.ts, HL_CAPS; design 0013 decision 10). The send path refuses before signing what the venue does not offer. Price and size precision are the instrument's, not the venue's (hl-instrument).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reduceOnly", "nativeStops", "modify", "batchOrders", "expiresAfterMs"],
+  "properties": {
+    "feeRates": { "type": "object", "additionalProperties": false, "required": ["maker", "taker"], "properties": { "maker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }, "taker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" } }, "description": "Published base maker/taker fractions for display before an account rate read (0040 amendment d28.4)." },
+    "reduceOnly": { "type": "boolean", "description": "The venue enforces reduce-only on this kind (Hyperliquid spot: no)." },
+    "nativeStops": {
+      "description": "The venue's own trigger orders and the price they fire on; null where the venue has none for this kind or they are not used.",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object", "additionalProperties": false, "required": ["triggerPrice"], "properties": { "triggerPrice": { "const": "mark" } } }
+      ]
+    },
+    "modify": { "const": "cancel-then-place", "description": "A resting order is changed by cancelling it and placing a new one with a new client order id; the venue's own modify is not used." },
+    "batchOrders": { "type": "boolean", "description": "Several orders in one signed action." },
+    "expiresAfterMs": { "type": "integer", "minimum": 1, "description": "Every order and cancel expires this many milliseconds after it is stamped." },
+    "buyFeeInBase": {
+      "description": "Added 2026-10-03 (ruling 151): a buy's fee is taken in the coin bought (Hyperliquid spot), so a DCA bot's buys are topped up from its first; fallbackRate is the venue's highest standard taker rate, a fraction (Hyperliquid spot: 0.0007), assumed when the account's own rate cannot be read. Null where the fee is taken in the quote; absent reads as null.",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object", "additionalProperties": false, "required": ["fallbackRate"], "properties": { "fallbackRate": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$" } } }
+      ]
+    },
+    "limitBandPct": {
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)?$",
+      "description": "Added 2026-10-03 (B13, release plan B10a): the venue's limit-distance rule, in percent: a limit order priced further than this from the venue's reference price is refused when placed (Hyperliquid perpetuals: 80, the figure of the venue's own refusal text; spot: none known). Absent: no bound, the default for a venue or kind without a known figure. gcx refuses a manual limit beyond it before signing, and a DCA bot holds a level beyond it until the price brings it inside."
+    }
+  }
+}

@@ -1,0 +1,577 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/dashboard-topic.schema.json",
+  "title": "Dashboard topic",
+  "description": "0007 amendment 4: held Dashboard read model. Money, prices, normalized factors and scores are decimal strings; counts and milliseconds are integers. No commands or journal kinds are added. since is the real previous-presence moment, never now. 0007 Amendment 9 (additive): each worth row carries `situation`, the reason it is drawn; `score` is its importance; `worthStale` marks rows ranked before the portfolio was known.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "pnl": {
+      "$ref": "https://gcx.ai/schemas/runtime-api.schema.json#/$defs/portfolio/properties/pnl",
+      "description": "0003a Amendment 1 d9 (additive): the same realised PnL shape as GET /api/v1/portfolio, computed from its in-memory record on the existing five-second held pulse; no venue read or new timer. Sent only when the frame changes. Omitted by older runtimes: the panel keeps the read made at show. Previous panels ignore this field."
+    },
+    "since": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "attention": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "liquidations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "instrumentId": {
+                "type": "string"
+              },
+              "display": {
+                "$ref": "instrument-display.schema.json"
+              }
+            },
+            "required": [
+              "sourceId",
+              "instrumentId"
+            ]
+          }
+        },
+        "cycles": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "pnl": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  },
+                  "averaging": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "id",
+                  "count",
+                  "pnl"
+                ]
+              }
+            },
+            "other": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "otherPnl": {
+              "type": "string",
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            }
+          },
+          "required": [
+            "rows",
+            "other",
+            "otherPnl"
+          ]
+        },
+        "executed": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "volume": {
+              "type": "string",
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            "largest": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "orderId": {
+                  "type": "string"
+                },
+                "sourceId": {
+                  "type": "string"
+                },
+                "instrumentId": {
+                  "type": "string"
+                },
+                "side": {
+                  "enum": [
+                    "buy",
+                    "sell"
+                  ]
+                },
+                "size": {
+                  "type": "string",
+                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                },
+                "display": {
+                  "$ref": "instrument-display.schema.json"
+                }
+              },
+              "required": [
+                "orderId",
+                "sourceId",
+                "instrumentId",
+                "side",
+                "size",
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "count",
+            "volume"
+          ]
+        },
+        "stopped": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "reason"
+                ]
+              }
+            },
+            "other": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "rows",
+            "other"
+          ]
+        },
+        "opened": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "instrumentId": {
+                "type": "string"
+              },
+              "display": {
+                "$ref": "instrument-display.schema.json"
+              }
+            },
+            "required": [
+              "sourceId",
+              "instrumentId"
+            ]
+          }
+        },
+        "closed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sourceId": {
+                "type": "string"
+              },
+              "instrumentId": {
+                "type": "string"
+              },
+              "display": {
+                "$ref": "instrument-display.schema.json"
+              }
+            },
+            "required": [
+              "sourceId",
+              "instrumentId"
+            ]
+          }
+        }
+      },
+      "required": [
+        "attention",
+        "liquidations",
+        "cycles",
+        "executed",
+        "stopped",
+        "opened",
+        "closed"
+      ]
+    },
+    "worth": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "position",
+              "bot",
+              "order"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "upnl": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "n": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "at": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "When the row began; absent when unknown (a position the runtime saw already open, position-row.schema.json)."
+          },
+          "size": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "filled": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "instrumentId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "long",
+              "short",
+              "buy",
+              "sell"
+            ]
+          },
+          "mark": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "entry": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "cycles": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "realized": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "holding": {
+            "type": "boolean"
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "tp",
+                      "sl"
+                    ]
+                  },
+                  "target": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  },
+                  "entry": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  },
+                  "now": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "target",
+                  "entry",
+                  "now"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "liquidation"
+                  },
+                  "target": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  },
+                  "away": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "target",
+                  "away"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "averaging"
+                  },
+                  "used": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "away": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "used",
+                  "total",
+                  "away"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "order"
+                  },
+                  "away": {
+                    "type": "string",
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "away"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "value"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            ]
+          },
+          "score": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "description": "0007 Amendment 9: the row's importance; only the order of rows is read."
+          },
+          "change": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "changeKind": {
+            "enum": [
+              "threshold",
+              "pnl",
+              "fill",
+              "value"
+            ]
+          },
+          "beforeUpnl": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "beforeFilled": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+          },
+          "upnlPercent": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "description": "Position ROE uses admitted margin; bot U uses Invested. Absent for unavailable/zero base."
+          },
+          "beforeUpnlPercent": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+            "description": "Actual previously seen percent. Optional on older baseline records; never recomputed using the current base."
+          },
+          "situation": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "0007 Amendment 9 d1-d5: the situation the row's words come from (its strongest firing one other than a plain move), with the row's importance (money in play × strength × weight ÷ the portfolio) and its money in play `a`. Figures are decimal strings, `account` an account id and `coin` an instrument id. giveback: peak, now; recovery and move: before, now; liquidation: price, away (and account, coin on a cross row); stop and take: price and now, the target's and the price's move from the entry in percent; derisk: used, planned and away (the price near its average, percent) or now and before (the cycle's loss from its worst); depth: used, planned; inside (added 2026-10-17, MH 623 (f)): from and to, the averaging orders a DCA bot's cycle does not place because its stop comes before them, and spot \"1\" on a spot pair; stuck: used, planned, now (the P&L percent); quiet: away; funding: paid (negative when paid); order: away.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "giveback",
+                  "recovery",
+                  "move",
+                  "liquidation",
+                  "stop",
+                  "take",
+                  "derisk",
+                  "depth",
+                  "inside",
+                  "stuck",
+                  "quiet",
+                  "funding",
+                  "order"
+                ]
+              },
+              "band": {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+              },
+              "importance": {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+              },
+              "a": {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+              },
+              "figures": {
+                "type": "object",
+                "propertyNames": {
+                  "enum": [
+                    "peak",
+                    "before",
+                    "now",
+                    "price",
+                    "away",
+                    "used",
+                    "planned",
+                    "paid",
+                    "account",
+                    "coin",
+                    "from",
+                    "to",
+                    "spot"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "since": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "The moment the sentence counts from (ms): when the block last told the row (recovery, move, funding), the cycle's start (stuck), the quiet range's start (quiet), the order's placement (order)."
+              }
+            },
+            "required": [
+              "kind",
+              "importance",
+              "a",
+              "figures"
+            ]
+          },
+          "display": {
+            "$ref": "instrument-display.schema.json"
+          },
+          "createdBy": {
+            "$ref": "order-row.schema.json#/$defs/createdBy"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "value",
+          "upnl",
+          "n",
+          "size",
+          "sourceId",
+          "instrumentId",
+          "subjectId",
+          "cycles",
+          "realized",
+          "holding",
+          "reason",
+          "score",
+          "change",
+          "changeKind",
+          "beforeUpnl",
+          "beforeFilled"
+        ]
+      }
+    },
+    "worthStale": {
+      "const": true,
+      "description": "0007 Amendment 9 d5: the portfolio's total is not known yet; the rows are ranked against the open rows' value and nothing is marked told. Absent otherwise."
+    }
+  },
+  "required": [
+    "since",
+    "summary",
+    "worth"
+  ]
+}

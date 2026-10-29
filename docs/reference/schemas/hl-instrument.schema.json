@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/hl-instrument.schema.json",
+  "title": "Hyperliquid instrument",
+  "description": "One perp of the Hyperliquid catalogue (decision 0003 §2.5–2.6) as the adapter builds it from `perpDexs`, `meta` per dex and `spotMeta` (src/venues/hyperliquid/instruments.ts, HlInstrument). Extends the domain Instrument of src/domain/orders/validate.ts. Asset id: the universe index on the main dex, `100000 + 10000 × dexIndex + assetIndex` on a HIP-3 dex.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "venue", "kind", "name", "dex", "dexIndex", "assetIndex", "assetId", "szDecimals", "minNotional", "maxLeverage", "marginModes", "onlyIsolated", "isDelisted", "collateralToken", "priceRule"],
+  "properties": {
+    "id": { "type": "string" },
+    "venue": { "const": "hyperliquid" },
+    "kind": { "const": "perp" },
+    "name": { "type": "string", "description": "The venue's coin name, with the dex prefix on HIP-3 (`xyz:XYZ100`)." },
+    "dex": { "type": "string", "description": "\"\" is the main dex." },
+    "dexIndex": { "type": "integer", "minimum": 0 },
+    "assetIndex": { "type": "integer", "minimum": 0 },
+    "assetId": { "type": "integer", "minimum": 0 },
+    "szDecimals": { "type": "integer", "minimum": 0, "description": "Sizes are floored to 10^−szDecimals." },
+    "minNotional": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "Minimum order value in the collateral token, checked at the order's price and at the mark." },
+    "maxLeverage": { "type": "string", "pattern": "^\\d+$" },
+    "marginModes": { "type": "array", "items": { "enum": ["isolated", "cross"] }, "minItems": 1, "uniqueItems": true },
+    "onlyIsolated": { "type": "boolean" },
+    "venueMarginMode": { "type": "string", "description": "The venue's own marginMode string when it sends one (strictIsolated, noCross)." },
+    "isDelisted": { "type": "boolean", "description": "On HIP-3 it also means never activated." },
+    "collateralToken": { "type": "integer", "minimum": 0, "description": "Spot token index of the dex's collateral." },
+    "priceRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sigFigs", "maxDecimals"],
+      "properties": { "sigFigs": { "const": 5 }, "maxDecimals": { "type": "integer", "minimum": 0, "maximum": 6, "description": "6 − szDecimals." } }
+    }
+  }
+}

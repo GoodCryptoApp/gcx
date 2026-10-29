@@ -44,13 +44,10 @@ Press **Disconnect** in Settings › Alerts. Your chat is told, and nothing more
 
 ## What you get
 
-Everything below is on at first. Each is a switch in Settings › Alerts:
-
-- **Orders from goodcryptoX**: the fill and the trigger of your manual orders.
-- **External orders**: a fill of an order you placed with the exchange's own app or another tool, sent with "(external)" in its title.
-- **Bot stop or error**, **Take profit / stop loss** and **Entry and averaging orders**: what every new bot starts with. Change a bot's own alerts in its form or its details.
-
-With no switch, you always get what needs you, a reminder every hour while a position is left without its stop-loss, and one message after goodcryptoX was away, with what happened meanwhile.
+Alerts tell you about order fills and triggers, bot activity and anything that needs you.
+Choose routine alerts in **Settings › Alerts** and each bot's **Notifications**.
+A reminder arrives every hour while a position is left without its working stop-loss or close.
+After goodcryptoX was away, one message tells you what happened meanwhile.
 
 ## Shortcut buttons
 
@@ -69,7 +66,3 @@ Each button does what the same button in the panel does. Two switches in Setting
 - **Confirm before acting**: a button first says what it is about to do, and acts only after you press **Confirm**.
 
 If someone else can use your phone or your Telegram, turn the shortcut buttons off.
-
-## What comes next
-
-We will keep adding to Telegram: the goal is that most of what the app does can be done from Telegram too.

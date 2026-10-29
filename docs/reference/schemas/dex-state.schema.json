@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/dex-state.schema.json",
+  "title": "Dex state",
+  "description": "One perp dex's clearinghouse state as the adapter parses it (src/venues/hyperliquid/account.ts, DexState), from REST `clearinghouseState` or one element of the `allDexsClearinghouseState` stream. An asset absent from `positions` is a zero position in a healthy read. In unified and portfolio-margin accounts the money figures here are not meaningful (decision 0003a) and never enter a balance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["dex", "time", "accountValue", "withdrawable", "totalMarginUsed", "crossAccountValue", "crossMaintenanceMarginUsed", "positions"],
+  "properties": {
+    "dex": { "type": "string", "description": "\"\" is the main dex." },
+    "time": { "type": "integer", "description": "The venue's time on the state, ms." },
+    "accountValue": { "$ref": "#/$defs/canonical" },
+    "withdrawable": { "$ref": "#/$defs/canonical" },
+    "totalMarginUsed": { "$ref": "#/$defs/canonical" },
+    "crossAccountValue": { "$ref": "#/$defs/canonical" },
+    "crossMaintenanceMarginUsed": { "$ref": "#/$defs/canonical" },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["coin", "szi", "entryPx", "positionValue", "unrealizedPnl", "liquidationPx", "marginUsed", "leverage", "cumFunding"],
+        "properties": {
+          "coin": { "type": "string" },
+          "szi": { "$ref": "#/$defs/canonical", "description": "Signed size." },
+          "entryPx": { "$ref": "#/$defs/canonical" },
+          "positionValue": { "$ref": "#/$defs/canonical" },
+          "unrealizedPnl": { "$ref": "#/$defs/canonical" },
+          "liquidationPx": { "oneOf": [{ "$ref": "#/$defs/canonical" }, { "type": "null" }] },
+          "returnOnEquity": { "$ref": "#/$defs/canonical", "description": "Optional venue ROE ratio, including zero; not a percentage." },
+          "marginUsed": { "$ref": "#/$defs/canonical" },
+          "leverage": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "value"],
+            "properties": { "type": { "enum": ["cross", "isolated"] }, "value": { "type": "string", "pattern": "^\\d+$" } }
+          },
+          "cumFunding": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["allTime", "sinceOpen", "sinceChange"],
+            "properties": { "allTime": { "$ref": "#/$defs/canonical" }, "sinceOpen": { "$ref": "#/$defs/canonical" }, "sinceChange": { "$ref": "#/$defs/canonical" } }
+          }
+        }
+      }
+    }
+  },
+  "$defs": { "canonical": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$", "description": "A canonical decimal string. Never a JSON number." } }
+}

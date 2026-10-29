@@ -1,0 +1,583 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/runtime-entry.schema.json",
+  "title": "Runtime entry",
+  "description": "An entry the runtime itself writes to the ledger beside the engine's inputs (decision 0008 §1.7 and §2.2; a send, 0013 d1; a send's refusal, 0003 Amendment 3 d5; a request, 0010 d4; a funding payment, 0011 d12; an account's source events, 0003b d1; an account write, 0013 S10), as the payload of a journal row (journal-row.schema.json). The engine's fold skips these. Times are milliseconds since the epoch on the runtime's wall clock. Mirrors src/runtime/store/store.ts, RuntimeEntry.",
+  "oneOf": [
+    {
+      "title": "Grid runtime step",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "botId",
+        "at",
+        "action",
+        "record"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "grid",
+            "grid.notify",
+            "grid.mismatch"
+          ]
+        },
+        "botId": {
+          "type": "string"
+        },
+        "at": {
+          "type": "integer"
+        },
+        "marginMode": { "enum": ["isolated", "cross"], "description": "M1, MH 2026-10-25: mode used for the recorded margin budget; absent retains the last known mode or the previous arithmetic" },
+        "leverage": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$", "description": "A3 d100: the leverage used to resolve the margin budget; absent uses the last recorded grid leverage, then ruling 88 (a)'s 5x default" },
+        "account": { "type": "object", "required": ["kind"], "properties": { "kind": { "enum": ["fresh", "stale", "absent"] }, "value": { "type": "string" } }, "description": "A2 d61: the held account value used before planning; resolved amounts also live in each grid note" },
+        "request": { "$ref": "bot-entry.schema.json#/$defs/request" },
+        "action": {
+          "type": "object"
+        },
+        "record": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "meta",
+            "notes",
+            "peak",
+            "armed",
+            "fire",
+            "alerts"
+          ],
+          "properties": {
+            "notification": {"type":"object","additionalProperties":{"type":"string"},"description":"P11 step-local notification facts; absent in old journals"},
+            "activity": {"type": "object", "description": "A4: this step’s ended-order, funding and pair deltas; the fold builds bounded cursor indexes."},
+            "profitability": {
+              "description": "G12 fixed-size derived-profit facts. Absent on older steps: no recorded chart history is invented.",
+              "type": "object", "additionalProperties": false,
+              "required": ["realized", "event", "planned", "held", "done"],
+              "properties": {
+                "realized": {"type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"},
+                "event": {"type": "boolean"},
+                "initial": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"},
+                "planned": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"},
+                "held": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$"},
+                "done": {"type": "boolean"}
+              }
+            },
+            "counted": { "type": "object", "additionalProperties": { "type": "string" } },
+            "meta": {
+              "type": "object"
+            },
+            "moves": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["at", "i0"], "properties": {"at": {"type": "integer"}, "i0": {"type": "integer"}, "neutral": {"type": "integer"}, "stopAbove": {"type": ["string", "null"]}, "stopBelow": {"type": ["string", "null"]}, "rule": {"type": "object", "additionalProperties": false, "required": ["low", "i0", "count"], "properties": {"low": {"type": "string"}, "i0": {"type": "integer"}, "count": {"type": "integer", "minimum": 2, "maximum": 9007199254740991}, "step": {"type": "string"}, "ratio": {"type": "string"}}, "oneOf": [{"required": ["step"], "properties": {"step": {}}}, {"required": ["ratio"], "properties": {"ratio": {}}}]}}}},
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "peak": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "armed": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "fire": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "alerts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "events": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "resized",
+                  "activated",
+                  "finished",
+                  "pnl",
+                  "range",
+                  "fill",
+                  "mismatch",
+                  "modified"
+                ]
+              }
+            },
+            "figures": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "position",
+                "gridProfit"
+              ],
+              "properties": {
+                "position": {
+                  "type": "string"
+                },
+                "gridProfit": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Gap start",
+      "description": "The runtime was not watching from `from` to `to`. Written at every start after the first (cause `down`, or `update` when the previous run drained for an update; `from` is the time of the ledger's last entry before the start, so it errs early) and at every detected sleep (cause `sleep`; `from` and `to` are the wall-clock times of the two ticks around it).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "phase", "from", "to", "cause"],
+      "properties": {
+        "type": { "const": "runtime.gap" },
+        "phase": { "const": "start" },
+        "from": { "type": "integer", "minimum": 0 },
+        "to": { "type": "integer", "minimum": 0 },
+        "cause": { "enum": ["sleep", "down", "update"] },
+        "version": { "type": "string", "minLength": 1, "description": "The build stamp of the runtime that started (0008 amendment 1 d9, e.g. `0.0.2-dev.412+a1b2c3d`); on a start's gap only, absent on a sleep's and in entries written before R1." }
+      }
+    },
+    {
+      "title": "Gap settled",
+      "description": "The gap that started at `from` is settled: reconcile finished and the 180 s late-fill window after it passed. What happened while away is the ledger between the gap's start and this entry; before it, the report is provisional.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "phase", "from", "at"],
+      "properties": {
+        "type": { "const": "runtime.gap" },
+        "phase": { "const": "settled" },
+        "from": { "type": "integer", "minimum": 0 },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Drain",
+      "description": "A drain began: no new risk, protective work finishes, in-flight sends settle, then the runtime stops. The reason is kept so the next start knows an update from a shutdown or a crash. `kill-all` was written by builds before 2026-10-05 (kill-all removed, MH: \"Kill-all not needed\"): such a row holds nothing now and is not a stop (a crash after it is a crash).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "reason", "at"],
+      "properties": {
+        "type": { "const": "runtime.drain" },
+        "reason": { "enum": ["update", "shutdown", "kill-all"] },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Resume",
+      "description": "Written by builds before 2026-10-05: the end of a kill-all hold (kill-all removed, MH: \"Kill-all not needed\"). It holds and changes nothing now; it stays readable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "at"],
+      "properties": {
+        "type": { "const": "runtime.resume" },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Market data's messages",
+      "description": "The effects of one market-data liveness step that become a message (decision 0009 row 17; roadmap N11), as the liveness reducer decided them, once per episode: a coin's feed delayed (`alert`, after 30 s STALE), no price (`page`, ABSENT), live again (`recovered`, only after an `alert` or a `page`), a gap the stops could not be checked over (`gapCheckOverdue`, its read unanswered two minutes after the frames resumed), a dex halted by the venue (`halted`). Written so the notifier hears them by its cursor as every other entry; the folds skip it. Added in N11: older ledgers have none and nothing defaults. Times are the wall clock's milliseconds. Mirrors src/runtime/store/store.ts, MarketDataEntry, and src/domain/marketdata/liveness.ts, LivenessEffect.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "effects", "at"],
+      "properties": {
+        "type": { "const": "runtime.marketdata" },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object", "additionalProperties": false, "required": ["kind", "instrument", "reasons", "since", "stopReached"],
+                "properties": {
+                  "kind": { "const": "alert" }, "instrument": { "type": "string", "minLength": 1 },
+                  "reasons": { "type": "array", "items": { "$ref": "#/$defs/reason" } },
+                  "since": { "type": "integer", "minimum": 0 }, "stopReached": { "type": "boolean" }
+                }
+              },
+              {
+                "type": "object", "additionalProperties": false, "required": ["kind", "instrument", "since", "liveAt"],
+                "properties": { "kind": { "const": "recovered" }, "instrument": { "type": "string", "minLength": 1 }, "since": { "type": "integer", "minimum": 0 }, "liveAt": { "type": "integer", "minimum": 0 } }
+              },
+              {
+                "type": "object", "additionalProperties": false, "required": ["kind", "instrument", "reason", "since"],
+                "properties": { "kind": { "const": "page" }, "instrument": { "type": "string", "minLength": 1 }, "reason": { "$ref": "#/$defs/reason" }, "since": { "type": "integer", "minimum": 0 } }
+              },
+              {
+                "type": "object", "additionalProperties": false, "required": ["kind", "instrument", "from"],
+                "properties": { "kind": { "const": "gapCheckOverdue" }, "instrument": { "type": "string", "minLength": 1 }, "from": { "type": "integer", "minimum": 0 } }
+              },
+              {
+                "type": "object", "additionalProperties": false, "required": ["kind", "dex"],
+                "properties": { "kind": { "const": "halted" }, "dex": { "type": "string" } }
+              }
+            ]
+          }
+        },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Send",
+      "description": "The send path's write-ahead evidence that the signed bytes of one action may have left (decision 0013 d1 step 5): written after the action is signed and before it is posted, never after. An order attempt recorded (intent.recorded) without a send entry was provably never sent: at the next start it is sent (a protective order) or held with \"Send now or cancel\" (an order that adds risk). One with a send entry and no answer is looked up by its cloid at `address`, never concluded \"not placed\" from one negative read. A second send entry for the same attempt carries `resigned: true`: the same cloid signed again with a new nonce, after a used-nonce answer or four 429 refusals of a protective order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "action", "orderId", "attempt", "cloid", "nonce", "expiresAfter", "address", "resigned", "at"],
+      "properties": {
+        "type": { "const": "send" },
+        "action": { "enum": ["order", "cancel"], "description": "An order (the attempt's place) or a cancel of the attempt by its cloid." },
+        "orderId": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "cloid": { "type": "string", "pattern": "^0x[0-9a-f]{32}$", "description": "The attempt's client order id, as recorded in its intent.recorded." },
+        "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce: above every nonce this account's agent signed before, across restarts." },
+        "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline (ms since the epoch): the venue refuses the action after it. The stamp time plus 10 s." },
+        "address": { "type": "string", "pattern": "^0x[0-9a-f]{40}$", "description": "The account (master address) the action trades for; lookups by cloid ask about it." },
+        "resigned": { "type": "boolean" },
+        "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
+      }
+    },
+    {
+      "title": "Send refused",
+      "description": "Added 2026-10-07 (0003 Amendment 3 d5; RG6b finding 1): Hyperliquid's post-only period after a network upgrade refused the send of an order with the same `cloid` and `nonce` on a POST the send path read as definite (the nonce's only POST under the default pins). Written before the order goes back to wait, so a start after it knows that signature is over: the attempt counts as never sent and the start's arm signs it again, same cloid, a new nonce. An older build skips the row (0008 amendment 3 d5.1) and resolves the send by its cloid, as before.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "action", "cloid", "nonce", "class", "at"],
+      "properties": {
+        "type": { "const": "send.refused" },
+        "orderId": { "type": "string", "minLength": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "action": { "const": "order" },
+        "cloid": { "type": "string", "pattern": "^0x[0-9a-f]{32}$", "description": "The refused send's cloid." },
+        "nonce": { "type": "integer", "minimum": 0, "description": "The refused send's nonce, spent by the refusal." },
+        "class": { "const": "upgrade-gate", "description": "Why the send placed nothing: the post-only period (the registry's UPGRADE_GATE)." },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Referral send",
+      "description": "The referral line's one `setReferrer` (decision 0007 d19; 0013 C11), signed by the account's API wallet on the same nonces as its orders: written after it is signed and before it is posted. It names the account, not an order; its outcome is the account's `source.referral` entry, and with no answer the line stays pending and is sent again at the next start.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "action", "sourceId", "nonce", "expiresAfter", "address", "at"],
+      "properties": {
+        "type": { "const": "send" },
+        "action": { "const": "referrer" },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "nonce": { "type": "integer", "minimum": 0 },
+        "expiresAfter": { "type": "integer", "minimum": 0 },
+        "address": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Request",
+      "description": "A manual order's command as it was answered (decision 0010 d4, slice B): who asked and under which id, the SHA-256 of the body's canonical JSON, and the answer given, written after the command's inputs in the same transaction, so a crash leaves both or neither. The same request again gets this answer; another body under the same id is refused (409). A refused command writes nothing and is judged again when sent again. A bot's command carries its request inside its own entry (bot-entry.schema.json).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "request", "answer", "at"],
+      "properties": {
+        "type": { "const": "request" },
+        "request": { "$ref": "bot-entry.schema.json#/$defs/request" },
+        "commandAccepted": { "description": "Positive cancel acceptance. External cancels require venue success; in-app cancels are accepted in the command transaction. Absent on write-ahead intent and older rows; older builds ignore it.", "type": "object", "additionalProperties": false, "required": ["action", "id"], "properties": { "action": { "const": "cancel" }, "id": { "type": "string", "minLength": 1 } } },
+        "answer": {
+          "oneOf": [
+            { "description": "A place: the new order's id; an exits' attach: the exits' id.", "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string", "minLength": 1 } } },
+            { "description": "A cancel; a leverage, margin or external-cancel write, journaled with it before its POST (a reply that never came keeps it).", "type": "object", "additionalProperties": false, "required": ["accepted"], "properties": { "accepted": { "const": true } } },
+            { "description": "A leverage, margin or external-cancel write the exchange refused: a second `request` row for the same request, written after the refusal, so the same request again is answered 422 with this text and never sent. Added after E10's review; older journals have none.", "type": "object", "additionalProperties": false, "required": ["rejected", "text"], "properties": { "rejected": { "type": "string", "minLength": 1 }, "text": { "type": "string", "minLength": 1 }, "raw": { "type": "string", "minLength": 1, "description": "The exchange's own words when it refused a margin change or the cancel of an outside order; `text` is then gcx's sentence (ruling 203). Added 2026-10-05; older rows have none, and the previous build folds the row as before, answering it with `raw` too." } } }
+          ]
+        },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Write: leverage",
+      "description": "An account action that is not an engine's order (decision 0013 S10, roadmap E10), journaled like a send: after it is signed and before it is posted, so its nonce counts for every later signature across restarts. `leverage`: the leverage and margin mode of one perpetual; `margin`: isolated margin added (positive) or removed (negative) on a position; `cancel-oid`: the cancel of an order placed outside gcx, by the venue's order id. It has no cloid and is never looked up or sent again: with no answer, the venue's state read after `expiresAfter` is the truth (MH 2026-10-01). A person's command is followed by its request entry in the same transaction. Added in E10; older journals have none.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "action", "instrumentId", "leverage", "cross", "nonce", "expiresAfter", "address", "at"],
+      "properties": {
+        "type": { "const": "write" },
+        "action": { "const": "leverage" },
+        "instrumentId": { "type": "string", "minLength": 1 },
+        "leverage": { "type": "string", "pattern": "^[1-9]\\d*$", "description": "leverage: the integer multiplier." },
+        "cross": { "type": "boolean", "description": "leverage: cross margin (true) or isolated (false)." },
+        "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce, above every nonce signed before." },
+        "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline: the stamp time plus 10 s." },
+        "address": {"type": "string", "pattern": "^0x[0-9a-f]{40}$"},
+        "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
+      }
+    },
+    {
+      "title": "Write: margin",
+      "description": "Isolated margin added (positive) or removed (negative) on a position. A write, as the first write entry describes it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "action", "instrumentId", "usdc", "long", "nonce", "expiresAfter", "address", "at"],
+      "properties": {
+        "type": { "const": "write" },
+        "action": { "const": "margin" },
+        "instrumentId": { "type": "string", "minLength": 1 },
+        "usdc": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "margin: USDC added (positive) or removed (negative), on the venue's 0.000001 grid." },
+        "long": { "type": "boolean", "description": "margin: the position's side." },
+        "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce, above every nonce signed before." },
+        "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline: the stamp time plus 10 s." },
+        "address": {"type": "string", "pattern": "^0x[0-9a-f]{40}$"},
+        "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
+      }
+    },
+    {
+      "title": "Write: cancel-oid",
+      "description": "The cancel of an order placed outside gcx, by the venue's order id: a person's, or the engine's for an imported send (orderId). A write, as the first write entry describes it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "action", "instrumentId", "oid", "nonce", "expiresAfter", "address", "at"],
+      "properties": {
+        "type": { "const": "write" },
+        "action": { "const": "cancel-oid" },
+        "instrumentId": { "type": "string", "minLength": 1 },
+        "oid": { "type": "string", "pattern": "^\\d+$", "description": "cancel-oid: the venue's order id." },
+        "orderId": { "type": "string", "minLength": 1, "description": "0004 amendment 3 d4: the engine's cancel of an imported send (an order placed outside gcx, taken into the book on its first change): its order (ext:<oid>); its answer is the engine's as for any cancel. Absent on a person's cancel of an order outside gcx. Added 2026-10-18; an older build folds the row as a write and ignores it." },
+        "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce, above every nonce signed before." },
+        "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline: the stamp time plus 10 s." },
+        "address": {"type": "string", "pattern": "^0x[0-9a-f]{40}$"},
+        "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
+      }
+    },
+    {
+      "title": "Funding",
+      "description": "A funding payment the venue reported on a coin, journaled once per account, coin and venue hour whoever holds the coin (since 2026-10-06; before, only while take-profit and stop-loss that are not a bot's held it): the fold computes their share from it (a position's take it whole, an order's usdc × q ÷ szi) and a position's details list its rows. The additive funding.recovered kind records a retrospective account receipt and explicitly journaled bot shares; it never allocates manual-exit funding. Older readers ignore that new kind. Original funding rows retain their journal-order meaning. Added with 0011's runtime part; older ledgers have only the hours exits held.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "instrumentId", "time", "usdc", "szi", "at"],
+      "properties": {
+        "type": { "enum": ["funding", "funding.recovered"] },
+        "instrumentId": { "type": "string", "minLength": 1 },
+        "time": { "type": "integer", "minimum": 0, "description": "The venue's hour of the payment." },
+        "usdc": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "Received positive, paid negative." },
+        "szi": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "The account's signed position it was paid on." },
+        "sourceId": { "type": "string", "minLength": 1, "description": "The account paid; absent before sub-accounts traded: the main account's." },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Liquidation",
+      "description": "Added 2026-10-05 (decision 0016 Amendment 3 d5): one liquidation or auto-deleveraging fill of an account, journaled once per fill id in the step that charges the bots on its coin their shares (after their rows), also when no bot holds the coin; the orders list's History rows (type liquidation or adl, one per account and venue order) are folded from these alone. `order` the venue's order id; `side`, `size`, `price` and `fee` (quote) the fill's; `time` its venue time; `bots` what the bots were charged, net (absent when none was). An older build skips it and pages once per start.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "sourceId", "instrumentId", "fillId", "order", "kind", "side", "size", "price", "fee", "time", "at"],
+      "properties": {
+        "type": { "const": "liquidation" },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "instrumentId": { "type": "string", "minLength": 1 },
+        "fillId": { "type": "string", "minLength": 1 },
+        "order": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["liquidation", "adl"] },
+        "side": { "enum": ["buy", "sell"] },
+        "size": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
+        "price": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
+        "fee": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$" },
+        "time": { "type": "integer", "minimum": 0 },
+        "at": { "type": "integer", "minimum": 0 },
+        "bots": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$" },
+        "position": {"type": "object", "additionalProperties": false, "required": ["start", "end"], "properties": {"start": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"}, "end": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"}, "pnl": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"}, "unpricedFee": {"type": "string"}}, "description": "Optional C66 144 display metadata captured from this admitted fill. Does not alter engine allocation. Older records remain valid without it; no historical position size/loss is guessed."}
+      }
+    },
+    {
+      "title": "Attention done",
+      "description": "Added 2026-10-05 (0016 Amendment 2 d10; 0003 Amendment 2 d8): the person pressed Done on a row of the Dashboard's \"Needs your attention\" section, which hides that row on every panel. `key` names the row's kind, its subject and the episode (for a bot whose position differs from the exchange's: `position:<bot>:<opened>`; for a wait under Hyperliquid's allowance `rate-address:<sourceId>:<nonce of the first refused send>`); a new episode is a new key and shows again. Journaled once per key. An older build skips the row (0008 amendment 3 d5.1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "key", "at"],
+      "properties": {
+        "type": { "const": "attention.done" },
+        "key": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Attention silence",
+      "description": "Added with 0028 d27.4 (RULINGS 356 b): the person pressed Silence on an item's hourly reminder (a position left without its working stop-loss or close): no more reminders for that item's episode. `key` is the item's (`<id>:<episode>`, src/domain/repair/items.ts); the item stays open and on the Dashboard. A new episode is a new key and is reminded again. Journaled once per key. An older build skips the row (0008 amendment 3 d5.1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "key", "at"],
+      "properties": {
+        "type": { "const": "attention.silence" },
+        "key": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Ledger compacted",
+      "description": "Added with 0031 d4 (built 2026-10-10 under ruling 417 b): a compaction erased the rows of these accounts, removed with \"Keep trading history\" unticked, at a start before anything traded. Written in the deletes' own transaction at the old head's `seq` + 1, so every cursor (Telegram's, the orders report's, the panel's) stays below it. `sources`: the account ids whose rows went; `rows`: how many journal rows went; `nonce`: the journal's highest nonce before, which the next signature stays above (0013 T7). No name, no address. Never dropped. An older build skips the row and counts it in its start page (0008 amendment 3 d5.1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "sources", "rows", "at"],
+      "properties": {
+        "type": { "const": "ledger.compacted" },
+        "sources": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "rows": { "type": "integer", "minimum": 0 },
+        "nonce": { "type": "integer", "minimum": 0 },
+        "before": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+        "requestSeq": { "type": "integer", "minimum": 1 },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Source history forgotten",
+      "description": "MH323: the person chose to delete a removed account\u2019s retained history. A new kind, skipped by an older reader; the existing startup compaction erases it. A shared API wallet record stays while another account uses it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "at"
+      ],
+      "properties": {
+        "type": {
+          "const": "source.forgotten"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    {
+      "title": "Source added",
+      "description": "An account enters gcx (decision 0003b d1; roadmap A1): one trading address on a venue, lower case, fixed for good; the same address again is a `source.restored` of this record, never a second one. A master (`master` = its own address) carries its API wallet's name at the venue (0007 d18) and its referral line, `pending` when the person left it checked, else `declined` (0007 d19), and starts waiting for its API wallet; a sub-account or vault names its master's address and starts active. Since 0003b amendment 2 v2 (2026-10-05) the API wallet is its own record, folded from these rows: a master's row adds the main's account (active at once) and, when no API wallet of that main stands, the wallet under this row's id (its name, its referral line, waiting); a master's row written while its wallet stands (the main account added back) adds the account only and carries no name. `requestId`: the connect request that added it. Mirrors src/domain/accounts/source.ts, SourceEvent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "venue", "kind", "address", "master", "label", "at"],
+      "properties": {
+        "type": { "const": "source.added" },
+        "id": { "type": "string", "minLength": 1 },
+        "venue": { "const": "hyperliquid" },
+        "kind": { "enum": ["master", "subAccount", "vault"] },
+        "address": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" },
+        "master": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 50 },
+        "agent": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "referral": { "enum": ["pending", "declined"] },
+        "requestId": { "type": "string", "minLength": 1 },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Source active",
+      "description": "A master's API wallet was seen listed by the venue (`extraAgents`, 0007 d17.8): from now on gcx trades the accounts under it (`id`: the wallet's, its master's row id); the start-up checks still read the wallet at every start (0013 d7).",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "at"],
+      "properties": { "type": { "const": "source.active" }, "id": { "type": "string", "minLength": 1 }, "at": { "type": "integer", "minimum": 0 } }
+    },
+    {
+      "title": "Source renamed",
+      "description": "The account's label, 1 to 50 characters (0003b d1).",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "label", "at"],
+      "properties": { "type": { "const": "source.renamed" }, "id": { "type": "string", "minLength": 1 }, "label": { "type": "string", "minLength": 1, "maxLength": 50 }, "at": { "type": "integer", "minimum": 0 } }
+    },
+    {
+      "title": "Source removing",
+      "description": "A remove began (0003b d12), written before anything is sent: gcx stops trading that account and leaves Hyperliquid as it is (one account per row and per remove since 0003b amendment 2 v2; until then a main account's remove wrote its sub-accounts' rows in the same append; the main's API wallet ends when every account under it is removed) (RULINGS 23: `choice` is always `keep`; `cancel` and `close` are never written). `keep` (added 2026-10-03, RULINGS 58): the remove dialog's two boxes, the trading history (orders, trades, positions, bots) and the portfolio history (balances); absent, as in every row before it, both are kept. A kept trading history is shown, its rows marked, from this row on (0003b amendment 3 d1, ruling 413.3; until then it was hidden while removed); with the trading history unticked the account's rows leave every view from this row on, the record is never restored and the address is added again as a new record. `keep.portfolio` is written true since 0003b amendment 3 d4 and read by nothing. `revoke` (added 2026-10-10, 0003b amendment 3 d3, ruling 413.2): the box \"Also remove the API wallet from Hyperliquid\"; true, the remove waits for a fresh read without the wallet (the main wallet's revoke) or the person's \"Remove without revoking\"; false, nothing is asked; absent, as every row before it, the revoke is asked only for the last account under the main. An older build ignores it.",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "choice", "at"],
+      "properties": {
+        "type": { "const": "source.removing" }, "id": { "type": "string", "minLength": 1 }, "choice": { "enum": ["keep", "cancel", "close"] },
+        "keep": { "type": "object", "additionalProperties": false, "required": ["trading", "portfolio"], "properties": { "trading": { "type": "boolean" }, "portfolio": { "type": "boolean" } } },
+        "revoke": { "type": "boolean" },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Source removed",
+      "description": "The remove finished (0003b d12). The record and its history stay in the ledger.",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "at"],
+      "properties": { "type": { "const": "source.removed" }, "id": { "type": "string", "minLength": 1 }, "at": { "type": "integer", "minimum": 0 } }
+    },
+    {
+      "title": "Source restored",
+      "description": "A removed address added again: the same record, with its history (0003b d1). With `agent`, a master connected again after its API wallet ended: a new wallet under this id, waiting (written by an older build put back on a main removed alone whose wallet stands: the account back, that wallet taking the name); without, an account back under a wallet that stands. Never written for a record removed with its trading history deleted (`source.removing` `keep.trading` false): its address is added as a new record.",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "at"],
+      "properties": { "type": { "const": "source.restored" }, "id": { "type": "string", "minLength": 1 }, "agent": { "type": "string", "description": "A master connected again: the API wallet name picked now (added 2026-10-03; absent, the name it had)." }, "at": { "type": "integer", "minimum": 0 } }
+    },
+    {
+      "title": "Source referral",
+      "description": "A master's API wallet's referral line settled, once (0007 d19; `id` the wallet's): `sent` when the venue accepted the `setReferrer` gcx's API wallet signed, `declined` with the venue's `text` when it refused it.",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "state", "at"],
+      "properties": { "type": { "const": "source.referral" }, "id": { "type": "string", "minLength": 1 }, "state": { "enum": ["sent", "declined"] }, "text": { "type": "string" }, "at": { "type": "integer", "minimum": 0 } }
+    }
+,
+    {
+      "title": "Storage erase requested",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "at"
+      ],
+      "properties": {
+        "type": {
+          "const": "storage.erase"
+        },
+        "at": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "before": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "sourceId"
+          ],
+          "not": {
+            "required": [
+              "before"
+            ]
+          }
+        },
+        {
+          "required": [
+            "before"
+          ],
+          "not": {
+            "required": [
+              "sourceId"
+            ]
+          }
+        }
+      ]
+    },
+    {"title": "P11 bot liquidation approach", "type": "object", "additionalProperties": false, "required": ["type", "botId", "sourceId", "instrumentId", "botType", "near", "price", "liquidationPrice", "at"], "properties": {"type": {"const": "runtime.bot-risk"}, "botId": {"type": "string"}, "sourceId": {"type": "string"}, "instrumentId": {"type": "string"}, "botType": {"enum": ["grid", "dca"]}, "venue": {"type": "string"}, "near": {"type": "boolean"}, "price": {"type": "string"}, "liquidationPrice": {"type": "string"}, "at": {"type": "integer"}}}
+  ],
+  "$defs": {
+    "reason": {
+      "description": "Why a channel is not LIVE (src/domain/marketdata/types.ts, Reason).",
+      "enum": ["socket", "dex", "book", "frozen", "trades", "candle", "mark", "pending", "noFirstFrame", "staleTooLong", "suspended"]
+    }
+  }
+}

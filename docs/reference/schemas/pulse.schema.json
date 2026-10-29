@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/pulse.schema.json",
+  "title": "Pulse",
+  "description": "One install's daily usage record (decision 0020 d16; RULINGS_FOR_MH section 21): one per install per UTC day, sent to our reports server through the same Worker, the same switch (reports.auto) and the same install reference as cases. Two closed shapes: the record (reports on) and the heartbeat (reports off: the install reference and the date, nothing else). Never a balance, an address, an order or gcx's version. Passes the last check of d4.5 like a case. Version 1; a new field is additive and optional and needs a schema addition, never a policy.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "v", "install", "day", "dashboard", "venues"],
+      "properties": {
+        "schema": { "const": "gcx-pulse" },
+        "v": { "const": 1 },
+        "install": { "$ref": "#/$defs/install" },
+        "day": { "$ref": "#/$defs/day" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "dashboard": { "type": "boolean", "description": "The Dashboard was opened that day (active user): the panel's POST /api/v1/usage/dashboard set the day's row." },
+        "where": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shell", "os", "arch"],
+          "description": "Where gcx runs (decision 0024 d15), under the same switch as the rest of the record. Optional, added in the build that follows the Worker's deploy: a record without it is as valid as ever. Never the browser's full user agent, the computer's name, the screen, the language, the time zone or gcx's version.",
+          "properties": {
+            "shell": { "enum": ["mac", "windows", "docker", "node"], "description": "mac: the Mac app's helper runs the runtime; windows: the Windows app's helper (GCXTray.exe) does; docker: the image (GCX_SHELL=docker); node: gcx started by hand or by the person's own unit. A later shell adds its own value." },
+            "os": { "type": "string", "maxLength": 64, "description": "System name and release, as case.schema.json header.os, e.g. darwin 25.1.0." },
+            "arch": { "enum": ["arm64", "x64"], "description": "The chip type, as case.schema.json header.arch." },
+            "browser": { "enum": ["chrome", "safari", "firefox", "edge", "other"], "description": "The family of the browser that last opened the Dashboard that day, reduced at once from its User-Agent (the agent is never stored or sent); absent on a day the Dashboard did not open." }
+          }
+        },
+        "keyStoreLocked": { "const": true, "description": "A start that day went on with gcx's key store not yet open (unlock-retry): its unlock was slow or failed. Optional, absent on a day every start opened it in time; under the same switch as the rest of the record, and sent only after the Worker's deploy that learns it." },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rssMb", "cpuSeconds", "uptimeSeconds"],
+          "description": "What gcx's runtime process uses when the record is built (decision 0030 amendment 3 section 3), under the same switch as the rest of the record. Optional: a record without it is as valid as ever.",
+          "properties": {
+            "rssMb": { "type": "integer", "minimum": 0, "description": "Its resident memory, in whole MB." },
+            "cpuSeconds": { "type": "integer", "minimum": 0, "description": "The processor time it used since it started (user and system), in whole seconds." },
+            "uptimeSeconds": { "type": "integer", "minimum": 0, "description": "The time since it started, in whole seconds." }
+          }
+        },
+        "venues": {
+          "type": "array",
+          "maxItems": 16,
+          "description": "One entry per venue or chain with something to say; demo accounts and testnet never counted.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["venue", "live", "created"],
+            "properties": {
+              "venue": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$", "description": "hyperliquid today; solana and others when built." },
+              "live": { "type": "boolean", "description": "A bot ran or an order of gcx's rested on this venue at any moment of the day (active trader, wide)." },
+              "created": { "type": "boolean", "description": "The person or their agent created a bot or an order on this venue that day; a bot's own orders do not count (active sender, narrow)." },
+              "volume": {
+                "type": "array",
+                "maxItems": 8,
+                "description": "Per quote currency: the sum of price x size of the day's fills of orders gcx placed on this venue, summed with Dec, exact, fees excluded.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["quote", "amount"],
+                  "properties": {
+                    "quote": { "type": "string", "pattern": "^[A-Z0-9]{1,16}$", "description": "The instruments' quote asset, e.g. USDC." },
+                    "amount": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "v", "install", "day", "off"],
+      "description": "The heartbeat (section 21 (5)): reports are off; this install exists and sends nothing else.",
+      "properties": {
+        "schema": { "const": "gcx-pulse" },
+        "v": { "const": 1 },
+        "install": { "$ref": "#/$defs/install" },
+        "day": { "$ref": "#/$defs/day" },
+        "off": { "const": true },
+        "tier": { "$ref": "#/$defs/tier" }
+      }
+    }
+  ],
+  "$defs": {
+    "tier": { "enum": ["internal", "beta", "everyone"], "description": "The tier the copy says it is (0030 amendments 1 and 2), as case.schema.json header.tier, so a record from an internal tester is told from one that touches production. Optional: absent when the copy reads none; on the heartbeat too." },
+    "install": { "type": "string", "pattern": "^[0-9a-f]{32}$", "description": "The install reference of case.schema.json header.install: the first 32 hex digits of SHA-256(\"gcx-case-install:\" + installId)." },
+    "day": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "The UTC day the record covers." }
+  }
+}

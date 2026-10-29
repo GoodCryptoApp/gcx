@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/balances-frame.schema.json",
+  "title": "Balances frame",
+  "description": "The `balances` topic of decision 0003a (decision 6): one frame per source, derived by src/domain/balances/derive.ts from the last good reads, served by src/runtime/account/topics.ts with `sourceId` and `assets` for the panel. Every figure is a string; `null` means the venue does not state it in this mode, distinct from a row whose `state` is `unavailable`. In unified and portfolio-margin accounts every per-dex money field is null. With an unknown mode every mode-dependent figure is null. No figure is a JSON number.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "mode", "modeReadAt", "state", "receivedAt", "collateral", "dexes", "spot"],
+  "properties": {
+    "accountValue": { "type": "string", "description": "0040 A2 d61: held runtime yardstick for bot sizing, including unrealized PnL. Optional for older peers; absence is unknown, never Available." },
+    "source": { "type": "string" },
+    "sourceId": { "type": "string", "description": "The same as `source`, as the panel reads it (roadmap P3; added, optional)." },
+    "assets": {
+      "type": "object",
+      "description": "The panel's free balance per spot token: its total less what is held, as the spot read gave them (roadmap P3; added, optional). Absent while the spot state was never read, so the panel waits rather than show 0.",
+      "additionalProperties": { "$ref": "#/$defs/figure" }
+    },
+    "own": {
+      "type": "object",
+      "description": "A vault's only (added, optional): its main account's own equity in it, USDC, from Hyperliquid's `userVaultEquities` (RULINGS 99 (a): a vault you lead counts your own share, never the followers' money). The Dashboard counts this figure for the vault; the vault's other figures are the whole vault's, for trading on it. `total` null with `state` unavailable until a read answered; stale when the read after the last good one failed.",
+      "additionalProperties": false,
+      "required": ["total", "state"],
+      "properties": { "total": { "$ref": "#/$defs/figure" }, "state": { "$ref": "#/$defs/state" } }
+    },
+    "mode": { "enum": ["standard", "unified", "portfolio", "dexAbstraction", "unknown"] },
+    "modeReadAt": { "type": ["integer", "null"] },
+    "state": { "$ref": "#/$defs/state" },
+    "receivedAt": { "type": "integer" },
+    "collateral": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["token", "coin", "total", "withdrawable", "lockedMargin", "lockedOrders", "state", "asOf", "basis"],
+        "properties": {
+          "token": { "type": "integer", "minimum": 0, "description": "Spot token index of the collateral." },
+          "coin": { "type": "string" },
+          "total": { "$ref": "#/$defs/figure" },
+          "unrealizedPnl": { "type": "string", "description": "Added by C71/MH170: sum of open positions’ unrealised PnL on this collateral’s dexes, from the same snapshot, in collateral units. The Portfolio total subtracts it; trading still uses total as venue equity. Absent on older wire means zero. Unified/portfolio margin uses spot only and omits this field." },
+          "withdrawable": { "$ref": "#/$defs/figure" },
+          "lockedMargin": { "$ref": "#/$defs/figure" },
+          "lockedOrders": { "$ref": "#/$defs/figure" },
+          "state": { "$ref": "#/$defs/state" },
+          "asOf": { "type": ["integer", "null"], "description": "The oldest component time." },
+          "basis": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["total", "withdrawable", "lockedMargin", "lockedOrders"],
+            "properties": {
+              "total": { "enum": ["total.spotPlusDexes", "total.spot", null] },
+              "withdrawable": { "enum": ["withdrawable.spotFreePlusDexes", null] },
+              "lockedMargin": { "enum": ["lockedMargin.dexMarginUsed", "lockedMargin.positionMargin", null] },
+              "lockedOrders": { "enum": ["lockedOrders.spotHold", null] }
+            }
+          }
+        }
+      }
+    },
+    "dexes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dex", "collateralToken", "state", "asOf", "accountValue", "withdrawable", "marginUsed"],
+        "properties": {
+          "dex": { "type": "string" },
+          "collateralToken": { "type": ["integer", "null"] },
+          "state": { "$ref": "#/$defs/state" },
+          "asOf": { "type": ["integer", "null"] },
+          "accountValue": { "$ref": "#/$defs/figure" },
+          "withdrawable": { "$ref": "#/$defs/figure" },
+          "marginUsed": { "$ref": "#/$defs/figure" }
+        }
+      }
+    },
+    "spot": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["token", "coin", "total", "hold", "state", "asOf"],
+        "properties": {
+          "token": { "type": ["integer", "null"] },
+          "coin": { "type": "string" },
+          "total": { "$ref": "#/$defs/figure" },
+          "hold": { "$ref": "#/$defs/figure" },
+          "state": { "$ref": "#/$defs/state" },
+          "asOf": { "type": "integer", "description": "Receipt time: spot state carries no venue time." }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "type": "object", "properties": { "mode": { "enum": ["unified", "portfolio"] } } },
+      "then": { "type": "object", "properties": { "dexes": { "type": "array", "items": { "type": "object", "properties": { "accountValue": { "type": "null" }, "withdrawable": { "type": "null" }, "marginUsed": { "type": "null" } } } } } }
+    },
+    {
+      "if": { "type": "object", "properties": { "mode": { "const": "unknown" } } },
+      "then": {
+        "type": "object",
+        "properties": {
+          "collateral": { "type": "array", "items": { "type": "object", "properties": { "total": { "type": "null" }, "withdrawable": { "type": "null" }, "lockedMargin": { "type": "null" }, "lockedOrders": { "type": "null" }, "state": { "const": "unavailable" } } } },
+          "dexes": { "type": "array", "items": { "type": "object", "properties": { "accountValue": { "type": "null" }, "withdrawable": { "type": "null" }, "marginUsed": { "type": "null" } } } }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "state": { "enum": ["live", "stale", "unavailable"] },
+    "figure": { "oneOf": [{ "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$" }, { "type": "null" }], "description": "A canonical decimal string, or null when the venue does not state it in this mode." }
+  }
+}

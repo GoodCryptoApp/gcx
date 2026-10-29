@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/leverage-frame.schema.json",
+  "title": "Leverage frame",
+  "description": "Hyperliquid's `activeAssetData` for one user and instrument: the `leverage` topic of 0007 decision 8. The two pairs are published as the venue sends them: which element is which side is pin P6 of decision 0003a, and nothing sizes from them until it is pinned. Mirrors src/venues/hyperliquid/user.ts (LeverageFrame).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "user", "coin", "leverage", "maxTradeSzs", "availableToTrade", "markPx"],
+  "properties": {
+    "venue": { "type": "string" },
+    "user": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" },
+    "coin": { "type": "string" },
+    "leverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "enum": ["cross", "isolated"] },
+        "value": { "type": "string", "pattern": "^\\d+$", "description": "The integer multiplier." },
+        "rawUsd": { "$ref": "#/$defs/canonical" }
+      }
+    },
+    "maxTradeSzs": { "$ref": "#/$defs/pair" },
+    "availableToTrade": { "$ref": "#/$defs/pair" },
+    "markPx": { "$ref": "#/$defs/canonical" }
+  },
+  "$defs": {
+    "canonical": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$", "description": "A canonical decimal string. Never a JSON number." },
+    "pair": { "type": "array", "prefixItems": [{ "$ref": "#/$defs/canonical" }, { "$ref": "#/$defs/canonical" }], "items": false, "minItems": 2 }
+  }
+}

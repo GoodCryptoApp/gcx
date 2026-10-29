@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/my-trade-row.schema.json",
+  "title": "My trades row",
+  "description": "One set of take-profit and stop-loss that is not a bot's, as the `my-trades` topic carries it (decision 0011 §3; the panel's list is P15): on a futures position (`subject` position, following it as it changes) or on an order placed by gcx (`subject` order, the order's id). Rows stay after they end; `status` says how. Mirrors src/runtime/exits/trades.ts (TradeRow).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "seq",
+    "sourceId",
+    "instrumentId",
+    "venue",
+    "subject",
+    "side",
+    "size",
+    "exits",
+    "realizedPnl",
+    "funding",
+    "status",
+    "openedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "The exits' id: `x1`, ... on a position; the order's id on an order. The `exits.*` routes take it."
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sourceId": {
+      "type": "string"
+    },
+    "removed": {
+      "const": true,
+      "description": "Added 2026-10-10 (0003b amendment 3 d1, rulings 339 and 413.3): the row's account is being removed from gcx or was removed with its trading history kept; the row takes no action. Absent otherwise."
+    },
+    "account": {
+      "type": "string",
+      "description": "Added 2026-10-10 (0003b amendment 3 d1): with `removed`, the account's name (shown \"<name> (Account removed)\"), since its row in the accounts list is gone."
+    },
+    "instrumentId": {
+      "type": "string"
+    },
+    "venue": {
+      "const": "hyperliquid"
+    },
+    "subject": {
+      "enum": [
+        "order",
+        "position"
+      ]
+    },
+    "side": {
+      "enum": [
+        "long",
+        "short"
+      ]
+    },
+    "size": {
+      "$ref": "order-row.schema.json#/$defs/decimal",
+      "description": "What the exits still cover: the position as built from fills, or what the order filled less what its exits sold."
+    },
+    "entry": {
+      "$ref": "order-row.schema.json#/$defs/decimal",
+      "description": "The position's entry, or the order's average fill; absent before anything filled."
+    },
+    "exits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "leg",
+          "index",
+          "type",
+          "size",
+          "filled",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The leg as an order (`x1/tp1`, `x1/sl`): the orders topic and the order routes know it."
+          },
+          "leg": {
+            "enum": [
+              "tp",
+              "sl"
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The target's place, 0 first; 0 for the stop-loss."
+          },
+          "type": {
+            "enum": [
+              "market",
+              "limit",
+              "trailing"
+            ]
+          },
+          "level": {
+            "$ref": "order-row.schema.json#/$defs/decimal",
+            "description": "The limit price, the trigger, or a trailing leg's stop now."
+          },
+          "size": {
+            "$ref": "order-row.schema.json#/$defs/decimal"
+          },
+          "filled": {
+            "$ref": "order-row.schema.json#/$defs/decimal"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "How a closed leg ended: `filled`, `oco` (another leg or the position's end closed it), `cancelled`, `position-reversed`, ..."
+          }
+        }
+      }
+    },
+    "realizedPnl": {
+      "$ref": "order-row.schema.json#/$defs/signed",
+      "description": "The exits' own fills against the entry they closed (the venue's closedPnl is never used), net of their fees and, on an order, its fee share."
+    },
+    "funding": {
+      "$ref": "order-row.schema.json#/$defs/signed",
+      "description": "Paid negative. A position's exits take each payment whole; an order's take usdc × q ÷ szi."
+    },
+    "status": {
+      "enum": [
+        "waiting",
+        "open",
+        "repair",
+        "done"
+      ],
+      "description": "`waiting`: the order has not filled yet. `repair`: a leg needs a person, or the exchange shows the coin flat on two reads (`reason` venue-flat)."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Done: `filled`, `closed` (the position closed by a gcx order), `closed-outside`, `reversed`, `liquidated`, `cancelled`. Repair: `venue-flat` or the leg's repair reason."
+    },
+    "following": {
+      "const": true,
+      "description": "Exits on a position that follow it (shown \"following position\")."
+    },
+    "openedAt": {
+      "type": "integer"
+    },
+    "closedAt": {
+      "type": "integer"
+    }
+  }
+}

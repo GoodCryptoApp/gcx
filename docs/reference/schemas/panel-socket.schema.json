@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/panel-socket.schema.json",
+  "title": "Panel socket",
+  "description": "The WebSocket at /api/v1/socket (decision 0008 §4.6): what the panel or an agent sends (subscribe, unsubscribe) and what the runtime sends back (an envelope per event, a heartbeat every second, a refusal). Every envelope carries the ledger id and the ledger seq it reflects, except coin-icons, whose seq is its runtime-local cache counter. `since` is honoured only within the same ledger id: a `since` from another ledger id (after a backup restore or an import) gets the topic's snapshot, which the panel accepts whatever seq it held. A topic starts with its snapshot, or with the events after `since`, then its live events in order. At runtime shutdown, the socket sends a standard 1001 close (runtime stopped), so the panel marks it unreachable immediately. A client that does not complete the handshake is terminated after 250 ms. See docs/reference/runtime/api.md.",
+  "$defs": {
+    "since": {
+      "type": "object", "additionalProperties": false, "required": ["ledgerId", "seq"],
+      "properties": { "ledgerId": { "type": "string", "minLength": 1 }, "seq": { "type": "integer", "minimum": 0 } }
+    },
+    "topic": {
+      "type": "string", "minLength": 1, "maxLength": 256,
+      "description": "The topic string, parameters included, as the panel subscribes it: `orders`, `positions`, `bots`, `my-trades` (data: list-frame.schema.json; `my-trades` the take-profit and stop-loss on positions and orders, decision 0011), `account-state` (data: lists-api.schema.json#/$defs/accountState), `balances` (data: balances-frame.schema.json), `ticks/<instrumentId>` (data: tick-frame.schema.json, one instrument's last price and mark, the last one first), `ticks` (the same for every watched instrument; deprecated, removed in the release after V1), `leverage/<sourceId>/<instrumentId>` (data: leverage-topic.schema.json), `candles/<instrumentId>/<resolution>` (data: chart-api.schema.json#/$defs/bar, the forming bar), `book/<instrumentId>/<rung>` with rung `finest`, `5m2`, `5m5`, `4`, `3` or `2` (data: book-frame.schema.json), `trades/<instrumentId>` (data: trades-frame.schema.json, a replay first), `md-state/<instrumentId>` (data: md-state-frame.schema.json), `asset-ctx/<instrumentId>` (data: asset-ctx-frame.schema.json), `ta/<instrumentId>/<interval>` (data: ta-rating-frame.schema.json, the TA rating of a period a DCA bot waits on), `runtime` (data: runtime-topic.schema.json, the process's state and the start-up checks still pending), `coin-icons` (data: a snapshot {epoch, versions}, then updates {coin, version}; every subscribe starts with the full snapshot, since is ignored, and seq is the icon cache's own counter, restarting with the runtime), and the demo accounts' `demo/orders`, `demo/positions`, `demo/bots`, `demo/account-state` and `demo/balances` (the same data; docs/panel/demo-accounts.md); the Trade page holds the market-data topics only while the block showing them is on screen. The runtime refuses a topic it does not serve."
+    },
+    "subscribe": {
+      "type": "object", "additionalProperties": false, "required": ["op", "topic"],
+      "properties": { "op": { "const": "subscribe" }, "topic": { "$ref": "#/$defs/topic" }, "since": { "$ref": "#/$defs/since" } },
+      "description": "A second subscribe to a topic already held replaces it: one stream, starting again from its snapshot or `since`."
+    },
+    "unsubscribe": {
+      "type": "object", "additionalProperties": false, "required": ["op", "topic"],
+      "properties": { "op": { "const": "unsubscribe" }, "topic": { "$ref": "#/$defs/topic" } }
+    },
+    "clientMessage": { "oneOf": [{ "$ref": "#/$defs/subscribe" }, { "$ref": "#/$defs/unsubscribe" }] },
+    "envelope": {
+      "type": "object", "additionalProperties": false, "required": ["ledgerId", "seq", "topic", "data"],
+      "properties": {
+        "build": { "type": "string", "description": "The runtime build stamp; a page compiled for another build reloads once." },
+        "ledgerId": { "type": "string", "minLength": 1, "description": "Minted when the ledger is created; a backup restore or an import mints a new one." },
+        "seq": { "type": "integer", "minimum": 0, "description": "The ledger seq this event reflects; the ledger head for topics that are not ledger views (ticks, balances, leverage, candles). Never goes back within one ledger id, except coin-icons: its seq is the icon cache's own counter, restarting with the runtime; since is ignored and every subscribe gets a full snapshot." },
+        "topic": { "$ref": "#/$defs/topic" },
+        "data": { "description": "The topic's own frame, as the topic's schema defines it." }
+      }
+    },
+    "heartbeat": {
+      "type": "object", "additionalProperties": false, "required": ["op"],
+      "properties": { "op": { "const": "heartbeat" }, "build": { "type": "string" } },
+      "description": "Sent every second, so the panel's 3 s silence rule can tell a quiet market from a dead socket."
+    },
+    "refused": {
+      "type": "object", "additionalProperties": false, "required": ["op", "reason"],
+      "properties": { "build": { "type": "string" }, "op": { "const": "refused" }, "topic": { "$ref": "#/$defs/topic" }, "reason": { "enum": ["unknown topic", "malformed message", "internal error"] } },
+      "description": "`internal error`: the runtime failed while subscribing the topic; it is reported, and the socket stays open."
+    },
+    "serverMessage": { "oneOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/heartbeat" }, { "$ref": "#/$defs/refused" }] }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/notify-templates.schema.json",
+  "title": "Notification template file",
+  "description": "The English texts of the notifications (decisions 0009 d7, 0022 d5, d6.2): src/domain/notify/templates/en.json, keyed by template id or word key. A template is a title and a body, plain text (no markup: the renderer builds it, as {orderCode}, {detailCode} and the time placeholders; lines separated by \\n); a word is plain text. Placeholders are {name}, {name:form} (a word in a form) and {name#key} (a count through the phrase key#<plural category>, such keys being words here). Every other language is locales/<code>/telegram.json, the same keys flat (<id>.title, <id>.body), any key left out shown in English. See docs/reference/notifications.md.",
+  "type": "object",
+  "propertyNames": { "pattern": "^[a-z]+(\\.[a-zA-Z-]+)+([:#][a-zA-Z-]+)?$" },
+  "additionalProperties": {
+    "oneOf": [
+      { "type": "string", "minLength": 1 },
+      {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "body"],
+        "properties": { "title": { "type": "string", "minLength": 1 }, "body": { "type": "string", "minLength": 1 } }
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/leverage-topic.schema.json",
+  "title": "Leverage topic",
+  "description": "The `leverage/<sourceId>/<instrumentId>` topic (decision 0007 part 3 decision 8; roadmap P3): the account's leverage, margin mode and margin available on one perpetual, from Hyperliquid's `activeAssetData` (leverage-frame.schema.json) with the catalogue's maximum leverage and whether only isolated margin is offered. Served by src/runtime/account/topics.ts; mirrors src/panel/model/form.ts (LeverageState). `availableToTrade` is the venue's pair as sent: the panel reads the first as buy and the second as sell, which pin P6 of decision 0003a still has to confirm. Never a JSON number.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "venue",
+    "sourceId",
+    "instrumentId",
+    "leverage",
+    "marginMode",
+    "maxLeverage",
+    "onlyIsolated",
+    "availableToTrade"
+  ],
+  "properties": {
+    "venue": {
+      "type": "string"
+    },
+    "sourceId": {
+      "type": "string"
+    },
+    "instrumentId": {
+      "type": "string"
+    },
+    "leverage": {
+      "type": "string",
+      "pattern": "^\\d+$",
+      "description": "The integer multiplier."
+    },
+    "marginMode": {
+      "enum": [
+        "cross",
+        "isolated"
+      ]
+    },
+    "maxLeverage": {
+      "type": "string",
+      "pattern": "^\\d+$"
+    },
+    "onlyIsolated": {
+      "type": "boolean"
+    },
+    "availableToTrade": {
+      "$ref": "leverage-frame.schema.json#/$defs/pair"
+    }
+  }
+}

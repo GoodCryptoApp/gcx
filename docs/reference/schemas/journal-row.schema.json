@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/journal-row.schema.json",
+  "title": "Journal row",
+  "description": "One row of the store's journal, the ledger (decision 0008 §3.2): one engine input, written in the same transaction as every other input of its engine step, before any of the step's effects. Rows are only ever appended; the database refuses an update or a delete. A row is named by the store's ledger id (kept in the store's meta table, minted at creation; a restore, not built yet, will re-mint it) and its seq: {ledgerId, seq}. Money inside the payload stays decimal strings; the database never reads inside the payload, sums or sorts it. Mirrors src/runtime/store/migrations.ts (migration 1); see the Store reference page.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seq", "schemaVersion", "payload"],
+  "properties": {
+    "seq": { "type": "integer", "minimum": 1, "description": "The row's position in the ledger. Only grows; never reused within one ledger id." },
+    "schemaVersion": { "type": "integer", "minimum": 1, "description": "The store's schema version when the row was written." },
+    "payload": {
+      "type": "string",
+      "contentMediaType": "application/json",
+      "description": "The entry as JSON text: an engine input (src/domain/orders/engine.ts, Input: a command, a tick, a timer, intent.recorded, a position read, or an exchange event, venue-event.schema.json) or one of the runtime's own entries (runtime-entry.schema.json: a gap, a drain, a send, the SendEntry that is written after an order or cancel is signed and before it is posted, a manual order's request with its answer, Grid rows (grid, grid.notify, grid.mismatch) carrying recorded domain notes and the stop block's peak, armed and fire facts, or an account write that is not an order: leverage, isolated margin, the cancel of an order placed outside gcx). Prices, sizes and fees are decimal strings, never JSON numbers; numbers are only counts and millisecond timestamps."
+    }
+  }
+}

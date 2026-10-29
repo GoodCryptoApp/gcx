@@ -1,0 +1,1077 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/case.schema.json",
+  "title": "Case",
+  "description": "One case (decision 0020 d1-d4): a bounded slice of the journal around one event, the exact exchange traffic around it (with the d3 replacements), a snapshot of the account at that moment and a small header. The same object serves the person's timeline, the API and MCP view, the automatic report and the person's own send. Anonymisation is enforced by the redactor (src/domain/cases/redact.ts: the per-source, by-path rules of $defs/fieldRules and the free-text pass over every other string leaf), its two tests (tests/cases/allowlist.test.ts walks every field of the corpus, the fake-venue scenarios and the recorded fixtures; tests/cases/redact.test.ts searches a recorded case for every secret) and the last check on the finished case (d4.5: no 0x + 40 hex but the builder address, no known address; run by the runtime and again by the Worker). This schema closes the header, the snapshot and the exchange lines; it does not see inside a redacted entry or a body. Money stays decimal strings. Never: a key, a signature, an account address, a balance, an account's dollar total, an account's label, a Telegram id. Version 1 (unreleased; 0020 v2 and v2.1's changes are folded in); a new field is additive and optional (CLAUDE.md, no breaking changes).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "v",
+    "id",
+    "header",
+    "accounts",
+    "snapshot",
+    "rows",
+    "exchanges"
+  ],
+  "properties": {
+    "schema": {
+      "const": "gcx-case"
+    },
+    "v": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(c:[0-9a-f]{32}|order:[A-Za-z0-9:/._-]{1,80}|bot:[A-Za-z0-9:/._-]{1,80}|runtime)$",
+      "description": "c:<random> for a stored case (opened on a trigger, or sent by the person: a send mints its own, so two sends of one order are two cases); order:<id> or bot:<id> for one built on demand by \"What happened?\" (d9), never stored under it. A bot's order id holds slashes (<bot>/<iteration>/<role>). runtime is the unstored look at this installation's state and recent redacted log (0020 amendment 2), also built by Send to gcx on a failure line (unlock-retry)."
+    },
+    "header": {
+      "$ref": "#/$defs/header"
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "The person's optional line on \"Send to gcx\" (d10), after the free-text pass of d3; kept as written otherwise (an e-mail address the person adds included)."
+    },
+    "accounts": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ref",
+          "kind"
+        ],
+        "properties": {
+          "ref": {
+            "$ref": "#/$defs/accountRef"
+          },
+          "kind": {
+            "enum": [
+              "master",
+              "subAccount",
+              "vault",
+              "agent"
+            ]
+          },
+          "mode": {
+            "enum": [
+              "standard",
+              "unified",
+              "portfolio",
+              "dexAbstraction",
+              "unknown"
+            ],
+            "description": "0003a d1."
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "demo": {
+            "const": true,
+            "description": "A demo account (src/runtime/demo.ts): never a trigger, shown only in a case the person builds."
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "$ref": "#/$defs/snapshot"
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 5000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "seq",
+          "entry"
+        ],
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The row's seq in the ledger (journal-row.schema.json)."
+          },
+          "entry": {
+            "$ref": "#/$defs/redactedEntry"
+          },
+          "say": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "template"
+            ],
+            "description": "The row's sentence as 0009 renders it (d1.8): the template id and variables from fromStep, taken by replaying the journal at build time; variables under their own list, fieldRules.sayVars (d3 Table A3), the rest through the free-text pass. Absent for a row that makes no 0009 event (the timeline then uses case.row.<type>).",
+            "properties": {
+              "template": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "vars": {
+                "type": "object",
+                "maxProperties": 40,
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "exchanges": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": {
+        "$ref": "#/$defs/exchange"
+      }
+    },
+    "crash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message"
+      ],
+      "description": "Only on a crash case (d6 T6): the uncaught error as the dying process wrote it (the handler writes the note synchronously and exits with code 1), through the free-text pass, file paths cut to the bundle's own.",
+      "properties": {
+        "message": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "stack": {
+          "type": "string",
+          "maxLength": 8000
+        }
+      }
+    },
+    "page": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Only on a case of the runtime's own page (d6 T4, template `runtime.page`): the sentence the person was paged with, or the status line that failed (unlock-retry: the line, then on the next line what is behind it, the reason as the log wrote it); on the runtime's case built on demand (`runtime`), the failure lines shown then. Each account's name (its label) replaced by its reference, then through the free-text pass of d3."
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shell",
+        "rssMb",
+        "cpuSeconds",
+        "uptimeSeconds",
+        "diskFreeMb",
+        "status",
+        "log"
+      ],
+      "description": "Only a runtime case the person asks for (0020 amendment 2); every log item and status text has passed Table A4 and the log text redactor. No journal or traffic is read.",
+      "properties": {
+        "shell": {
+          "enum": [
+            "mac",
+            "windows",
+            "docker",
+            "node"
+          ]
+        },
+        "browser": {
+          "enum": [
+            "chrome",
+            "safari",
+            "firefox",
+            "edge",
+            "other"
+          ]
+        },
+        "rssMb": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cpuSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uptimeSeconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diskFreeMb": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "level",
+              "text"
+            ],
+            "properties": {
+              "level": {
+                "enum": [
+                  "now",
+                  "look"
+                ]
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "log": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "type": "object"
+          },
+          "description": "Last 1,000 log lines at most, oldest first, redacted by field name (A4). Unknown fields retain only their shape; torn lines retain kind and byte count."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "time": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Milliseconds since the epoch, the runtime's wall clock."
+    },
+    "accountRef": {
+      "type": "string",
+      "pattern": "^a:[A-Za-z0-9_-]{1,64}$",
+      "description": "An account as gcx's own local id of it (the source id, src/runtime/accounts.ts:129), never its address. Every 0x address of 40 hex digits the account is known by is replaced by this; an address gcx does not know becomes a:unknown<n>, numbered within the case."
+    },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "app",
+        "os",
+        "arch",
+        "node",
+        "install",
+        "policy",
+        "origin",
+        "openedAt",
+        "trigger",
+        "subject",
+        "window"
+      ],
+      "properties": {
+        "app": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "The build stamp as 0008 defines it (0008 amendment 1 d9 today; the version and build number of RULINGS section 21 are an 0008 amendment, not this design)."
+        },
+        "os": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "System name and release, e.g. darwin 25.1.0."
+        },
+        "arch": {
+          "enum": [
+            "arm64",
+            "x64"
+          ]
+        },
+        "node": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "install": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "The install reference: the first 32 hex digits of SHA-256(\"gcx-case-install:\" + installId). The only identifier; shown to the person in Settings so a deletion can be asked for."
+        },
+        "policy": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The collection policy's version in force (d12)."
+        },
+        "tier": {
+          "enum": [
+            "internal",
+            "beta",
+            "everyone"
+          ],
+          "description": "The tier the copy says it is (0030 amendments 1 and 2): Internal, Beta or Everyone, from its own label, so a report from an internal tester is told from one that touches production. Optional: absent when the copy reads none (a checkout, a build from before the tiers)."
+        },
+        "origin": {
+          "enum": [
+            "auto",
+            "asked",
+            "request"
+          ],
+          "description": "auto: opened by a trigger; asked: built by the person's \"What happened?\"; request: built for one of our signed requests (d11)."
+        },
+        "requestId": {
+          "type": "string",
+          "pattern": "^r:[0-9a-f]{32}$"
+        },
+        "testnet": {
+          "type": "boolean"
+        },
+        "openedAt": {
+          "$ref": "#/$defs/time"
+        },
+        "closedAt": {
+          "$ref": "#/$defs/time"
+        },
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "rejected",
+                "unknown",
+                "not-placed",
+                "exchange-error",
+                "notify-alert",
+                "notify-page",
+                "journal-only",
+                "crash",
+                "refusal",
+                "unreachable",
+                "cut",
+                "approval-error",
+                "asked",
+                "request"
+              ],
+              "description": "d6 T1-T10: rejected T1, unknown and not-placed T2, exchange-error T3, notify-alert and notify-page T4, journal-only T5, crash T6, refusal T7, unreachable T8, cut T9 (a bound that cut an order: an Ioc partly filled, a remainder), approval-error T10 (an exchange error on a wallet-signed approval through the signed route); asked and request are origins of cases not opened by a trigger."
+            },
+            "class": {
+              "enum": [
+                "REJECTED_TERMINAL",
+                "PRICE_RACE",
+                "NO_LIQUIDITY",
+                "ALREADY_FLAT",
+                "NOT_FOUND",
+                "AUTH",
+                "NONCE",
+                "RATE_IP",
+                "RATE_ADDRESS",
+                "MAINTENANCE",
+                "UPGRADE_GATE",
+                "UNAVAILABLE",
+                "RESOLVE",
+                "UNKNOWN"
+              ],
+              "description": "src/venues/hyperliquid/errors.ts ErrorClass. UPGRADE_GATE added 2026-10-05 (0003 Amendment 3 d5): a placement refused in the post-only minutes after an upgrade."
+            },
+            "pattern": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "The registry row that matched (errors.ts MESSAGES), absent for UNKNOWN."
+            },
+            "status": {
+              "type": "string",
+              "maxLength": 64,
+              "description": "A venue order status (errors.ts STATUSES) or an HTTP status."
+            },
+            "template": {
+              "type": "string",
+              "maxLength": 80,
+              "description": "The 0009 template id of a notify trigger."
+            },
+            "occurrences": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Occurrences of the same signature joined into this case (d7)."
+            },
+            "more": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Occurrences of the same signature on other subjects joined here after the day's 20 cases of that signature (d7.1)."
+            }
+          }
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "order",
+                "bot",
+                "account",
+                "runtime"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "account": {
+              "$ref": "#/$defs/accountRef"
+            },
+            "instrumentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "from",
+            "to"
+          ],
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/time"
+            },
+            "to": {
+              "$ref": "#/$defs/time"
+            }
+          }
+        },
+        "venue": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Connection state at the trigger.",
+          "properties": {
+            "answering": {
+              "type": "boolean",
+              "description": "The transport's last request was answered (errors.ts Unreachable)."
+            },
+            "unansweredForMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "stream": {
+              "enum": [
+                "connected",
+                "reconnecting",
+                "down"
+              ]
+            },
+            "marketData": {
+              "enum": [
+                "LIVE",
+                "QUIET",
+                "STALE",
+                "ABSENT"
+              ],
+              "description": "0006 §2.3, for the subject's instrument."
+            },
+            "maintenance": {
+              "type": "boolean"
+            }
+          }
+        },
+        "clockOffsetMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "This computer's clock minus the exchange's at the last start-up check (src/runtime/supervisor/startup.ts:157); null when never measured."
+        },
+        "trimmed": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "What the size budget (d2) left out.",
+          "properties": {
+            "rows": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "exchanges": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ticks": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "log": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "wireKept": {
+          "type": "boolean",
+          "description": "False when the window reaches past what the wire log still holds (d5; an order older than 7 days, d9.2) or the log did not exist (before S2); the case then has no exchanges for that part."
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "at",
+        "orders",
+        "bots",
+        "positions"
+      ],
+      "description": "Everything live on the subject's account at the trigger (B60; MH 2026-09-28, knowledge/v1-package-notes-2026-09-28.md:563): every open order, every bot, every position. Sizes in coin; no balance, margin, value or profit in dollars; a liquidation price only on an isolated position.",
+      "properties": {
+        "at": {
+          "$ref": "#/$defs/time"
+        },
+        "orders": {
+          "type": "array",
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "account",
+              "instrumentId",
+              "side",
+              "type",
+              "state"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "account": {
+                "$ref": "#/$defs/accountRef"
+              },
+              "botId": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "instrumentId": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "side": {
+                "enum": [
+                  "buy",
+                  "sell"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "state": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "size": {
+                "$ref": "#/$defs/decimal"
+              },
+              "filled": {
+                "$ref": "#/$defs/decimal"
+              },
+              "price": {
+                "$ref": "#/$defs/decimal"
+              },
+              "triggerPrice": {
+                "$ref": "#/$defs/decimal"
+              },
+              "reduceOnly": {
+                "type": "boolean"
+              },
+              "cloid": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{32}$"
+              },
+              "oid": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "repair": {
+                "type": "string",
+                "maxLength": 60
+              }
+            }
+          }
+        },
+        "bots": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "account",
+              "instrumentId",
+              "state"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "account": {
+                "$ref": "#/$defs/accountRef"
+              },
+              "instrumentId": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "state": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "iteration": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "level": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "position": {
+                "$ref": "#/$defs/decimal"
+              },
+              "repair": {
+                "type": "string",
+                "maxLength": 60
+              }
+            }
+          }
+        },
+        "positions": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "account",
+              "instrumentId",
+              "size"
+            ],
+            "properties": {
+              "account": {
+                "$ref": "#/$defs/accountRef"
+              },
+              "instrumentId": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "size": {
+                "$ref": "#/$defs/signedDecimal"
+              },
+              "entry": {
+                "$ref": "#/$defs/decimal"
+              },
+              "leverage": {
+                "type": "string",
+                "maxLength": 16
+              },
+              "marginMode": {
+                "enum": [
+                  "cross",
+                  "isolated"
+                ]
+              },
+              "liquidationPrice": {
+                "$ref": "#/$defs/decimal",
+                "description": "Isolated positions only: on a cross position it gives back the account's margin from public figures (d1.3)."
+              }
+            },
+            "if": {
+              "required": [
+                "marginMode"
+              ],
+              "properties": {
+                "marginMode": {
+                  "const": "isolated"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "liquidationPrice": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "redactedEntry": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "description": "A journal entry (an engine input, src/domain/orders/engine.ts Input; a runtime entry, runtime-entry.schema.json; a bot entry, bot-entry.schema.json) as journaled, with $defs/fieldRules.journal applied by path and the free-text pass over every other string leaf that is not exact (d3). Open here: the allow-list walk over values (d4.2) and the last check (d4.5) bound it, not this schema. Ticks: at most the last of each 5 s and the one before each send (d1).",
+      "properties": {
+        "type": {
+          "type": "string",
+          "maxLength": 40
+        }
+      }
+    },
+    "exchange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "dir",
+        "ch",
+        "kind"
+      ],
+      "description": "One line of the wire log (d5) inside the window: a request out, an answer in, or a stream frame in.",
+      "properties": {
+        "t": {
+          "$ref": "#/$defs/time"
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Pairs a request with its answer."
+        },
+        "dir": {
+          "enum": [
+            "out",
+            "in"
+          ]
+        },
+        "ch": {
+          "enum": [
+            "info",
+            "exchange",
+            "ws"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "The /info or action type (orderStatus, order, cancelByCloid…) or the stream channel (orderUpdates, userFills, user (a userEvents frame), userFundings, error)."
+        },
+        "status": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "HTTP status of an answer; null: no answer (transport failure or timeout)."
+        },
+        "ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "From the request to its answer."
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 262144,
+          "description": "Present when the kind is collectable (d3 table B) and the text is at most 256 KiB: the exact text with only the fieldRules.wire replacements and the free-text pass made in place; every other byte, including the digits of every number, as it went or came. A body that is not JSON is one free-text leaf, cut to 2,000 characters."
+        },
+        "shape": {
+          "$ref": "#/$defs/shape",
+          "description": "Present instead of body for a shape-only kind that refused or erred, and for a collectable body over 256 KiB (with bodyOver): the JSON's keys with every value replaced by its type name."
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "The transport's failure or the parser's refusal text, through the free-text redaction."
+        },
+        "class": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "acct": {
+          "$ref": "#/$defs/accountRef",
+          "description": "gcx's account of this line where known (d5.2): the signer's account for a write, the user of an /info read, the subscription's account for a frame. A case takes lines of its subject's account and lines without one."
+        },
+        "bodyOver": {
+          "const": true,
+          "description": "The body passed 256 KiB and is kept as shape and bytes (d2.2)."
+        }
+      },
+      "dependentSchemas": {
+        "body": {
+          "properties": {
+            "shape": false
+          }
+        }
+      }
+    },
+    "decimal": {
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)?$"
+    },
+    "signedDecimal": {
+      "type": "string",
+      "pattern": "^-?\\d+(\\.\\d+)?$"
+    },
+    "fieldRules": {
+      "description": "d3, per source and by path, never by a bare name at every depth (Hyperliquid's order wire is {a, b, p, s, r, t, c}: s is the size, r reduce-only). ref: replaced by the account's accountRef; strip: the value replaced by <stripped> (stripSubtree: the whole object); drop: removed; policy: kept when the policy in force collects it (version 1: all on, H1 decided); principal: telegram:<id> becomes telegram; exact: a field whose own schema gives a pattern, an enum or a number type, kept and not passed through free text. Precedence: ref, strip, drop and policy win over exact; keep leaves go through the free-text pass. Every other string leaf passes the free-text pass (d3: a RATE_ADDRESS text cut at the pattern's first occurrence, matched by includes; 64 hex to <hex64>; runs of 32+ to <long>, sparing cloids, 0x+40 hex, a: references and the UUID shape 8-4-4-4-12 hex; 0x+40 hex to its ref; $<digits> to $<n>; home paths to ~). The redactor reads the same constant (src/domain/cases/rules.ts); a path in the corpus, the fake-venue scenarios or the recorded fixtures that no list and no keep entry classifies fails tests/cases/allowlist.test.ts.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "journal": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ref": {
+              "enum": [
+                "address",
+                "master",
+                "user",
+                "vaultAddress",
+                "agentAddress",
+                "destination",
+                "liquidatedUser",
+                "liquidator"
+              ]
+            },
+            "strip": {
+              "enum": [
+                "label",
+                "nonceHash",
+                "name",
+                "note"
+              ],
+              "description": "The person's own words: an account's label, a bot's name and note (its create and an edit)."
+            },
+            "drop": {
+              "enum": [
+                "accountValue",
+                "withdrawable",
+                "totalMarginUsed",
+                "marginUsed",
+                "totalNtlPos",
+                "totalRawUsd",
+                "marginSummary",
+                "crossMarginSummary",
+                "unrealizedPnl",
+                "returnOnEquity",
+                "positionValue",
+                "availableToTrade",
+                "maxTradeSzs",
+                "liquidatedNtlPos",
+                "liquidatedAccountValue",
+                "cumVlm"
+              ]
+            },
+            "policy": {
+              "enum": [
+                "entryAmount",
+                "level1Amount",
+                "usdc",
+                "closedPnl",
+                "pnl"
+              ],
+              "description": "By unit: every amount of a bot's create, step or command in the quote currency under sizingMode cost (today entryAmount, level1Amount), a funding usdc, a fill's closedPnl, a liquidation record's position pnl (C66 144)."
+            },
+            "principal": {
+              "enum": [
+                "principal"
+              ]
+            },
+            "exact": {
+              "enum": [
+                "hash"
+              ],
+              "description": "Strings kept as they are although the free-text pass would alter them: a request's body hash (bot-entry.schema.json), 64 hex digits by its pattern."
+            }
+          }
+        },
+        "wire": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stripSubtree": {
+              "enum": [
+                "$.signature"
+              ],
+              "description": "The top-level signature of a posted /exchange body, whole (its r, s, v). Nothing else named r, s or v is touched."
+            },
+            "ref": {
+              "enum": [
+                "$.vaultAddress",
+                "$.user",
+                "$.data.user",
+                "$.action.agentAddress",
+                "$..destination",
+                "$..liquidated_user",
+                "$..liquidator",
+                "$..liquidation.liquidatedUser",
+                "$[*].address"
+              ],
+              "description": "$.data.user: a userFills frame (src/venues/hyperliquid/user.ts:220); $[*].address: the extraAgents answer, a bare array (http.ts:209)."
+            },
+            "strip": {
+              "enum": [
+                "$..hash"
+              ],
+              "description": "By name at every depth on purpose (it can only lose data): a fill's transaction hash."
+            },
+            "drop": {
+              "enum": [
+                "$..liquidated_ntl_pos",
+                "$..liquidated_account_value",
+                "$..accountValue",
+                "$..withdrawable",
+                "$..totalMarginUsed",
+                "$..marginUsed",
+                "$..totalNtlPos",
+                "$..totalRawUsd",
+                "$..marginSummary",
+                "$..crossMarginSummary",
+                "$..unrealizedPnl",
+                "$..returnOnEquity",
+                "$..positionValue",
+                "$..availableToTrade",
+                "$..maxTradeSzs",
+                "$..cumVlm",
+                "$..liquidatedNtlPos",
+                "$..liquidatedAccountValue"
+              ],
+              "description": "By name at every depth on purpose: the two snake-case liquidation figures and all sixteen drop names of the journal list."
+            },
+            "policy": {
+              "enum": [
+                "$..closedPnl",
+                "$..usdc"
+              ],
+              "description": "By name at every depth on purpose: a fill's closedPnl, a funding usdc."
+            },
+            "keep": {
+              "enum": [
+                "$.action.orders[*].a",
+                "$.action.orders[*].b",
+                "$.action.orders[*].p",
+                "$.action.orders[*].s",
+                "$.action.orders[*].r",
+                "$.action.orders[*].t",
+                "$.action.orders[*].c",
+                "$.action.builder",
+                "$[*].name"
+              ],
+              "description": "Named here because a by-name rule would have caught them; the rest of keep is tests/cases/keep.txt."
+            }
+          }
+        },
+        "sayVars": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "d3 Table A3: the variables fromStep produces (src/domain/notify/events.ts:232, :239, :247), a third source with names of its own. A policy turning closedPnl off turns these off too. Every other variable passes the free-text pass.",
+          "properties": {
+            "policy": {
+              "enum": [
+                "pnl",
+                "pnlPct",
+                "rpnl",
+                "rpnlPct",
+                "upnl",
+                "upnlPct"
+              ]
+            }
+          }
+        },
+        "log": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "0020 amendment 2 Table A4. Closed by top-level field name: unnamed fields keep only their type/shape. journal subtrees use A1 with every hash stripped at any depth.",
+          "properties": {
+            "exact": {
+              "enum": [
+                "t",
+                "event",
+                "version",
+                "level",
+                "kind",
+                "action",
+                "post",
+                "attempt",
+                "pct",
+                "reachPct",
+                "short",
+                "afterS",
+                "update",
+                "message",
+                "build",
+                "code"
+              ]
+            },
+            "text": {
+              "enum": [
+                "text",
+                "error",
+                "failed",
+                "key",
+                "topic",
+                "panel",
+                "cache",
+                "ignored",
+                "dropped",
+                "refused",
+                "answer",
+                "bound",
+                "proof"
+              ]
+            },
+            "journal": {
+              "enum": [
+                "write",
+                "send",
+                "result",
+                "evidence"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "shape": {
+      "description": "A JSON value's shape: a type name, or an object or array of shapes (an array as its first item's shape).",
+      "oneOf": [
+        {
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": "object",
+          "maxProperties": 200,
+          "propertyNames": {
+            "maxLength": 64
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/shape"
+          }
+        },
+        {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/$defs/shape"
+          }
+        }
+      ]
+    }
+  }
+}

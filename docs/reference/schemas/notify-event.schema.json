@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/notify-event.schema.json",
+  "title": "Notification event",
+  "description": "What one committed engine step means to the user (decision 0009 §1): either a message part for a subject (an order that closed filled carries the \"filled\" message, with the order's whole total, and releases its waiting message), or an order's end, which releases the order's waiting message. Keyed ledgerId:seq:i (i = 0 the step's input, i ≥ 1 its outputs in order). Variables are strings: sizes and prices as plain decimal strings, words as keys of the template files (a list of keys joined by commas), times as <name>Unix (seconds) and <name>Utc (HH:MM:SS). Mirrors src/domain/notify/events.ts (NotifyEvent). See docs/reference/notifications.md.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "subject", "topic", "part"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "subject": { "type": "string", "minLength": 1, "description": "The bot id for a bot's events and its orders' problems; the order id for a manual order; template:venue for market data." },
+        "topic": { "enum": ["bots", "manual", "account"] },
+        "part": { "$ref": "#/$defs/part" },
+        "gate": { "$ref": "#/$defs/gate" },
+        "closed": { "type": "string", "minLength": 1, "description": "Present when the message ends the order: the close reason (\"filled\", with the part order.fill)." }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "subject", "closed"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "subject": { "type": "string", "minLength": 1 },
+        "closed": { "type": "string", "minLength": 1, "description": "The order's close reason (decision 0004); it releases the order's waiting message." }
+      }
+    }
+  ],
+  "$defs": {
+    "key": { "type": "string", "pattern": "^.+:[0-9]+:([^:]+:)?[0-9]+$", "description": "ledgerId:seq:i, the i-th event of the journal row; a live DCA bot's events carry the bot, ledgerId:seq:botId:i, since several bots may hear one row." },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["templateId", "vars"],
+      "properties": {
+        "templateId": { "enum": ["bot.liquidation-near", "grid.modified", "dca.modified", "sizing.account-stale", "sizing.account-absent", "grid.resized", "dca.resized", "grid.healing-limit", "grid.overfill", "grid.activated", "grid.finished", "grid.pnl", "grid.range", "grid.fill", "grid.mismatch", "grid.level-error", "grid.valuation", "grid.dust", "grid.refused", "grid.refused-flat", "grid.refused-min", "grid.close-error", "grid.foreign", "grid.foreign-orders", "grid.key-limit", "grid.key-resumed", "dca.executed-enter", "dca.executed-safety", "dca.executed-tp", "dca.executed-sl", "order.fill", "order.partial", "order.fill-outside", "order.open-stop", "order.trail-active", "repair.order", "order.alert", "md.stale", "md.recovered", "md.absent", "md.halted", "md.gap-overdue", "dca.close-position", "dca.level-error", "dca.entry-partial", "dca.stopped.tp", "dca.stopped.sl", "dca.stopped.stopped", "dca.stopped.closed", "dca.stopped.ended", "dca.stopped.liquidated", "dca.stopped.adl", "dca.stopped.error", "dca.stopped.account-removed", "repair.bot.entry-refused", "repair.bot.allowance", "repair.bot.venue-flat", "repair.bot.wallet-expiring", "dca.wallet-renewed", "dca.exits-reattached", "dca.uncounted", "repair.bot.key-limit", "repair.bot.differs", "repair.bot.refused", "repair.bot.refused-order", "repair.bot.refused-flat", "repair.bot.refused-min", "repair.bot.foreign", "repair.bot.foreign-orders", "repair.reminder", "repair.bot.order", "dca.key-resumed", "dca.key-reduces", "position.liquidated", "position.adl", "runtime.locked", "runtime.away", "runtime.away-now", "runtime.away-order", "runtime.away-trail", "runtime.away-page", "runtime.page", "runtime.poller-stopped", "account.agent-expires", "account.agent-expires-day", "account.agent-expired", "agent.placed", "agent.canceled", "agent.created-bot", "agent.proposal-order", "agent.proposal-bot", "agent.limit", "agent.suspended", "account.fill-unknown-kind", "dca.kill-all", "dca.dust", "runtime.waiting.stop", "runtime.waiting.close", "venue.maintenance-start", "venue.maintenance-end", "venue.maintenance-end-check", "venue.maintenance-overrun"] },
+        "vars": { "type": "object", "additionalProperties": { "type": "string" } },
+        "rule": {
+          "description": "The instrument's price and size rule as of the step (decision 0015 d14), so prices and sizes read the same whenever the message is sent: significant digits and most decimals of a price, decimals of a size. Optional: a part stored without it (a market-data part, which has no instrument) is shown with the widest rule (5 significant digits, 8 decimals).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["priceRule", "szDecimals"],
+          "properties": {
+            "priceRule": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sigFigs", "maxDecimals"],
+              "properties": { "sigFigs": { "type": "integer", "minimum": 1 }, "maxDecimals": { "type": "integer", "minimum": 0 } }
+            },
+            "szDecimals": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "gate": {
+      "description": "The per-bot switch the event answers to: a DCA fill at averaging level `fills` (the entry is 0), sent if fills are on and the level is at least fromLevel; or a take-profit or stop-loss fill or a close of the position, sent if tpSl is on; or a bot that stopped, sent if stops is on.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["fills"], "properties": { "fills": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["grid"], "properties": { "grid": { "enum": ["activate", "finish", "pnl", "range", "orders"] } } },
+        { "const": "tpSl" },
+        { "const": "stops" }
+      ]
+    }
+  }
+}

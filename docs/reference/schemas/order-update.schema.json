@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/order-update.schema.json",
+  "title": "Order update",
+  "description": "One order status change from Hyperliquid's `orderUpdates` stream as the adapter publishes it (src/venues/hyperliquid/user.ts, OrderUpdate). Money is canonical decimal strings; ids are the venue's exact digits. `lifecycle` is the status registry's reading of `status` (0003 §2.13); `unknown` pages.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["venue", "coin", "side", "limitPx", "sz", "origSz", "oid", "placedAt", "status", "lifecycle", "statusTime"],
+  "properties": {
+    "venue": { "type": "string" },
+    "coin": { "type": "string" },
+    "side": { "enum": ["buy", "sell", "unknown"] },
+    "venueSide": { "type": "string" },
+    "limitPx": { "$ref": "#/$defs/canonical" },
+    "sz": { "$ref": "#/$defs/canonical", "description": "Remaining size." },
+    "origSz": { "$ref": "#/$defs/canonical" },
+    "oid": { "$ref": "#/$defs/id" },
+    "cloid": { "type": "string", "description": "0x + 32 hex lower-cased; any other id verbatim." },
+    "reduceOnly": { "const": true },
+    "placedAt": { "type": "integer" },
+    "status": { "type": "string", "description": "The venue's status string, exactly." },
+    "lifecycle": { "enum": ["open", "filled", "cancelled", "rejected", "unknown"] },
+    "statusTime": { "type": "integer" },
+    "orderType": { "type": "string", "description": "An open-orders row's or an orderStatus reply's type name, as the venue wrote it (\"Limit\", \"Stop Market\", \"Take Profit Limit\"…); the stream's frames carry none (0004 amendment 3 d3, d7)." },
+    "tif": { "type": "string", "description": "Its time in force (\"Gtc\", \"Alo\", \"Ioc\"); absent on a trigger and on a stream frame." },
+    "isTrigger": { "const": true, "description": "A trigger order that has not triggered; absent otherwise." },
+    "triggerPx": { "$ref": "#/$defs/canonical", "description": "A trigger's price; only with isTrigger." },
+    "isPositionTpsl": { "const": true, "description": "A take-profit or stop-loss of the whole position; absent otherwise." },
+    "children": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1, "description": "The venue ids of the orders grouped under this one; absent when none." }
+  },
+  "$defs": {
+    "canonical": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$", "description": "A canonical decimal string: no trailing zeros, no exponent. Never a JSON number." },
+    "id": { "type": "string", "pattern": "^\\d+$" }
+  }
+}

@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/accounts-api.schema.json",
+  "title": "Accounts API",
+  "description": "Connecting a Hyperliquid main account (decisions 0007 d17 to d20, 0013 slice C; roadmap A8, the runtime half) and the accounts list with each account's readiness (roadmap A8 item 4). The panel connects the main wallet, reads the wallet check, asks the runtime for an API wallet (`POST /api/v1/accounts`; the key is made by gcx's key store and never leaves it), has the main wallet sign `approveAgent` and, only when the approved builder fee is below 0.03 %, `approveBuilderFee`, and hands each signed action to `POST /api/v1/accounts/{sourceId}/signed`, which relays it to Hyperliquid, field for field, when the allow-list admits it. A person's routes only: an access key is refused. Times are Unix milliseconds. See docs/venues/hyperliquid.md and docs/reference/runtime/api.md.",
+  "$defs": {
+    "inPortfolio": {
+      "description": "Only the pressed Dashboard membership switch; merged per account, person only (0007 Amendment 6)",
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": { "balances": { "type": "boolean" }, "pnl": { "type": "boolean" } }
+    },
+    "membership": {
+      "type": "object", "additionalProperties": false, "required": ["balances", "pnl"],
+      "properties": { "balances": { "type": "boolean" }, "pnl": { "type": "boolean" } }
+    },
+    "inPortfolioAnswer": {
+      "type": "object", "additionalProperties": false, "required": ["sourceId", "inPortfolio"],
+      "properties": { "sourceId": { "type": "string" }, "inPortfolio": { "$ref": "#/$defs/membership" } }
+    },
+    "address": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+    "agent": {
+      "description": "An API wallet as Hyperliquid lists it (`extraAgents`): its name (\"\" for the one unnamed wallet), its address, and Hyperliquid's expiry (null: none). `held`: gcx's key store holds its key on this computer; the panel shows such a wallet but never offers to replace it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "address", "validUntil", "held"],
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "$ref": "#/$defs/address" },
+        "validUntil": { "type": ["integer", "null"] },
+        "held": { "type": "boolean" }
+      }
+    },
+    "feeState": {
+      "description": "The builder-fee approval for gcx's 0.03 % (decision 0007 d20): `approved` when Hyperliquid's `maxBuilderFee` for our builder is at least 30 (tenths of a basis point; an old approval of 1 % reads 1000 and stands), `not approved` below it, `unknown` when it could not be read (the accounts list reads every approval not read as approved before it answers, so there `unknown` means the read failed). Every order carries the fee, exits, closes and stop-losses included (ruling 5). `not approved` refuses a new order or bot (422 `builder-fee`), for a person and a key alike, after one fresh read of the approval that still says so (MH 196; a read that fails is `unknown` and nothing is refused); a Close, an order that only reduces, a cancel, an exit and a Stop are not refused, and a running bot goes on. Hyperliquid refuses an order that carries the fee when the approval is gone.",
+      "enum": ["approved", "not approved", "unknown"]
+    },
+    "wallet": {
+      "description": "GET /api/v1/accounts/wallet/{address}: what the connect screen needs after the wallet is connected (step 1), read fresh from Hyperliquid. `role` must be `user` to connect (a sub-account, a vault or an API wallet shows \"Connect the wallet that owns the Hyperliquid account\"; `missing`, a wallet Hyperliquid does not know, shows \"Wallet not linked to Hyperliquid, or the account has < 5 USDC\"). `name`: the API wallet name gcx will use, the first of gcx, gcx1, gcx2 that Hyperliquid does not list; null when `full`. `full`: the named API wallets fill the account's slots (3, plus 2 per sub-account; the unnamed one is not counted) or all three names are taken: the person picks one to replace from `agents` (never one with `held`), and the connect body names it in `replace`; nothing is signed until one is picked. `validUntil`: the expiry to sign into `approveAgent` (`<name> valid_until <validUntil>`), Hyperliquid's clock plus 180 days less one hour, never this computer's clock. `referred`: whether Hyperliquid's `referral` read shows a referrer (null: the read failed); the referral line is shown only when it is false. `builderFee.max` is null when the read failed. Answers 503 when the role, the API wallets, the sub-accounts or Hyperliquid's clock could not be read.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "agents", "name", "full", "validUntil", "referred", "builderFee"],
+      "properties": {
+        "role": { "enum": ["user", "agent", "vault", "subAccount", "missing"] },
+        "agents": { "type": "array", "items": { "$ref": "#/$defs/agent" } },
+        "name": { "type": ["string", "null"] },
+        "full": { "type": "boolean" },
+        "validUntil": { "type": "integer" },
+        "referred": { "type": ["boolean", "null"] },
+        "builderFee": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "max"],
+          "properties": { "state": { "$ref": "#/$defs/feeState" }, "max": { "type": ["integer", "null"], "minimum": 0 } }
+        }
+      }
+    },
+    "connect": {
+      "description": "POST /api/v1/accounts: connect the main account whose wallet the panel connected. `label`: the account's name in gcx, at most 50 characters; empty takes the default (Hyperliquid, then Hyperliquid-2, Hyperliquid-3, as goodcryptoX). `referral`: the referral line was shown and left checked (stored `pending`, sent once by gcx's API wallet after it is active); false when unchecked, not shown, or already referred (stored `declined`). `replace`: only when the wallet check said `full`, the name of the API wallet the person picked to replace; its old key stops working. The same main account sent again (\"Try again\", or after a reload) answers the same account and the same API wallet; another main account connects beside those already there, with its own record and its own API wallet (several main accounts; a main account still waiting for its approval stays).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "masterAddress", "label", "referral"],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "masterAddress": { "$ref": "#/$defs/address" },
+        "label": { "type": "string", "maxLength": 50 },
+        "referral": { "type": "boolean" },
+        "replace": { "type": "string", "minLength": 1, "maxLength": 16 }
+      }
+    },
+    "connected": {
+      "description": "The answer to POST /api/v1/accounts: the account's id in gcx and its API wallet's name and address, nothing else. The key is on disk, encrypted, before this answer is sent. 422 `{rejected, text}`: not a main account's wallet, slots full without a pick, a pick that is not offered; 409: the requestId was used for another main account; 503: Hyperliquid could not be read, or the key store is locked or has no unlock source.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "agent"],
+      "properties": {
+        "sourceId": { "type": "string", "minLength": 1 },
+        "agent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "address"],
+          "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 16 }, "address": { "$ref": "#/$defs/address" } }
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["r", "s", "v"],
+      "properties": {
+        "r": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+        "s": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$" },
+        "v": { "enum": [27, 28] }
+      }
+    },
+    "signed": {
+      "description": "POST /api/v1/accounts/{sourceId}/signed: one action the main wallet signed, as Hyperliquid's `/exchange` takes it (the typed data as the builder-fees page builds it: domain HyperliquidSignTransaction, `signatureChainId` the wallet's own chain, one nonce for the action and the body). gcx relays it, field for field, only when its allow-list admits it: `approveAgent` for exactly the address and name gcx made for this account, and `approveBuilderFee` for gcx's builder at exactly \"0.03%\". While every account under the wallet is being removed, only `approveAgent` to the zero address under its API wallet's name (the revoke); while an account under a wallet that stands is being removed with `revoke` true (0003b amendment 3 d3), that revoke as well as the usual approvals. Anything else is refused 422 `not-allowed` and nothing is sent. Answers 200 `{accepted: true}` when Hyperliquid accepted it; 422 `{rejected: \"venue\", text}` with Hyperliquid's text; 503 `{error, text}` when Hyperliquid did not answer (it may have taken it: the accounts list shows what it did); `text` is the sentence to show, `error` carries the cause.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "nonce", "signature"],
+      "properties": {
+        "action": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "signatureChainId", "hyperliquidChain", "agentAddress", "agentName", "nonce"],
+              "properties": {
+                "type": { "const": "approveAgent" },
+                "signatureChainId": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$" },
+                "hyperliquidChain": { "const": "Mainnet" },
+                "agentAddress": { "$ref": "#/$defs/address" },
+                "agentName": { "type": "string" },
+                "nonce": { "type": "integer", "minimum": 0 }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "signatureChainId", "hyperliquidChain", "maxFeeRate", "builder", "nonce"],
+              "properties": {
+                "type": { "const": "approveBuilderFee" },
+                "signatureChainId": { "type": "string", "pattern": "^0x[0-9a-fA-F]+$" },
+                "hyperliquidChain": { "const": "Mainnet" },
+                "maxFeeRate": { "type": "string" },
+                "builder": { "$ref": "#/$defs/address" },
+                "nonce": { "type": "integer", "minimum": 0 }
+              }
+            }
+          ]
+        },
+        "nonce": { "type": "integer", "minimum": 0 },
+        "signature": { "$ref": "#/$defs/signature" }
+      }
+    },
+    "row": {
+      "description": "One element of GET /api/v1/accounts. The first five fields are the account selector's (0007); the rest are added by roadmap A8 for the connect screens and the Settings rows: `enabled` is true once Hyperliquid listed the API wallet (the account trades from then on; until then it waits for approval). `agent.approval`: `waiting` until Hyperliquid lists the API wallet, then `active`. `agent.validUntil`: Hyperliquid's expiry from gcx's last read (null: none; absent: not read since gcx started). `builderFee.stale`: the last read failed and `state` is the one before it. `referral`: `pending` until gcx's API wallet has sent Hyperliquid's referral code once, then `sent`, or `declined` (unchecked, already referred, or refused by Hyperliquid).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceId", "venue", "label", "enabled", "empty"],
+      "properties": {
+        "inPortfolio": { "$ref": "#/$defs/membership" },
+        "sourceId": { "type": "string" },
+        "venue": { "type": "string" },
+        "label": { "type": "string" },
+        "enabled": { "type": "boolean" },
+        "empty": { "type": "boolean" },
+        "kind": { "enum": ["master", "subAccount", "vault"] },
+        "master": { "type": "string", "description": "A sub-account's or vault's main account (its sourceId) while the main account is in gcx, else its API wallet's id (0003b amendment 2 v2); absent on a main account." },
+        "state": { "type": "string", "description": "goodcryptoX's account status code (ok, AuthenticationError, …); absent reads ok." },
+        "address": { "$ref": "#/$defs/address" },
+        "agent": {
+          "type": "object",
+          "description": "The API wallet that signs for this account: its main account's, one per main account. Since 0003b amendment 2 v2 (2026-10-05, additive) on every account under that main, the main's own included, where it was on a main account's row only.",
+          "additionalProperties": false,
+          "required": ["name", "address", "approval"],
+          "properties": {
+            "id": { "type": "string", "description": "Additive (amendment 2 v2): the API wallet's own id, which `signed`, `renew` and `found?master=` take; one renewal or revoke on it acts for every account under its main." },
+            "master": { "$ref": "#/$defs/address", "description": "Additive (amendment 2 v2): the main account's address, whose wallet approves, renews and revokes this API wallet." },
+            "name": { "type": "string" },
+            "address": { "$ref": "#/$defs/address" },
+            "approval": { "enum": ["waiting", "active"] },
+            "validUntil": { "type": ["integer", "null"] },
+            "moved": { "type": "boolean", "description": "Deprecated, never sent since 0024 amendment 3 (an import keeps the API wallets with no hold); builds before it sent true for an account brought from another machine whose API wallet waited for a replacement. Absent: not moved." }
+          }
+        },
+        "key": {
+          "type": "object",
+          "description": "Additive (unlock-retry, 0008 amendment 4): present while this account's API wallet key cannot sign. `state`: `locked` (the key store cannot be opened; goodcryptoX keeps trying), `elsewhere` (it was sealed under another Windows account or on another computer: no try here can open it), `missing` (this computer has no key for it: no key store file, or a new store without it). `replace`: Replace API wallet (`renew`) is offered as the last resort: at once for `missing` and `elsewhere`; for `locked` once a whole schedule of tries failed or the last start failed too. The replacement makes a new key store where the old one cannot be opened, and every other main account's key in it is then `missing`. `cause`: what the last try met (`timeout`; `refused`; `profile`, before the Windows account was loaded; `blocked`, the tool could not be started). `why`: the reason as the log wrote it, never a path or a secret. `id`, `master`: the API wallet's id and its main account's address, whose wallet approves the replacement.",
+          "additionalProperties": false,
+          "required": ["state", "replace", "id", "master"],
+          "properties": {
+            "state": { "enum": ["locked", "elsewhere", "missing"] },
+            "replace": { "type": "boolean" },
+            "cause": { "enum": ["timeout", "refused", "profile", "blocked"] },
+            "why": { "type": "string" },
+            "id": { "type": "string" },
+            "master": { "$ref": "#/$defs/address" }
+          }
+        },
+        "builderFee": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "max", "stale"],
+          "properties": { "state": { "$ref": "#/$defs/feeState" }, "max": { "type": ["integer", "null"], "minimum": 0 }, "stale": { "type": "boolean" } }
+        },
+        "referral": { "enum": ["pending", "sent", "declined"] },
+        "budget": {
+          "type": "object", "additionalProperties": false, "required": ["used", "cap", "surplus", "cumVlm", "at"],
+          "description": "Additive (0003 Amendment 2 d1, d8; 2026-10-05): the account's request allowance as Hyperliquid's `userRateLimit` read it (at most once a minute; the list reads it when asked): 10,000 plus 1 per 1 USDC traded, never refilling with time; once used up Hyperliquid allows one request every 10 seconds. Absent before a read or when the read failed.",
+          "properties": {
+            "used": { "type": "integer", "minimum": 0, "description": "`nRequestsUsed`." },
+            "cap": { "type": "integer", "minimum": 0, "description": "`nRequestsCap`." },
+            "surplus": { "type": "integer", "description": "`nRequestsSurplus`, shown raw; its meaning is pin R4." },
+            "cumVlm": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "USDC traded since the address began." },
+            "at": { "type": "integer", "minimum": 0, "description": "When it was read, ms since the epoch." }
+          }
+        },
+        "refused": { "type": "string", "deprecated": true, "description": "Deprecated (0003 Amendment 2 d7, 2026-10-05): never sent any more. It said a sub-account or a vault took no new order or bot after Hyperliquid refused gcx's builder fee there; now each order carries the fee and Hyperliquid answers each one. Kept in the schema for one release, as the no-breaking-changes rule asks." },
+        "wallet": { "enum": ["expired", "removed"], "description": "Additive (MH 2026-10-05, audit line 13): the main account's API wallet, which signs for this account, has expired or is no longer listed at Hyperliquid, as the runtime's last read found it; a new order or bot on it is refused 422 `api-wallet` with the sentence, and the panel shows the sentence in place of Buy, Sell and Launch. Nothing is held: a running bot's next order goes to the exchange, which refuses it. Absent: neither, or no runtime is open." },
+        "simulated": { "type": "boolean", "description": "true on a demo account (docs/panel/demo-accounts.md; always listed, after the connected accounts): made up, it never trades and nothing of it reaches a venue; its lists are the socket's `demo/` topics. Absent on a connected account." },
+        "live": { "type": "boolean", "description": "Additive (0013 amendment 2 d5): true while the account gets live updates; false while it is polled, because Hyperliquid allows only so many live accounts per internet address (gcx follows what Hyperliquid accepts) and accounts with a bot or an order of gcx come first. Absent: the runtime does not say (no account open yet, a demo account)." },
+        "everyMs": { "type": "integer", "minimum": 60000, "description": "Additive (0013 amendment 2 d5): while `live` is false, how often the account is read (ms): at least a minute, longer when many accounts are polled. Absent while live." },
+        "open": {
+          "type": "object", "additionalProperties": false, "required": ["bots", "orders"],
+          "description": "Additive (2026-10-03; 0003b d12, RULINGS 23): gcx's bots running and orders not done on the account, which a remove leaves on Hyperliquid unwatched (the remove dialog's warning); also the main account's near-empty warning (a sub-account with a bot). Absent when no runtime is open.",
+          "properties": { "bots": { "type": "integer", "minimum": 0 }, "orders": { "type": "integer", "minimum": 0 }, "resting": { "type": "integer", "minimum": 0, "description": "Additive (2026-10-10, 0003b amendment 3 d5): of `orders`, those resting on Hyperliquid (the remove dialog's count of orders still open there)." }, "held": { "type": "integer", "minimum": 0, "description": "Additive (2026-10-10, 0003b amendment 3 d5): of `orders`, the stops and trails gcx watches itself, which end with a remove (the dialog's clause) or can no longer be sent when the API wallet goes." } }
+        },
+        "removing": {
+          "type": "object", "additionalProperties": false, "required": ["waiting", "revoke"],
+          "description": "Additive (2026-10-03; 0003b d12): the account's remove is under way. `waiting`: its sends (and those of the accounts leaving with it when its API wallet ends) that Hyperliquid has not answered yet; it ends when that is 0 and, when it awaits the API wallet's revoke, once Hyperliquid no longer lists gcx's API wallet (`revoke`: this account's remove asks the revoke, its box ticked or, on a remove before the box, the last account under the main; false after the person's Remove without revoking). Absent when not being removed.",
+          "properties": { "waiting": { "type": "integer", "minimum": 0 }, "revoke": { "type": "boolean" } }
+        }
+      }
+    },
+    "found": {
+      "description": "GET /api/v1/accounts/found: the sub-accounts and the vaults each active main account may add, read fresh from Hyperliquid (`subAccounts` and `leadingVaults` of the main account), less those already in gcx. `name`: Hyperliquid's; `master`: the main account's sourceId. With `?master={sourceId}` (additive, 0003b amendment 1): that one active main account's whole list, including those in gcx, each of those carrying `sourceId` (active, waiting or being removed; a removed one has none, it is offered); 404 for an unknown or inactive main account. With `?master=`, since 0003b amendment 2 v2 (additive), the first item is the main account itself (kind `master`: its gcx name, or the one it would get, and its sourceId while it is in gcx), and `master` names the API wallet's id (a main account's id names its wallet too). Answers 503 when Hyperliquid could not be read.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "address", "name", "master"],
+        "properties": { "kind": { "enum": ["master", "subAccount", "vault"] }, "address": { "$ref": "#/$defs/address" }, "name": { "type": "string" }, "master": { "type": "string" }, "sourceId": { "type": "string", "description": "Additive: only with `?master=`, the account's id when it is in gcx." } }
+      }
+    },
+    "add": {
+      "description": "POST /api/v1/accounts/add: add a sub-account or a vault that `found` offers, or (additive, 0003b amendment 2 v2) a main account whose API wallet stands in gcx: its own account, added, or brought back with its history. A fresh read must list it; it then trades at once, its orders signed by its main account's API wallet with its address as `vaultAddress`, with gcx's builder fee as the main account's. Answers 200 `{sourceId}` (the same requestId or the same address again answers the same), with `warning` (additive, 0013 amendment 2 d5) when gcx already trades as many accounts as Hyperliquid last accepted live, so this one will be polled: \"Hyperliquid allows a limited number of live accounts per connection point; this one updates every minute over the slower path, which can also delay its orders.\"; 422 `{rejected, text}`: `not-found` (Hyperliquid does not list it), `most` (gcx trades up to 100 accounts at once, 0013 d13), `not-available`; 409: the requestId was used for another account; 503: Hyperliquid could not be read.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "address"],
+      "properties": { "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }, "address": { "$ref": "#/$defs/address" } }
+    },
+    "renew": {
+      "description": "POST /api/v1/accounts/{sourceId}/renew (0003b d12 replace / reissue; goodcryptoX's Update API wallet automatically): no fields. A main account that trades gets a new API wallet key, kept on disk before the answer (`connected`: the same name, the new address; the same key again while it waits). Its own wallet then approves it through `signed` (approveAgent under the same name, which replaces the old API wallet on Hyperliquid); the old key signs until a fresh read of Hyperliquid lists the new one. 404 not a main account in gcx; 422 `not-available` while its first API wallet waits for approval (Try again) or while it is being removed; 503 when the key could not be kept. Added 2026-10-04.",
+      "type": "object", "additionalProperties": false, "properties": {}
+    },
+    "rename": {
+      "description": "POST /api/v1/accounts/{sourceId}/rename (0003b d1; goodcryptoX's exchange-rename.vue): the account's name in gcx, 1 to 50 characters; names may repeat. The panel sends nothing for an empty field (no change). Answers 200 `renamed`; 400 an empty or longer name; 404 an account not in gcx (or removed).",
+      "type": "object", "additionalProperties": false, "required": ["label"],
+      "properties": { "label": { "type": "string", "minLength": 1, "maxLength": 50 } }
+    },
+    "renamed": {
+      "description": "The answer to a rename: the account and its name now.",
+      "type": "object", "additionalProperties": false, "required": ["sourceId", "label"],
+      "properties": { "sourceId": { "type": "string" }, "label": { "type": "string" } }
+    },
+    "remove": {
+      "description": "POST /api/v1/accounts/{sourceId}/remove (0003b d12; RULINGS 23; 0003b amendment 3, ruling 413): gcx removes the account from itself and leaves Hyperliquid as it is: resting orders rest, positions stay, nothing is cancelled or closed; its bots stop with the reason Account removed and its internal stops are no longer watched. `trading`: the dialog's Keep trading history (unticked by default): kept, its bots and orders stay in the lists marked Account removed; unticked, they leave every view at once, for good. `portfolio`: written true (no box since amendment 3; read by nothing). `revoke` on the first call (added 2026-10-10): Also remove the API wallet from Hyperliquid (unticked by default): the remove then waits for the main wallet's revoke (approveAgent to the zero address under its name, relayed by `signed` on the wallet's id) to be seen done, the other accounts under the wallet meeting line 13 (their new orders refused, a running bot stopping at its next refused send); absent (an older client), the revoke is asked only for the last account under the main. Journaled (`source.removing`) before anything is sent. Every account goes alone (ruling 219). The key is deleted with the last account under the wallet. `revoke: false` sent again on an account while it is removing is the person's Remove without revoking, for that account.",
+      "type": "object", "additionalProperties": false, "required": ["trading", "portfolio"],
+      "properties": { "trading": { "type": "boolean" }, "portfolio": { "type": "boolean" }, "revoke": { "type": "boolean" } }
+    },
+    "removed": {
+      "description": "Where a remove stands: `removing` with the row's `waiting` and `revoke` (the panel asks the main wallet for the revoke while `revoke` is true: the last account under its main), or `removed`, with `warning` when something stays on Hyperliquid: an account removed while others under its main stay (the main account's API wallet can still trade it until the last of them leaves gcx), or the last one removed without the revoke (the API wallet stays approved until it expires or is removed there; an earlier export archive still holds the key).",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["state", "waiting", "revoke"], "properties": { "state": { "const": "removing" }, "waiting": { "type": "integer", "minimum": 0 }, "revoke": { "type": "boolean" } } },
+        { "type": "object", "additionalProperties": false, "required": ["state"], "properties": { "state": { "const": "removed" }, "warning": { "type": "string" } } }
+      ]
+    },
+    "rows": { "description": "GET /api/v1/accounts. With no account connected: `[]` (200, never 404), and the rest of what the panel reads answers empty too: the settings their defaults, the history an empty page (`{rows: []}`), the `orders`, `positions` and `bots` topics an empty snapshot, and `account-state`, `balances` and `leverage/…` are accepted and send nothing until an account exists; market data is served as always.", "type": "array", "items": { "$ref": "#/$defs/row" } }
+  }
+}

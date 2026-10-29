@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/cases-api.schema.json",
+  "title": "Cases routes",
+  "description": "The routes of decision 0020 slices S1, S3 and S3b (docs/reference/cases/README.md, docs/reports.md): the stored cases (what was sent), one case built now or read back, the person's \"Send to gcx\", the daily usage records and the Dashboard's mark. Additions to /api/v1.",
+  "$defs": {
+    "row": {
+      "description": "One stored case as \"What was sent\" lists it, never its body. state: waiting (to be sent), sent at sentAt, held (the last check found an address at error's path; never sent), refused (by our server, error its text). sending (S3, absent on a case only the person's press sends): collecting (still open, its trigger may join it), queued (gcx sends it by itself), off (closed while automatic sending was off), skipped (past the backlog's bound); off and skipped go on the person's Send. more: occurrences of the same trigger past the day's 20 cases, kept here.",
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "openedAt", "origin", "trigger", "subject", "state", "sentAt", "error", "bytes"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^c:[0-9a-f]{32}$" },
+        "openedAt": { "type": "integer", "minimum": 0 },
+        "origin": { "enum": ["auto", "asked", "request"] },
+        "trigger": { "type": "string", "maxLength": 40 },
+        "subject": { "type": "string", "maxLength": 100, "description": "order:<id>, bot:<id>, account:<ref> or runtime." },
+        "state": { "enum": ["waiting", "sent", "held", "refused"] },
+        "sentAt": { "type": ["integer", "null"] },
+        "error": { "type": ["string", "null"], "maxLength": 500 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "sending": { "enum": ["collecting", "queued", "off", "skipped"] },
+        "more": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "list": { "description": "GET /api/v1/cases: every stored case, newest first.", "type": "array", "items": { "$ref": "#/$defs/row" } },
+    "view": {
+      "description": "GET /api/v1/cases/{id}: the case (an order's, a bot's or the runtime's built now and written nothing; a stored one as it was stored) and, with ?timeline=<language>, its timeline.",
+      "type": "object", "additionalProperties": false, "required": ["case"],
+      "properties": {
+        "case": { "$ref": "case.schema.json" },
+        "timeline": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": false, "required": ["at", "text"], "properties": { "at": { "type": "integer", "minimum": 0 }, "text": { "type": "string" } } }
+        }
+      }
+    },
+    "usage": {
+      "description": "GET /api/v1/usage (S3b, d16): the install reference that stands for this gcx in every report and record, and each daily record built, newest first: its state (waiting, sent at sentAt, held: the last check found an address at error's path, refused: our server's text in error) and the record or heartbeat as it goes (pulse.schema.json).",
+      "type": "object", "additionalProperties": false, "required": ["install", "days"],
+      "properties": {
+        "install": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+        "days": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["day", "state", "sentAt", "error", "body"],
+            "properties": {
+              "day": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+              "state": { "enum": ["waiting", "sent", "held", "refused"] },
+              "sentAt": { "type": ["integer", "null"] },
+              "error": { "type": ["string", "null"] },
+              "body": { "$ref": "pulse.schema.json" }
+            }
+          }
+        }
+      }
+    },
+    "usageMark": {
+      "description": "POST /api/v1/usage/dashboard (S3b, d16.1): the Dashboard was opened. Any field is ignored: the runtime marks its own current UTC day.",
+      "type": "object"
+    },
+    "sendBody": {
+      "description": "POST /api/v1/cases/{id}/send: the person's own line (500 characters), kept as written after the free-text pass.",
+      "type": "object", "additionalProperties": false,
+      "properties": { "note": { "type": "string", "maxLength": 500 } }
+    },
+    "sent": {
+      "description": "The answer to a send: the stored case's id and its state (sent; waiting when our server did not answer, Send again later; held with the path where an address was found; refused with our server's text).",
+      "type": "object", "additionalProperties": false, "required": ["id", "state"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^c:[0-9a-f]{32}$" },
+        "state": { "enum": ["waiting", "sent", "held", "refused"] },
+        "error": { "type": "string", "maxLength": 500 }
+      }
+    }
+  }
+}

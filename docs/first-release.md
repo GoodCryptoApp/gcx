@@ -10,7 +10,7 @@ goodcryptoX ran on our servers: the candles you saw came from our servers, your 
 
 ## What it is
 
-goodcryptoX 3.0 is goodcryptoX self-hosted: it runs on your machine, or on a server you rent, and it is yours to run. For now, in the beta, we start with Hyperliquid: manual trading and the DCA bot. More will follow.
+goodcryptoX 3.0 is goodcryptoX self-hosted: it runs on your machine, or on a server you rent, and it is yours to run. For now, in the beta, we start with Hyperliquid: manual trading and the DCA bot (the Grid bot joined in 3.1). More will follow.
 
 What each version brings is in the release notes: Settings › General › Version history in the app, and [goodcryptoX's releases](https://github.com/GoodCryptoApp/gcx/releases).
 

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/user-event.schema.json",
+  "title": "User event",
+  "description": "One Hyperliquid `userEvents` frame (channel `user`) as the adapter publishes it (src/venues/hyperliquid/user.ts, UserEvent): fills, funding, a liquidation, venue-side cancels, or `other` for an event the engine never causes (TWAP) or a key the venue added, surfaced for an alert, never dropped.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "fills", "unordered"],
+      "properties": { "kind": { "const": "fills" }, "fills": { "type": "array", "items": { "$ref": "user-fills-frame.schema.json#/$defs/fill" } }, "unordered": { "$ref": "user-fills-frame.schema.json#/properties/unordered" } }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "time", "coin", "usdc", "szi", "fundingRate"],
+      "properties": {
+        "kind": { "const": "funding" },
+        "time": { "type": "integer" },
+        "coin": { "type": "string" },
+        "usdc": { "$ref": "#/$defs/canonical", "description": "Paid negative, received positive." },
+        "szi": { "$ref": "#/$defs/canonical" },
+        "fundingRate": { "$ref": "#/$defs/canonical" },
+        "nSamples": { "type": "integer" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "lid", "liquidator", "liquidatedUser", "liquidatedNtlPos", "liquidatedAccountValue"],
+      "properties": {
+        "kind": { "const": "liquidation" },
+        "lid": { "type": "string", "pattern": "^\\d+$" },
+        "liquidator": { "type": "string" },
+        "liquidatedUser": { "type": "string" },
+        "liquidatedNtlPos": { "$ref": "#/$defs/canonical" },
+        "liquidatedAccountValue": { "$ref": "#/$defs/canonical" }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "cancels"],
+      "properties": {
+        "kind": { "const": "nonUserCancel" },
+        "cancels": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": false, "required": ["coin", "oid"], "properties": { "coin": { "type": "string" }, "oid": { "type": "string", "pattern": "^\\d+$" } } }
+        }
+      }
+    },
+    { "type": "object", "additionalProperties": false, "required": ["kind", "key"], "properties": { "kind": { "const": "other" }, "key": { "type": "string" } } }
+  ],
+  "$defs": { "canonical": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$", "description": "A canonical decimal string. Never a JSON number." } }
+}
