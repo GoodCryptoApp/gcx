@@ -4,11 +4,11 @@ A rented server runs goodcryptoX day and night. You set it up from any computer,
 
 Any provider works. We recommend Hostinger for now: by far the easiest to set up that we found, and cost-effective too. The steps below show Hostinger screen by screen; the same steps work on any cloud provider, AWS, DigitalOcean, Google Cloud, Azure or any other.
 
-**[Open Hostinger](https://www.hostinger.com?REFERRALCODE=HBDNPMHGJLZB)**
+**[Deploy on Hostinger](https://www.hostinger.com/docker-hosting?compose_url=https://raw.githubusercontent.com/GoodCryptoApp/gcx/main/compose.yaml&REFERRALCODE=HBDNPMHGJLZB)**
 
-[Hostinger](https://www.hostinger.com?REFERRALCODE=HBDNPMHGJLZB): through this link you get 20 % off your first purchase, and goodcryptoX gets a share of it.
+The shortcut: open the link, create your Hostinger account, choose a plan and follow its screens; at the end goodcryptoX is set up on the new server by itself, nothing to paste. Finish in the same browser you opened the link in. If anything goes wrong, the step-by-step guide below does the same by hand.
 
-You are free to go to Hostinger without the link, or to use any other provider.
+*Through this link you get 20 % off your first purchase, and goodcryptoX gets a share of it. You are free to go to Hostinger without it, or to use any other provider.*
 
 ## Rent a server
 
@@ -87,7 +87,7 @@ Rent a small server with Ubuntu and Docker, 2 GB of memory or more, in a region 
 
 ![The Compose menu, the arrow at Compose from URL](../pictures/install/hostinger/16-compose-menu.webp)
 
-**13. The link and the name.** Paste this link (goodcryptoX's compose file on GitHub; it always installs the latest release), name the application `gcx` and press **Deploy**.
+**13. The link and the name.** Paste this link (goodcryptoX's compose file on GitHub, which uses the latest image), name the application `gcx` and press **Deploy**.
 
 ```
 https://raw.githubusercontent.com/GoodCryptoApp/gcx/main/compose.yaml
