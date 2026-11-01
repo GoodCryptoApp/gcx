@@ -18,6 +18,9 @@
 - [Grid setup](bots/grid-setup.md)
 - [Running a Grid](bots/grid-running.md)
 
+- [AI agents](agents/README.md)
+- [API](agents/api.md)
+
 ## Legal
 
 - [Terms of service](legal/terms.md)

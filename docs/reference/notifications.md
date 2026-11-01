@@ -17,7 +17,7 @@ Nothing you or a bot planned is ever sent as an alert.
 | Event | Template id | Kind | Switch |
 |---|---|---|---|
 | An account-percent bot’s unfilled orders resize after a leverage change | `grid.resized`, `dca.resized` | information | Grid: Range, follows, resizes; DCA: Bot stop or error |
-| An active Grid or DCA position comes within the selected distance of its liquidation price | `bot.liquidation-near` | alert | Alert when the price is … from liquidation (Trading) |
+| An active Grid or DCA position comes within the selected distance of its liquidation price (once per approach: told again only after the price has been twice that distance away, or when the position grew) | `bot.liquidation-near` | alert | Alert when the price is … from liquidation (Trading) |
 | A Grid follows the price, re-enters its range or changes new opening sizes through Reinvest/account sizing | `grid.range`, `grid.resized` | information | Range, follows, resizes |
 | A Grid or DCA Modify takes effect, made by an agent or a program, or a change you made for the next cycle when that cycle starts | `grid.modified`, `dca.modified` | information | Grid: Starts, stops, changes; DCA: Bot stop or error |
 | A Grid position is liquidated | `grid.finished` with its liquidation reason | information | none |

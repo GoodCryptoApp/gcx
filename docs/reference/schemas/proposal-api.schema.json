@@ -39,13 +39,19 @@
         "command": { "type": "object" },
         "createdAt": { "type": "integer" },
         "closedAt": { "type": ["integer", "null"] },
-        "outcome": { "enum": ["waiting", "launched", "rejected"] }
+        "outcome": { "enum": ["waiting", "launched", "rejected", "withdrawn"] },
+        "simulated": { "const": true, "description": "Added 2026-10-31: one of the demo's proposals (its key a demo key, its account a demo account), where the runtime serves demo accounts; it launches on its demo account only. Absent on every real proposal." }
       }
     },
     "list": {
       "description": "GET /api/v1/proposals: the proposals waiting, oldest first.",
       "type": "array",
       "items": { "$ref": "#/$defs/proposal" }
+    },
+    "withdraw": {
+      "description": "POST /api/v1/proposals/{proposalId}/withdraw (MH 2026-10-31: a program can take back what it proposed): the key that made the proposal takes it back while it waits. A second call answers the same.",
+      "type": "object", "additionalProperties": false, "required": ["requestId"],
+      "properties": { "requestId": { "type": "string", "minLength": 1, "maxLength": 128 } }
     },
     "reject": {
       "description": "POST /api/v1/proposals/{proposalId}/reject: an empty object.",

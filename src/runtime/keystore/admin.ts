@@ -14,6 +14,7 @@ import type { UnlockSource } from "./sources.js";
 export type KeyStoreAdmin = Pick<
   KeyStore,
   "locked" | "moved" | "addressesStale" | "unlock" | "signer" | "addAgent" | "rotate" | "pending" | "confirmRotation" | "removeAgent" | "exportSealed" | "markMoved"
+  | "keepAccess" | "access" | "hasAccess" | "dropAccess"
 >;
 export type { ImportedAgent } from "./store.js";
 export type { Address } from "./signer.js";

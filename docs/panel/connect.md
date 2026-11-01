@@ -59,6 +59,8 @@ If you reject a prompt in your wallet, the step turns red ("You rejected the req
 
 If you close the wallet window without connecting a wallet, the step says "Wallet is not connected" with **Try again**.
 
+If you pick a wallet that connects by QR code and no code appears, your computer cannot reach WalletConnect, the service that carries the QR code. After ten seconds goodcryptoX closes the window and the step says "No QR code: the wallet service cannot be reached. Check your internet, antivirus or firewall, or try a VPN", with **Try again**. Under the sentence three short grey lines say how your computer and your browser reach the service: send support a screenshot of the page and they are in it. A wallet that is a browser extension connects without it.
+
 An account whose builder fee is not approved trades nothing new: **Edit account › Allow builder fees** asks prompt 2 again.
 
 ## When the API wallet slots are full

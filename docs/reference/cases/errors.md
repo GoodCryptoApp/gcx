@@ -81,6 +81,9 @@ An answer goodcryptoX does not know: new risk is held and you are paged; nothing
 ## "Order would increase open interest too quickly"
 `REJECTED_TERMINAL`.
 
+## "Cannot increase position when open interest is at cap"
+`REJECTED_TERMINAL`: the market's open interest cap, as Hyperliquid words it in a reply (observed 2026-10-30; the asset number follows). The order is not placed and nothing is sent again.
+
 ## "Order has insufficient spot balance to trade"
 `REJECTED_TERMINAL`: not enough of the coin on spot.
 

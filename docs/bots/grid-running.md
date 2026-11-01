@@ -18,6 +18,8 @@ You can change the range, levels, sizing, Follow, trailing exits and stops while
 
 The **+ level** and **− level** controls add or remove a level at that edge. Confirm the proposed change with the tick, or cancel with the cross. Review the new funds requirement before adding levels.
 
+A change to **Grid top**, **Grid bottom**, **Levels** or **Between levels** keeps your **Investment** and changes the **Level size**. The **+ level** and **− level** controls keep the **Level size** and change the **Investment**.
+
 **Entry condition** and **Grid mode** record how the grid started. While waiting, you can edit the entry price or signal conditions. Once it starts, use the live settings to adjust the trading plan.
 
 Changes take effect immediately. A price stop or PnL target already reached can stop the bot as soon as you save; read the warning first. Changing **Max drawdown** starts its peak from total PnL at that time.
@@ -63,7 +65,7 @@ Press **Chart** to see the grid on the price chart and fit its range, stops and 
 - Level lines mark the prices in the range.
 - Buy and sell order lines use their side's colours.
 - Fills mark where orders traded; filled order lines end at those points.
-- A trailing exit shows its moving trigger.
+- A live trailing exit shows its solid path to the current candle and its dotted trigger line from there. After it ends, its level is dotted from placement until trailing started, followed by its path to the fill.
 - Stops and Follow limits show where the plan can end or move.
 
 A size label shows a level whose size changed. Use it to see differences after Reinvest, account sizing or an edit. Watch the range's edges as well as completed trades: a growing position there may matter more than frequent small profits.
@@ -111,6 +113,10 @@ Yes. The open position can lose more than completed round trips earned. Look at 
 ### Does Take profit count the open position?
 
 Yes. **Take profit**, **Stop loss** and **Max drawdown** all use total PnL, including the open position. With **Stop in Neutral position**, Take profit needs its target and a flat bot position at the same time. Hitting the target once does not reserve it for a later flat moment. Stop loss and Max drawdown close immediately when triggered. See [When to stop](grid-setup.md#when-to-stop).
+
+### When does Stop in Neutral position stop a Long or Short grid?
+
+When the bot's position is flat, which on a Long grid happens only once its top sell has filled (the level the chart marks **Neutral pos.**) and on a Short grid once its bottom buy has.
 
 ### Will Stop leave me holding a position?
 

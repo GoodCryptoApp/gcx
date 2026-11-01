@@ -51,6 +51,14 @@ end in repair as "The order was never placed" with **Retry** and **Cancel**, bec
 the order: a proof that comes while another send of the same order is still live, and a proof of a send goodcryptoX recorded
 before it marked its sends for a proof.
 
+## A cancel with no answer
+
+When goodcryptoX cancels an order (your Cancel, a change, a bot's cancel) and the exchange does not confirm it, goodcryptoX
+keeps cancelling for about 11 minutes. Before each new try it checks the order's status, your open orders and your
+fills; an order the exchange shows cancelled or filled ends there, and "not found" is never taken as cancelled. If the
+exchange still has not confirmed it after those 11 minutes, the order goes to repair ("cancel unknown") with one
+notification, and **Retry** cancels it again. A bot keeps running meanwhile.
+
 ## When goodcryptoX was off between deciding and sending
 
 If goodcryptoX stops (a restart, a sleep, a drain) after it decided to send an order but before the request left, goodcryptoX knows it

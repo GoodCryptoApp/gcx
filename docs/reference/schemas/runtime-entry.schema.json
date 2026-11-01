@@ -572,7 +572,7 @@
         }
       ]
     },
-    {"title": "P11 bot liquidation approach", "type": "object", "additionalProperties": false, "required": ["type", "botId", "sourceId", "instrumentId", "botType", "near", "price", "liquidationPrice", "at"], "properties": {"type": {"const": "runtime.bot-risk"}, "botId": {"type": "string"}, "sourceId": {"type": "string"}, "instrumentId": {"type": "string"}, "botType": {"enum": ["grid", "dca"]}, "venue": {"type": "string"}, "near": {"type": "boolean"}, "price": {"type": "string"}, "liquidationPrice": {"type": "string"}, "at": {"type": "integer"}}}
+    {"title": "P11 bot liquidation approach", "type": "object", "additionalProperties": false, "required": ["type", "botId", "sourceId", "instrumentId", "botType", "near", "price", "liquidationPrice", "at"], "properties": {"type": {"const": "runtime.bot-risk"}, "botId": {"type": "string"}, "sourceId": {"type": "string"}, "instrumentId": {"type": "string"}, "botType": {"enum": ["grid", "dca"]}, "venue": {"type": "string"}, "near": {"type": "boolean"}, "price": {"type": "string"}, "liquidationPrice": {"type": "string"}, "size": {"type": "string"}, "at": {"type": "integer"}}}
   ],
   "$defs": {
     "reason": {

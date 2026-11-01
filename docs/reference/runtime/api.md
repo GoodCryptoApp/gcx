@@ -8,7 +8,7 @@ goodcryptoX runs one program on your computer (or NAS or server). The panel you 
 
 Only on this computer (`127.0.0.1`, which the name `localhost` also reaches), on the port chosen at install. Nothing on your network, and nothing on the internet, can reach it directly. If another program already uses the port, goodcryptoX keeps running your bots, tells you (in the log, and in `gcx open`), and tries the port again every 30 seconds.
 
-Reaching the panel from your phone through Tailscale needs a passkey, which this version does not offer yet: until then every request that came through a proxy is refused.
+Remote devices connect through [our relay](../../phone.md); apps and programs pair from [MCP & API](../../agents/README.md#from-another-computer). A computer can instead use an SSH tunnel to reach this local API.
 
 ## Signing in on this computer
 
@@ -53,51 +53,49 @@ A sign-in to the panel must also confirm it is you on this computer, unless the 
 
 ## Connecting clients
 
-Any AI agent or program can use this API with an access key from **Settings › API & Agents**. An MCP client uses the connector below; another program calls HTTP directly. Both reach the same API and use the same permissions.
+Any AI agent or program can use this API with an access key from **Settings › MCP & API**. An MCP client uses the connector below; another program calls HTTP directly. Both reach the same API and use the same permissions.
 
 ### MCP configuration, transports and paths
 
-The connector speaks MCP over standard input and output, not an HTTP MCP endpoint. Set `GCX_URL` to goodcryptoX's origin **without `/gcx` or `/api/v1`**, for example `http://127.0.0.1:8128`, and `GCX_KEY` to the access key. Use the address and port shown in **Connect**, rather than assuming the example port.
+The connector is the public npm package `goodcryptox-connector`, published at each goodcryptoX version; it speaks MCP over standard input and output, not an HTTP MCP endpoint. **Settings › MCP & API** gives each app a ready line that runs it at your goodcryptoX's exact version with these environment values:
 
-For a client that takes JSON configuration:
+- `GCX_URL`: goodcryptoX's origin **without `/gcx` or `/api/v1`**, for example `http://127.0.0.1:8128`;
+- `GCX_KEY`: the access key;
+- where your goodcryptoX offers connections through our relay: `GCX_RELAY`, `GCX_MAILBOX`, `GCX_R` (your installation's public key), `GCX_PROFILE` and the one-use pairing code `GCX_PAIR`.
+
+With both, the connector asks `GCX_URL` once, without the key, which installation answers there (`GET /api/v1/identity`, below); it connects directly when that is the installation `GCX_R` names, and through the relay otherwise. With `GCX_URL` alone it connects directly; with the relay values alone, through the relay.
+
+For a client that takes JSON configuration (the shape of the **Cursor and other apps** line):
 
 ```json
 {
   "mcpServers": {
     "gcx": {
-      "command": "node",
-      "args": ["<folder>/server/index.mjs"],
+      "command": "npx",
+      "args": ["-y", "goodcryptox-connector@<version>-<build>"],
       "env": { "GCX_URL": "http://127.0.0.1:8128", "GCX_KEY": "<your key>" }
     }
   }
 }
 ```
 
-**Claude Desktop** downloads `gcx.mcpb`. It holds the loopback address of goodcryptoX, not your key; Desktop asks for the key during installation. The `.mcpb` is a ZIP: extract `server/index.mjs` to use the connector with another MCP client. Run it with Node 18 or newer: `node <folder>/server/index.mjs`. In a goodcryptoX container, `gcx mcp` starts the connector.
+`<version>-<build>` is the running build's, for example `3.1.1-19248`: copy the line the panel shows rather than typing it. On Windows the command is `cmd` with the arguments `/c`, `npx`, `-y`, `goodcryptox-connector@<version>-<build>`. Codex takes the same values in TOML (`[mcp_servers.<name>]` with `command`, `args`, `env`) and the line adds `startup_timeout_sec = 60` for the first start, which fetches the package. The Claude Code line is `claude mcp add --scope user <name> -e GCX_URL=… -e GCX_KEY=… -- npx -y goodcryptox-connector@<version>-<build>`. The connector reads the key only from its environment, never a command-line argument.
 
-**Claude Code**, **Codex** and **Cursor** copy a command or configuration using the installed Node and connector paths. These buttons appear only when local connector paths are available. Replace `<your key>` in the copy. Codex's file is `~/.codex/config.toml`; Cursor uses `mcp.json`. **Other apps** shows the generic configuration.
+**Claude Desktop** downloads `goodcryptoX-<key name>.mcpb`: a ZIP with the same connector, its icon and a manifest holding the same environment values but not the key; Claude Desktop asks for the key when it installs the file and keeps it itself. In a goodcryptoX container, `gcx mcp` starts the connector.
 
-The Claude Code command has this shape (both executable paths are supplied by goodcryptoX):
-
-```sh
-claude mcp add gcx -e GCX_URL=http://127.0.0.1:<port> -e GCX_KEY=<your-key> -- "<goodcryptoX's Node>" "<connector file>"
-```
-
-Use `claude mcp add --help` if your client's option syntax differs. The connector itself reads the key only from its environment, never a command-line argument to the connector.
-
-When goodcryptoX runs on a server, NAS or in Docker, the executable and connector paths must belong to the computer running the MCP client. Download and extract the connector there and open the private tunnel described in [Set up on a server](../../install/server.md#sign-in) or [Set up on a NAS](../../install/nas.md#sign-in). Set `GCX_URL` to the tunnel's local end. The generated Desktop bundle uses `http://127.0.0.1:<port>` and works through that tunnel. Keep the tunnel open while making calls; bots and orders continue on the server when it closes.
+`GET /api/v1/identity` answers `{"installation": "<GCX_R>"}` (or `null` where the relay is not offered) without a key or sign-in; it carries nothing but that public key.
 
 If Desktop cannot connect, open **Claude menu › Settings › Developer** or inspect `mcp*.log`: `~/Library/Logs/Claude` on macOS, `%APPDATA%\Claude\logs` on Windows. The connector reports a runtime that is not running, an incorrect address, or an incorrect or revoked key.
 
 ### Direct HTTP and data
 
-**Your own programs** shows the API address, including `/api/v1`, with **Copy**, **Show example** and **API reference**. Send the key as `Authorization: Bearer <key>`. The reference button opens `/api/v1/openapi.json`, filtered to operations that credential may call. HTTP does not require an MCP client.
+The **API** block shows the API address, including `/api/v1`, with **Copy** and **API reference**. Send the key as `Authorization: Bearer <key>`. The reference button opens `/api/v1/openapi.json`, filtered to operations that credential may call. HTTP does not require an MCP client.
 
 All money, prices, sizes and percentages cross the API as decimal strings, not rounded JSON numbers. Encode decimal points with a dot: a sheet's `0,96 %` becomes `"0.96"`. When a snapshot topic has sent no data, the API reports **503 "not yet known"**. Treat it as unknown, not an empty list or zero, and retry later.
 
 ### MCP tools
 
-The connector offers these tools according to the key's scope. The [endpoint table](#endpoints) and served OpenAPI document describe their bodies and responses.
+The connector offers these tools according to the key's scope. The [endpoint table](#endpoints) and served OpenAPI document describe their bodies and responses. Each tool also has a title, which AI agents show in their tool lists and permission settings: an action, verb first (**Close all positions** for `positions_close_all`, **Read accounts** for `accounts`); the tool names stay as they are.
 
 | Tool | What it answers |
 |---|---|
@@ -112,6 +110,7 @@ The connector offers these tools according to the key's scope. The [endpoint tab
 | `preview_order` | What placing an order would answer now: its errors and warnings in goodcryptoX's words, and what would be sent; nothing is placed |
 | `preview_bot` | What a DCA or Grid bot's settings make now (`kind: grid` for a Grid): each order of its ladder with its price and value, as the bot form shows it; nothing is created |
 | `propose_order`, `propose_bot` | With a Propose or Trade key: an order, or a DCA or Grid bot, for you to review and launch in goodcryptoX |
+| `withdraw_proposal` | With a Propose or Trade key: take back a proposal of its own while it waits; it leaves your list and nothing is sent to you |
 | `place_order`, `cancel_order`, `modify_order`, `set_leverage` | With a Trade key: place orders, cancel non-bot orders on allowed accounts, change only its own orders and set leverage, within its limits (`modify_order` changes only the orders the key placed, the changed order judged by the limits as a new one and counted at its new value) |
 | `create_bot`, `bot_command` | With a Trade key: DCA or Grid bots within its limits (`kind: grid` for a Grid), and Change, Stop or Close for the bots it created |
 | `cancel_all_orders`, `stop_all_bots`, `positions_close_all` | With a Trade key: every order on its accounts, or every bot it created, or every position on its accounts, that matches a filter (account, pair, side, search; orders and bots also type and status), each cancelled, stopped or closed as if alone; bot orders are left, including a stopped bot's, a bot's part of a position too (or, with `bots: "stop"`, the bots the key created are stopped with close); the answer names what was done |
@@ -120,7 +119,7 @@ The connector offers these tools according to the key's scope. The [endpoint tab
 
 ### Access keys: AI agents and scripts
 
-Keys are made and managed only by a person signed in to **Settings › API & Agents**. The secret is shown once; goodcryptoX retains its SHA-256 fingerprint. Send it in `Authorization: Bearer <key>`, never in a URL. A request carrying both a sign-in cookie and a key is refused. A new scope or revocation applies from the next request; a revoked key's socket closes within two seconds.
+Keys are made and managed only by a person signed in to **Settings › MCP & API**. A request is checked against the key's SHA-256 fingerprint; the secret itself is kept encrypted in the key store, where the signed-in person can show it again (`GET /api/v1/keys/{id}/secret`, never a key's), and Revoke deletes it. No list answers it. Send it in `Authorization: Bearer <key>`, never in a URL. A request carrying both a sign-in cookie and a key is refused. A new scope or revocation applies from the next request; a revoked key's socket closes within two seconds.
 
 | Scope | Permission |
 |---|---|
@@ -132,12 +131,16 @@ No key can withdraw or move funds, change isolated margin or settings, manage ke
 
 ### Limits and wire rules
 
-`limits` contains `accounts: string[]`, `markets: string[] | "all"`, and decimal strings `perOrder`, `per24h`, `leverage`. Starting values are `"1000"`, `"10000"` and `"5"`; accounts and custom markets must be selected. Missing limits, empty selections or unset/non-positive numbers prevent trading. `markets: "all"` covers every market regardless of quote. The limits compare each market's quote value directly: 1 USDH, USDE or USDT0 counts as 1 USDC; this is not a currency conversion.
+`limits` contains `accounts: string[] | "all"` and `markets: string[] | "all"`, then the optional limits, decimal strings above zero ([access-key](../schemas/access-key.schema.json)`#/$defs/limits`): for the key's orders `perOrder` and `per24h`; for its bots `bots` (`"off"`, `"all"` or a list of kinds, `"dca"`, `"grid"`), `perBot` and `botsPer24h`; for its positions on perpetuals `perPosition` and `totalPositions`; and `leverage` and `margin` (`"isolated"` or `"any"`). A money limit that is absent is no limit; `margin` absent is `"any"`. The panel's form starts with every money limit off, bots on with all kinds, `leverage` `"5"` and `margin` `"isolated"`, and always sends `bots`, `leverage` and `margin`. Accounts and custom markets must be selected; empty selections prevent trading. Money limits are in USD: a market's quote value counts one to one when its quote is a stablecoin (1 USDC, USDH, USDE or USDT0 is 1 USD). A value that is not a decimal above zero with at most 15 whole digits is refused with 400 and the field: `{"error": "perBot: Enter a number above zero"}`.
+
+A key whose limits carry no `bots` (made before these limits and not saved since) keeps its earlier meaning: `perOrder`, `per24h` and `leverage` are all required for it to trade, each bot order must fit `perOrder`, and each bot cycle counts up front against the one `per24h` shared with its orders.
 
 - **Order value:** goodcryptoX uses its own receipt and price. A market buy counts size at its possible fill bound: the book-derived bound, or 10% above the price when no level was read. A quote-sized spot buy counts its quote amount. Other orders, including market sells, use receipt value.
 - **Exits:** a spot sell, perpetual Close or reduce-only order excludes the key's own holdings less its other resting exits (bracket legs counted once). Only the excess counts toward `perOrder` and `per24h`. Bot holdings are separate from these standalone-order holdings. An order that only reduces is not subject to the leverage limit.
 - **Opposite-side orders:** a non-reduce-only order against an account's combined position is judged as on a flat market. A long of 1 ETH becomes 0.9 ETH after a sell of 0.1 ETH; permission is not confined to the key's own position.
-- **Rolling usage:** fills counted by the limits in the last 24 hours plus the remaining open counted value. Cancellation returns the unfilled allowance. A modification is checked as a new order at its changed value and counted at that new value.
+- **Rolling usage:** fills counted by the limits in the last 24 hours plus the remaining open counted value. Cancellation returns the unfilled allowance. A modification is checked as a new order at its changed value and counted at that new value. A key's bots' orders are never counted in `per24h`; `GET /api/v1/keys` reports `used.orders` and `used.bots` for a key with `bots` set.
+- **Positions:** on a perpetual, the key's position is what its own orders hold plus its own resting orders that open or add, at the order's price on its market and the last price on the others. An order that makes its position larger is refused past `perPosition` or, with its other positions, past `totalPositions`; an order that makes it smaller is never refused by them. Spot orders have no position check.
+- **Margin:** with `margin: "isolated"`, an order that adds risk on a market whose margin mode is cross, a leverage write to cross, and a bot launched or changed in cross are refused (`key.margin`).
 - **Leverage:** new risk-adding orders use the account's leverage at send; `expected` is accepted but ignored (deprecated). Leverage and margin-mode writes must fit the key's account, market and leverage permissions. The already-current setting returns `{"accepted": true}` without a venue write.
 - **Brackets:** omitted `bracket.reduceOnly` means reduce-only, independently of Settings › Trading. An edit that omits it preserves the existing choice. Explicit non-reduce-only exits are allowed.
 - **Exact close:** an order whose side and size exactly close the known account position is sent reduce-only even if the command omits that flag, and the limits judge it accordingly. A `close` command is sized from the account position.
@@ -147,7 +150,7 @@ A key can cancel its own, the person's, another key's and external non-bot order
 
 ### Bots and proposals
 
-`POST /api/v1/bots` takes `botCreate` from the served OpenAPI document; use `kind: "grid"` for Grid. `POST /api/v1/bots/preview` / `preview_bot` shows the planned orders at current prices without creating a bot. Each DCA entry/averaging order or Grid opening order must fit `perOrder`. The DCA ladder or all Grid opening levels count up front against remaining `per24h` for each cycle. New cycles use current account, market, order and 24-hour limits. Leverage is checked at launch and key Modify, not reimposed at each running cycle.
+`POST /api/v1/bots` takes `botCreate` from the served OpenAPI document; use `kind: "grid"` for Grid. `POST /api/v1/bots/preview` / `preview_bot` shows the planned orders at current prices without creating a bot. With `bots` set, `bots` decides whether and which kinds the key may launch; a bot's money (a DCA cycle's entry and all its averaging orders, a Grid's total investment) must fit `perBot` at launch, at the key's Modify and at each DCA cycle's start; the bots' `botsPer24h` counts each DCA cycle's money when it starts and a Grid's investment when it is launched and when it grows. A launch that only finds no room in `botsPer24h` is created and waits, with a Telegram message, until room frees; no order limit applies to a bot's orders. Without `bots` (an earlier key): each DCA entry/averaging order or Grid opening order must fit `perOrder`, and the DCA ladder or all Grid opening levels count up front against remaining `per24h` for each cycle. New cycles use the current account, market and money limits. Leverage and margin are checked at launch and key Modify, not reimposed at each running cycle.
 
 Omitted bot `leverage` and `marginMode` use the open position's values, otherwise isolated 5x. A failed required position read returns 503, "The position could not be read. Try again.", with no bot or venue write. A bot can trade against the account position within its limits; Telegram reports the opposite size at cycle start. Its reduce-only exits may be refused while the account position remains on the other side, requiring repair. On spot, a supported bot sell can use coins held on the account within the same limits.
 
@@ -204,14 +207,20 @@ A trading key's own refusals, with their texts:
 
 | `rejected` | Text |
 |---|---|
-| `key.noLimits` | This key has no limits yet. Set them in Settings › API & Agents. |
+| `key.noLimits` | This key has no limits yet. Set them in Settings › MCP & API. |
 | `key.account` | This key may not trade on hl-main. |
 | `key.market` | This key may not trade BTC. You can propose it instead. |
-| `key.perOrder` | Order value 1,240.00 USDC is over this key's limit of 1,000.00 USDC. You can propose it instead. |
-| `key.per24h` | This key has used 9,800.00 of its 10,000.00 USDC for the last 24 hours; this order needs 400.00. You can propose it instead. |
+| `key.perOrder` | Order value 1,240.00 USD is over this key's limit of 1,000.00 USD. You can propose it instead. |
+| `key.per24h` | This key has used 9,800.00 of its 10,000.00 USD for the last 24 hours; this order needs 400.00. You can propose it instead. |
 | `key.leverage` | Leverage on ETH is 10x; this key allows at most 5x. You can propose it instead. |
-| `key.botOrder` | Averaging order 6: value 1,600.00 USDC is over this key's limit of 1,000.00 USDC per order. |
-| `key.bot24h` | This bot needs 9,900.00 USDC; this key has used 800.00 of its 10,000.00 USDC for the last 24 hours. |
+| `key.margin` | Margin on ETH is cross; this key trades isolated margin only. You can propose it instead. |
+| `key.perPosition` | The BTC position would be 5,500.00 USD; this key allows 5,000.00 USD per position. You can propose it instead. |
+| `key.totalPositions` | This key's positions would total 8,100.00 USD; it allows 8,000.00 USD. You can propose it instead. |
+| `key.bots` | This key may not run bots. |
+| `key.botKinds` | This key may run DCA bots only. (the kinds named from the key) |
+| `key.perBot` | This bot needs 3,000.00 USD; this key allows 2,000.00 USD per bot. |
+| `key.botOrder` | Averaging order 6: value 1,600.00 USD is over this key's limit of 1,000.00 USD per order. (a key without `bots`) |
+| `key.bot24h` | This bot needs 9,900.00 USD; this key has used 800.00 of its 10,000.00 USD for the last 24 hours. (a key without `bots`) |
 | `key.botLeverage` | Leverage 10x is over this key's limit of 5x. |
 | `key.botPosition` | This key may use up to 5x; the position on this market is at 10x. (a bot made with no leverage, on a market where you hold a position above the key's limit) |
 | `key.suspended` (403) | Suspended by you. |
@@ -297,7 +306,7 @@ All answers are JSON. Money is always a decimal string. An id in a path is perce
 | `GET /api/v1/notes` | read | | `{notes: {subject: text}}` ([runtime-api](../schemas/runtime-api.schema.json)`#/$defs/notes`): your notes on orders and positions, by subject `order:<id>` (the id the order's row keeps across a change) or `position:<sourceId>:<instrument>`; 404 from a goodcryptoX that keeps none |
 | `POST /api/v1/notes` | you | `{subject, text}` (`#/$defs/note`; text at most 2,000 characters, empty removes the note) | 200 `{}`; 400 for another subject or a longer text |
 | `GET /api/v1/portfolio` | read | `since` (ms; optional; absent: the runtime's "since you were last here") | `{accounts: [{sourceId, readAt, start: {d, w, m, y}, end: {d, w, m, y}} \| {sourceId, error}], pnl: {day, week, month, allTime, since, partial: {ok, of}}}` ([runtime-api](../schemas/runtime-api.schema.json)`#/$defs/portfolio`): each connected main account's and sub-account's value in USDC when the Dashboard's day, week, month and year began and at their ends, both from Hyperliquid's portfolio read (its account value, vault balances and every coin included; null: not known, and both null for a year on an account younger than a year); a read younger than 5 minutes is reused; a failed read is the account's `error`, never a start of 0; `pnl` is Hyperliquid's profit and loss over its day, week, month and all-time windows (the window's last `pnlHistory` point less its first), summed in decimal over the accounts that read, deposits and withdrawals not in it, null where no account read or one has no points for the window, never 0; `pnl.since` (with `?since=`, else null) is the figure from Hyperliquid's sample nearest that moment to the latest and `{at, value}` names that sample's time (the series is sampled, so the moment is known to the nearest sample); `partial` counts the accounts read of those connected; 404 from a goodcryptoX that does not serve it |
-| `GET /api/v1/runtime` | you | | `{dataFolder, keyStore, watching?, apiUrl?, connector?}` ([runtime-api](../schemas/runtime-api.schema.json)`#/$defs/runtimeInfo`): the folder that holds goodcryptoX's data, and the key store `unlocked` or `locked` now; Settings shows both; `watching`, with an account open, `{bots, orders, stops, botStops?}`: the bots not finished, and the person's own stops and trails gcx triggers itself and other open orders, a bot's orders counted with its bot, and `botStops`, the bots whose own stop-loss gcx triggers itself and is open (Move to another machine's sentences; absent on an older runtime means 0); `connector` (added): `{url, run}`, the runtime's loopback address and the program that starts the connector on this computer (its Node and the connector file), which Settings › API & Agents shows for any MCP client; absent in Docker; `apiUrl` (added) is the loopback API origin including its port, present in Docker too, for generic MCP configuration and direct API programs; absent from older runtimes; `quit: true` where the panel offers Quit goodcryptoX (`POST /api/v1/runtime/quit`; the Linux desktop); 404 from a goodcryptoX that does not serve them |
+| `GET /api/v1/runtime` | you | | `{dataFolder, keyStore, watching?, apiUrl?, connector?}` ([runtime-api](../schemas/runtime-api.schema.json)`#/$defs/runtimeInfo`): the folder that holds goodcryptoX's data, and the key store `unlocked` or `locked` now; Settings shows both; `watching`, with an account open, `{bots, orders, stops, botStops?}`: the bots not finished, and the person's own stops and trails gcx triggers itself and other open orders, a bot's orders counted with its bot, and `botStops`, the bots whose own stop-loss gcx triggers itself and is open (Move to another machine's sentences; absent on an older runtime means 0); `connector` (added): `{url, run}`, the runtime's loopback address and the program that starts the connector on this computer (its Node and the connector file), which Settings › MCP & API shows for any MCP client; absent in Docker; `apiUrl` (added) is the loopback API origin including its port, present in Docker too, for generic MCP configuration and direct API programs; absent from older runtimes; `quit: true` where the panel offers Quit goodcryptoX (`POST /api/v1/runtime/quit`; the Linux desktop); 404 from a goodcryptoX that does not serve them |
 | `POST /api/v1/runtime/quit` | you | `{}` (`#/$defs/quit`) | `{}`, then goodcryptoX stops as the Mac menu's Quit goodcryptoX does (it finishes what it is doing first and stays stopped until it is opened again); offered where `GET /api/v1/runtime` says `quit` (the Linux desktop), 404 elsewhere and to a paired device, whose `GET /api/v1/runtime` never says `quit` |
 | `POST /api/v1/runtime/show-data-folder` | you | `{}` (`#/$defs/showDataFolder`) | `{}` once the Mac helper shows the data folder in Finder (the configured folder only, never a supplied path); 404 without the helper |
 | `GET /api/v1/runtime/storage` | read | `count` (`0`: the folder alone; absent: the count runs while this is asked) | `{state, seq, at, folder: {bytes, parts}, accounts: [{sourceId, label, address, removed, bytes, groups}], shared, months, free, compacted}` ([storage](../schemas/storage.schema.json)): how much disk the data folder takes by part, and the history by account and by month, an estimate counted in the background only while this is asked (it stops 10 seconds after the last request and goes on from where it stopped); `state` is `counting` until the first count reaches the end of the journal; `compacted`: each deletion of an account's data, when, how many rows (no name, no address); 404 from a goodcryptoX that does not serve it |
@@ -309,6 +318,7 @@ All answers are JSON. Money is always a decimal string. An id in a path is perce
 | `GET /api/v1/updates/builds` | you | | `{tiers, unread?}`: the latest published build of every tier a switch can take, read from GitHub when asked; `tier`, `current` and `builds` (the running tier's list) are deprecated, kept one release ([runtime-api](../schemas/runtime-api.schema.json)`#/$defs/updateBuilds`) |
 | `GET /api/v1/accounts` | read | | one row per venue account with its main account's API wallet on every account under that main (`agent`: its id, the main's address, waiting or active, Hyperliquid's expiry, and `moved: true` while a key brought from another machine waits for its replacement), builder-fee state and, on a main account, the referral line ([accounts-api](../schemas/accounts-api.schema.json)`#/$defs/rows`); `[]` with none connected |
 | `GET /api/v1/accounts/wallet/{address}` | you | the main account's address | what connecting it needs, read fresh from Hyperliquid: role, API wallets and slots, the name and expiry goodcryptoX would sign, builder approval, referrer (`#/$defs/wallet`); 503 when Hyperliquid could not be read |
+| `GET /api/v1/connect/relay` | you | | `{ok: true}`, or `{ok: false, says}` with the wallet relay's own words or `no answer` after 10 s: one hello from this computer to WalletConnect's relay with the panel's own origin; the panel asks it only after its wallet window's QR view got no code; 404 where this runtime has no such check |
 | `POST /api/v1/accounts` | you | `{requestId, masterAddress, label, referral, replace?}` (`#/$defs/connect`) | `{sourceId, agent: {name, address}}`: goodcryptoX's key store made the API wallet's key, on disk before this answer; the same main account again answers the same; 422 `{rejected, text}` (not a main account's wallet, slots full without a pick); 409; 503 (Hyperliquid unread, key store locked or no unlock source) |
 | `POST /api/v1/accounts/{sourceId}/signed` | you | one action your main wallet signed (`#/$defs/signed`); `sourceId` the API wallet's id (a row's `agent.id`) | relayed field for field when allowed (`approveAgent` for this API wallet, `approveBuilderFee` for goodcryptoX's builder at "0.03%"; while the last account under its main is being removed, only `approveAgent` to the zero address under its API wallet's name, the revoke): 200 `{accepted: true}`; 422 `not-allowed`, or `venue` with Hyperliquid's text; 503 no answer from Hyperliquid |
 | `GET /api/v1/accounts/found` | you | | the sub-accounts and the vaults each active API wallet's main account may add, read fresh from Hyperliquid, less those already in goodcryptoX: `[{kind, address, name, master}]` (`#/$defs/found`); with `?master={walletId}`, that main account first (kind `master`) and its whole list, those in goodcryptoX with their `sourceId`; 503 when Hyperliquid could not be read |
@@ -327,11 +337,12 @@ All answers are JSON. Money is always a decimal string. An id in a path is perce
 | `POST /api/v1/chart/layouts` | you | `{meta, content}` (`#/$defs/create`, up to 4 MiB) | `{id, rev: 1}` |
 | `POST /api/v1/chart/layouts/{id}` | you | `{baseRev, meta, content}` (`#/$defs/save`, up to 4 MiB) | `{rev}`; 409 `{rev}` and nothing changed when `baseRev` is not the current rev; 404 for a layout that does not exist |
 | `POST /api/v1/chart/layouts/{id}/delete` | you | `{}` | `{}`, or 404 |
-| `GET /api/v1/mcp/bundle` | you | | the connector bundle of `gcx mcp`, `gcx.mcpb` (`application/zip`, saved as a file): its manifest with this runtime's address (`http://127.0.0.1:<port>`) and the connector; it holds no key, supplied separately by the person. Any MCP client can run `server/index.mjs` after unzipping it; Claude Desktop can install the file directly (Settings › API & Agents, Connect, **Claude Desktop**). 404 `{error}` when this build carries no connector (a checkout that never ran `pnpm mcpb`) |
-| `GET /api/v1/keys/summary` | you | | five attention-first rows and `more`, no money totals; 404 when the incremental producer is unavailable |
+| `GET /api/v1/mcp/bundle` | you | | the connector bundle of `gcx mcp`, `gcx.mcpb` (`application/zip`, saved as a file): its manifest with this runtime's address (`http://127.0.0.1:<port>`) and the connector; it holds no key, supplied separately by the person. Any MCP client can run `server/index.mjs` after unzipping it; Claude Desktop can install the file directly (Settings › MCP & API, Connect, **Claude Desktop**). 404 `{error}` when this build carries no connector (a checkout that never ran `pnpm mcpb`) |
+| `GET /api/v1/keys/summary` | you | | five attention-first rows and `more`; each row (added) carries `figures`: `active` `{orders, bots}`, the key's open orders and the bots it runs now (integers; a bot's own orders count with the bot), and its volume and realized P&L per currency, each `{total, last24h}` in decimal strings ([access-key](../schemas/access-key.schema.json)`#/$defs/figures`); no totals across keys; 404 when the incremental producer is unavailable |
 | `GET /api/v1/keys/{keyId}` | you | | one retained key card, including a revoked key; 404 unknown ID |
 | `GET /api/v1/keys/{keyId}/activity?cursor=&limit=` | you | | indexed activity page; 404 unknown key; empty when the producer is unavailable |
-| `POST /api/v1/keys/{keyId}/notifications` | you | `{commands}` | save optional accepted-command notices, off by default; proposal notices are independent; 404 unknown or revoked key |
+| `GET /api/v1/keys/{keyId}/secret` | you | | the key's secret again, for the signed-in person only, never for a key or a read-only phone (masked); 404 unknown or revoked key (Revoke deletes the secret) |
+| `POST /api/v1/keys/{keyId}/notifications` | you | `{commands}` | save optional accepted-command notices, on by default (a key never set reads on; an explicit off stays off); proposal notices are independent; 404 unknown or revoked key |
 | `POST /api/v1/proposals/bot` | propose | `{requestId, kind:"bot-create", command}` ([proposal-api](../schemas/proposal-api.schema.json)`#/$defs/proposeBot`) | `{proposalId}`; DCA or Grid create body without requestId; no trade until a person launches; shares the existing waiting limit with order proposals |
 | `GET /api/v1/keys` | you | optional `state=current|revoked|all`, `limit`, `cursor` (encoded JSON `[createdAt,keyId]`) | every key, revoked ones included, oldest first ([access-key](../schemas/access-key.schema.json)`#/$defs/list`), with its limits, whether suspended, what it did, what it used in the last 24 hours, what its orders hold and its PnL; never a key's secret or hash |
 | `POST /api/v1/keys` | you | `{name, scope, limits?}` ([access-key](../schemas/access-key.schema.json)`#/$defs/create`) | the new key with its `secret`, shown this once |
@@ -355,7 +366,8 @@ All answers are JSON. Money is always a decimal string. An id in a path is perce
 | `GET /api/v1/proposals` | you | | the proposals waiting, oldest first ([proposal-api](../schemas/proposal-api.schema.json)`#/$defs/list`) |
 | `POST /api/v1/proposals/{id}/launch` | you | the form's [order command](../schemas/order-command.schema.json) | as `POST /api/v1/orders`, placed as your launch of the proposal; refused, the proposal still waits; 422 `proposal-rejected`, or `proposal-launched` for a new requestId once launched; 404 no such proposal |
 | `POST /api/v1/proposals/{id}/reject` | you | `{}` | 200 `{accepted: true}`; 422 `proposal-launched`; 404 |
-| `GET /api/v1/usage` | read | | `{install, days}`: the random number that stands for this goodcryptoX in every report, and each daily usage record (or, with reports off, the daily sign that goodcryptoX exists) built, newest first, with its state (`#/$defs/usage`; [pulse](../schemas/pulse.schema.json)); see [Reports](../../reports.md) |
+| `POST /api/v1/proposals/{id}/withdraw` | propose | `{requestId}` ([proposal-api](../schemas/proposal-api.schema.json)`#/$defs/withdraw`) | 200 `{accepted: true}`, also when it was already withdrawn; 422 `proposal-launched` or `proposal-rejected`; 404 no such proposal for this key. The proposal leaves your list and nothing is sent to you |
+| `GET /api/v1/usage` | read | | `{install, days}`: the random number that stands for this goodcryptoX in every report, and each daily usage record (or, with reports off, the daily sign that goodcryptoX exists) built, newest first, with its state (`#/$defs/usage`; [pulse](../schemas/pulse.schema.json)); see [Reports](../../reports.md). Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are. |
 | `POST /api/v1/usage/dashboard` | you | `{}` (any field ignored) | `{}`: the Dashboard was opened today; the runtime marks its own UTC day. The panel's, once per page load and day |
 | `GET /api/v1/referral` | you | | `{code, discount, fee, since}`: the partner code this goodcryptoX joined with, its discount on goodcryptoX's fee and the fee every order carries from then on (`code: null`, `"0"`, `"0.03"`, `since: null` before one; [affiliate-api](../schemas/affiliate-api.schema.json)`#/$defs/referral`; [Referral program](../../referral-program.md)); 404 where this goodcryptoX has no partner signing key yet |
 | `POST /api/v1/referral` | you | `{code}` (`#/$defs/join`) | the referral, as GET answers it: the code is checked offline against goodcryptoX's key and stored once for every account of this goodcryptoX, never changed or removed; 422 `{error}` "Invalid code" or "You can't refer yourself" (this goodcryptoX's own partner key); 409 `{error}` "You're already referred"; 404 as above |
@@ -364,12 +376,17 @@ All answers are JSON. Money is always a decimal string. An id in a path is perce
 | `GET /api/v1/partner/figures` | you | | per code of the stored partner key, read from goodcryptoX's partner-code server at most once a minute: `{at, stale, through, codes: [{discount, joined, trading, volume: [{unit, amount}]}]}` (users who joined with the code, those who placed orders this week from Monday 00:00 UTC, this week's paid volume per unit as exact decimal strings; `through` the last day counted, or null; `stale: true` when the server cannot be read and the last answer received is served; `#/$defs/figures`); 404 where there is none to read (no key that verifies, no server, a server without the figures); 503 `{error}` when the server cannot be read and nothing was received; never an access key's |
 | `POST /api/v1/partner` | you | `{key}` (`#/$defs/install`) | the partner view, as GET answers it: every code in the key checked against goodcryptoX's key; it replaces the one stored; 422 `{error}` "Invalid key"; 404 as above |
 | `POST /api/v1/partner/remove` | you | no body (`#/$defs/clear`) | `{key: null}` after the local test key and the stored partner key were removed; a development build's test tool: any other build answers 403; 404 as above |
-| `GET /api/v1/devices` | you | | the devices paired to reach the panel through the phone tunnel, oldest first: `{rows: [{deviceId, name, canTrade, pairedAt, lastUsedAt}], machine}`, `machine` the network name of the machine goodcryptoX runs on, without a trailing `.local` (the panel's first row; an older runtime leaves it out) (`device.schema.json#/$defs/list`); never an access key's |
+| `GET /api/v1/devices` | you | | the devices paired to reach the panel through the phone tunnel, oldest first: `{rows: [{deviceId, name, canTrade, pairedAt, lastUsedAt}], machine, programs?}`, `machine` the network name of the machine goodcryptoX runs on, without a trailing `.local` (the panel's first row; an older runtime leaves it out) (`device.schema.json#/$defs/list`); optional `programs` lists paired program computers separately, without Can trade; never an access key’s |
 | `POST /api/v1/devices/pair` | you | `{}` | a pairing link that works once, for 10 minutes, the one before it void: `{link, expiresAt}`; a device paired with it starts at Can trade |
 | `POST /api/v1/devices/pair/cancel` | you | `{}` | `{}`: the dialog closed, its link stops working (a link from `gcx pair` stays) |
 | `POST /api/v1/devices/{id}/rename` | you | `{name}` (1 to 50 characters) | the row as it is now; 404 for a device not paired |
 | `POST /api/v1/devices/{id}/switch` | you | `{canTrade}` | the row as it is now; the device obeys it from its next request; 404 for a device not paired |
 | `POST /api/v1/devices/{id}/remove` | you | `{}` | `{}`: the row gone, the device's open sessions closed within a second; 404 for a device not paired |
+| `GET /api/v1/program-devices` | you | | the programs admitted to reach this goodcryptoX through the relay, oldest first: `{rows: [{deviceId, publicKey, name, pairedAt, lastUsedAt}]}` (`program-device.schema.json#/$defs/list`); 404 where the relay door is off; every program request still needs its own access key |
+| `POST /api/v1/program-devices/pair` | you | `{}` | a program code that works once, for 10 minutes, the one before it void: `{code, expiresAt, relay, mailbox, key}` (`program-device.schema.json#/$defs/pair`); [the connector](program-connector.md) takes it |
+| `POST /api/v1/program-devices/pair/cancel` | you | `{}` | `{}`: the dialog closed, its code stops working |
+| `POST /api/v1/program-devices/{id}/rename` | you | `{name}` (1 to 50 characters) | the row as it is now; 404 for a program not admitted |
+| `POST /api/v1/program-devices/{id}/remove` | you | `{}` | `{}`: the admission gone, the program's tunnels closed within a second; a command already running may finish; 404 for a program not admitted |
 
 Every command (an order, a cancel, a modify, a bot command, a leverage or margin change) reaches goodcryptoX with who sent it, worked out from your sign-in, never from the body.
 
@@ -445,7 +462,7 @@ To set leverage first, send `POST /api/v1/leverage` with `{"requestId": "...", "
 
 ### DCA settings from a strategy sheet
 
-The trader walkthrough of the strategy sheet guide uses one entry and four equal averaging orders, 359.35 USDC each, totalling 1,796.75 USDC. These are the corresponding wire fields. Use account and instrument IDs returned by the API; a HIP-3 instrument includes its dex, for example `xyz:MU`.
+The strategy sheet example on [AI agents](../../agents/README.md) uses one entry and four equal averaging orders, 359.35 USDC each, totalling 1,796.75 USDC. These are the corresponding wire fields. Use account and instrument IDs returned by the API; a HIP-3 instrument includes its dex, for example `xyz:MU`.
 
 | Sheet setting | Fields sent | Example / default |
 |---|---|---|

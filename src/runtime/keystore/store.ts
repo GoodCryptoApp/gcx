@@ -1,6 +1,6 @@
 /**
- * The key store (0008 §7): venue agent keys by source id in `keystore.enc`, nothing else. Opened locked; an unlock
- * source opens it. The engine never imports this module, only `signer.ts` (lint-enforced).
+ * The key store (0008 §7): venue agent keys by source id in `keystore.enc`, and the access keys' values by key id (MH 3.1.1
+ * item 25: a key can be seen again; a kind of its own, never an agent), nothing else. Opened locked; an unlock source opens it. The engine never imports this module, only `signer.ts` (lint-enforced).
  *
  * - Locked: `address()` answers from the plain side file; `sign` refuses with `SignerRefused("locked")`.
  * - Rotation: `rotate` stores a new key as pending and returns its address; the old key keeps signing until the caller
@@ -14,7 +14,7 @@ import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { signAction } from "../../venues/hyperliquid/actions.js";
 import { writeAtomic } from "../fs/atomic.js";
-import { ADDRESSES_FILE, KEYSTORE_FILE, KeystoreError, MOVED_FILE, OLD_MOVED_FILE, decodeEntries, removeKeyFiles, encodeEntries, newSealer, reopen, seal, unseal, type Entry, type Sealer } from "./format.js";
+import { ACCESS_BYTES, ADDRESSES_FILE, KEYSTORE_FILE, KeystoreError, MOVED_FILE, OLD_MOVED_FILE, decodeEntries, removeKeyFiles, encodeEntries, newSealer, reopen, seal, unseal, type Entry, type Sealer } from "./format.js";
 import { SignerRefused, type Address, type SignIntent, type Signer } from "./signer.js";
 import { PATIENT_TOOL_MS, type UnlockSource } from "./sources.js";
 import { agentAddress, localWallet, newAgentKey } from "./wallet.js";
@@ -51,9 +51,14 @@ export class KeyStore {
   readonly #dir: string;
   #addresses: Record<string, Address>;
   #moved: boolean;
+  #marking = false;
   #sealer: Sealer | null = null;
   #entries = new Map<string, Entry>();
+  /** The access keys' values by key id (MH 3.1.1 item 25). */
+  #access = new Map<string, Buffer>();
   #queue: Promise<unknown> = Promise.resolve();
+  #generation = 0;
+  #exportedGeneration: number | null = null;
   #addressesStale = false;
 
   private constructor(dir: string, addresses: Record<string, Address>, moved: boolean) {
@@ -68,13 +73,14 @@ export class KeyStore {
   get addressesStale(): boolean { return this.#addressesStale; }
 
   /** A new, empty, unlocked store in `dir`, sealed with the source's secret. */
-  static async create(dir: string, source: UnlockSource, entries = new Map<string, Entry>()): Promise<KeyStore> {
+  static async create(dir: string, source: UnlockSource, entries = new Map<string, Entry>(), access = new Map<string, Buffer>()): Promise<KeyStore> {
     if (await exists(join(dir, KEYSTORE_FILE))) throw new KeystoreError("exists", "this folder already has a key store");
     const secret = await readSecret(source);
     const store = new KeyStore(dir, {}, false);
     try { store.#sealer = await newSealer(secret); } finally { secret.fill(0); }
-    await store.#write(entries);
+    await store.#write(entries, access);
     store.#entries = entries;
+    store.#access = access;
     await store.#writeAddresses();
     return store;
   }
@@ -92,7 +98,7 @@ export class KeyStore {
     const secret = await readSecret(source);
     let opened: { sealer: Sealer; plaintext: Buffer };
     try { opened = await unseal(file, secret); } finally { secret.fill(0); }
-    try { this.#entries = decodeEntries(opened.plaintext); } finally { opened.plaintext.fill(0); }
+    try { ({ entries: this.#entries, access: this.#access } = decodeEntries(opened.plaintext)); } finally { opened.plaintext.fill(0); }
     this.#sealer = opened.sealer;
     // Repairs a side file a crash left behind a rename; on the save chain so it never shares a temp file with a save.
     const repair = this.#queue.then(() => this.#writeAddresses());
@@ -120,7 +126,7 @@ export class KeyStore {
   }
 
   async #sign(sourceId: string, intent: SignIntent, vault: Address | null): Promise<Uint8Array> {
-    if (this.#moved) throw new SignerRefused("moved", "this data folder was exported; it signs nothing until the user acts");
+    if (this.#moved || this.#marking) throw new SignerRefused("moved", "this data folder was exported; it signs nothing until the user acts");
     const entry = this.#entry(sourceId);
     const signed = await signAction(localWallet(entry.key, this.#address(sourceId)), intent.action, intent.nonce, intent.expiresAfter, intent.isTestnet, vault);
     return Buffer.from(JSON.stringify(signed), "utf8");
@@ -186,9 +192,39 @@ export class KeyStore {
     gone.pending?.fill(0);
   }
 
+  /**
+   * An access key's value kept under its id (MH 3.1.1 item 25), durable before this resolves; the store keeps its own copy, so
+   * the caller zeroes the bytes it gave. Refuses while locked, and a value that is not 32 bytes before anything is written.
+   */
+  async keepAccess(keyId: string, value: Buffer): Promise<void> {
+    if (value.length !== ACCESS_BYTES) throw new KeystoreError("damaged", "an access key's value is 32 bytes");
+    const copy = Buffer.from(value);
+    await this.#mutate((_entries, access) => { access.set(keyId, copy); });
+  }
+
+  /** The key's value, a copy for one answer (the caller zeroes it); null when none is kept (a key made before this build). Refuses while locked. */
+  access(keyId: string): Buffer | null {
+    this.#unlocked();
+    const v = this.#access.get(keyId);
+    return v === undefined ? null : Buffer.from(v);
+  }
+
+  /** Whether the key's value is kept; null while locked: unknown, never "none". */
+  hasAccess(keyId: string): boolean | null {
+    return this.locked ? null : this.#access.has(keyId);
+  }
+
+  /** A revoked key's value zeroed and gone from the file, durable before this resolves; a key with none changes nothing. */
+  async dropAccess(keyId: string): Promise<void> {
+    const gone = await this.#mutate((_entries, access) => { const v = access.get(keyId); access.delete(keyId); return v; });
+    gone?.fill(0);
+  }
+
   /** The contents re-encrypted under the export passphrase, read back before they are given (0024 d8.1: `gcx export`'s key store part). Marks nothing. */
   async exportSealed(exportPassphrase: Buffer): Promise<Buffer> {
-    const plaintext = encodeEntries(this.#unlocked());
+    await this.#queue;
+    const plaintext = encodeEntries(this.#unlocked(), this.#access);
+    this.#exportedGeneration = this.#generation;
     try {
       const sealer = await newSealer(exportPassphrase);
       const sealed = seal(sealer, plaintext);
@@ -203,20 +239,27 @@ export class KeyStore {
   }
 
   /**
-   * The export is done (0024 d8.1 step 5): from this call this process signs nothing (the flag is set first, at the call's
-   * instant), the folder's one marker, `note` as its text, is durable, and then the key files are deleted and the keys in
-   * memory zeroed (amendment 3 d1): the keys then exist only in the export file. A failed marker write leaves the folder
+   * The export is done (0024 d8.1 step 5): stop signing at the call; on the write chain verify the exported generation,
+   * make the folder's one marker (`note` as its text) durable, then delete the key files and zero the keys in
+   * memory (amendment 3 d1): the keys then exist only in the export file. A failed marker write leaves the folder
    * unmarked on disk with its keys: the runtime exits, and its next start runs as before. A cut after the marker leaves a
    * moved folder, which never opens its key store; its next start deletes the files (`resumeMoved`).
    */
-  async markMoved(note: string): Promise<void> {
-    this.#moved = true;
-    await writeAtomic(join(this.#dir, MOVED_FILE), Buffer.from(note, "utf8"));
-    // A write already under way lands first; one asked after the flag is refused (`#apply`), so none follows the deletion.
-    await this.#queue;
-    removeKeyFiles(this.#dir);
-    for (const e of this.#entries.values()) { e.key.fill(0); e.pending?.fill(0); }
-    this.#entries = new Map();
+  markMoved(note: string): Promise<void> {
+    this.#marking = true;
+    const run = this.#queue.then(async () => {
+      if (this.#exportedGeneration !== null && this.#generation !== this.#exportedGeneration) throw new KeystoreError("damaged", "The keys changed during export; export this folder again");
+      this.#moved = true;
+      await writeAtomic(join(this.#dir, MOVED_FILE), Buffer.from(note, "utf8"));
+      // Marker and deletion share the write chain: no key write can land between them.
+      removeKeyFiles(this.#dir);
+      for (const e of this.#entries.values()) { e.key.fill(0); e.pending?.fill(0); }
+      for (const v of this.#access.values()) v.fill(0);
+      this.#entries = new Map();
+      this.#access = new Map();
+    });
+    this.#queue = run.catch(() => undefined);
+    return run;
   }
 
   /**
@@ -226,9 +269,10 @@ export class KeyStore {
   static async importFrom(dir: string, sealed: Buffer, exportPassphrase: Buffer, source: UnlockSource): Promise<{ store: KeyStore; agents: ImportedAgent[] }> {
     if (await exists(join(dir, KEYSTORE_FILE))) throw new KeystoreError("exists", "this folder already has a key store");
     const { plaintext } = await unseal(sealed, exportPassphrase);
-    let entries: Map<string, Entry>;
-    try { entries = decodeEntries(plaintext); } finally { plaintext.fill(0); }
-    const store = await KeyStore.create(dir, source, entries);
+    let decoded: { entries: Map<string, Entry>; access: Map<string, Buffer> };
+    try { decoded = decodeEntries(plaintext); } finally { plaintext.fill(0); }
+    const { entries, access } = decoded;
+    const store = await KeyStore.create(dir, source, entries, access);
     const agents = [...entries].map(([sourceId, e]): ImportedAgent => ({ sourceId, address: agentAddress(e.key) }));
     return { store, agents };
   }
@@ -247,26 +291,28 @@ export class KeyStore {
    * the entries in memory. A failed write leaves memory equal to the disk. Changes run one at a time, in call order, so
    * two writes never share the temp file and each change starts from the one before it.
    */
-  #mutate<T>(change: (entries: Map<string, Entry>) => T): Promise<T> {
+  #mutate<T>(change: (entries: Map<string, Entry>, access: Map<string, Buffer>) => T): Promise<T> {
     const run = this.#queue.then(() => this.#apply(change));
     this.#queue = run.catch(() => undefined);
     return run;
   }
 
-  async #apply<T>(change: (entries: Map<string, Entry>) => T): Promise<T> {
+  async #apply<T>(change: (entries: Map<string, Entry>, access: Map<string, Buffer>) => T): Promise<T> {
     if (this.#moved) throw new SignerRefused("moved", "this data folder was exported; its key store changes nothing more");
     const next = new Map([...this.#unlocked()].map(([id, e]) => [id, { ...e }]));
-    const result = change(next);
-    await this.#write(next);
+    const nextAccess = new Map(this.#access);
+    const result = change(next, nextAccess);
+    await this.#write(next, nextAccess);
     this.#entries = next;
+    this.#access = nextAccess;
     await this.#writeAddresses();
     return result;
   }
 
-  async #write(entries: ReadonlyMap<string, Entry>): Promise<void> {
+  async #write(entries: ReadonlyMap<string, Entry>, access: ReadonlyMap<string, Buffer>): Promise<void> {
     const sealer = this.#sealer;
     if (sealer === null) throw new SignerRefused("locked", "the key store is locked");
-    const plaintext = encodeEntries(entries);
+    const plaintext = encodeEntries(entries, access);
     try {
       await writeAtomic(join(this.#dir, KEYSTORE_FILE), seal(sealer, plaintext), (written) => {
         const back = reopen(sealer, written);
@@ -274,6 +320,7 @@ export class KeyStore {
         back.fill(0);
         if (!same) throw new KeystoreError("damaged", "the new key store file did not read back; the previous one is kept");
       });
+      this.#generation++;
     } finally {
       plaintext.fill(0);
     }

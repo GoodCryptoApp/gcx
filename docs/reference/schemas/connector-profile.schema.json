@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goodcrypto.app/schemas/connector-profile.schema.json",
+  "title": "Laptop connector private profile (0042 R2)",
+  "description": "Private per-user storage, never a support export. No API key or pairing code. Completion/removal writes compare the authenticated session's seed. Unknown future fields are additive.",
+  "type": "object",
+  "required": ["id", "target", "names", "completed"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-f0-9]{32}$" },
+    "target": {
+      "type": "object", "required": ["relay", "mailbox", "r"],
+      "properties": {
+        "relay": { "type": "string", "description": "Canonical relay host, optional port; no scheme, userinfo, path, query or fragment" },
+        "mailbox": { "type": "string", "pattern": "^[A-Za-z0-9_-]{22}$" },
+        "r": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$", "description": "Pinned installation R public key" }
+      },
+      "additionalProperties": false
+    },
+    "names": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" } },
+    "seed": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$", "description": "PRIVATE Ed25519 signing seed, owner-only; absent after authenticated removal" },
+    "protectedSeed": { "type": "string", "maxLength": 4096, "description": "Windows DPAPI CurrentUser ciphertext in canonical base64url; replaces seed on disk" },
+    "completed": { "type": "boolean" },
+    "port": { "type": "integer", "minimum": 1, "maximum": 65535, "description": "Only an actually bound port is saved" },
+    "connected": { "type": "boolean", "default": false, "description": "R4 remembered connect state; --always sets it, --disconnect/removal clears it" }
+  },
+  "allOf": [{ "if": { "properties": { "completed": { "const": true } } }, "then": { "anyOf": [{ "required": ["seed"] }, { "required": ["protectedSeed"] }] } }]
+}

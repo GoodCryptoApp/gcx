@@ -1,8 +1,8 @@
 # Terms of service
 
-Version 2 · 23 October 2026
+Version 4 · 31 October 2026
 
-**What changed:** Version 2: The privacy policy covers proxy connections and Reports that send goodcryptoX's state and recent log. General sentences say the exchange rather than naming Hyperliquid.
+**What changed:** Version 4: no change to the terms; the privacy policy now covers access keys kept encrypted in your data folder. Version 3: Remote app and program access, removal and connection risks; the privacy policy covers saved identities, their deletion and relay traffic and logs.
 
 These terms are an agreement between you and GoodC International Ltd., British Virgin Islands. By installing or using goodcryptoX, or connecting an account, you accept them and our [privacy policy](privacy.md). If you do not agree, do not use goodcryptoX. Contact: info@goodcrypto.app.
 
@@ -10,7 +10,9 @@ These terms are an agreement between you and GoodC International Ltd., British V
 
 goodcryptoX is a trading program you run on your computer or server. It displays your accounts, sends orders, runs bots and delivers alerts. The exchange holds your funds and executes your trades. We cannot see your panel or trading keys, and we do not hold, receive or control your funds.
 
-You can open the panel from a phone, or from a computer away from your server, by pairing that device. A device is set to **Can trade**, which may do everything you can do at your computer, or to **Read-only**, which only looks. You change the switch, or remove the device, in Settings › Devices. A passkey synced by Apple or Google carries its switch to your other devices in that account.
+You can open the panel from a phone, or from a computer away from your server, by pairing that device. A browser device is set to **Can trade**, which may do everything you can do at your computer, or to **Read-only**, which only looks. You change the switch, or remove the device, in Settings › Devices. A passkey synced by Apple or Google carries its switch to your other devices in that account.
+
+Apps and your own programs can connect through our encrypted relay using a paired computer identity and their own access keys. Pairing grants no access to data or trading by itself; every request uses the key's current permissions. Removing a program connection prevents later requests; a command already accepted may still finish. If a reply is lost, check the result before trying again. Your relay connection depends on our relay, the connector, the installation and the network being available.
 
 ## 2. No advice or exchange service
 
@@ -36,7 +38,7 @@ goodcryptoX’s own stops, trails and waiting bot orders work only while it runs
 
 Software, networks and exchanges can fail. A leaked key can trade your account into losses. A vault’s leader is responsible for trading followers’ money. Anyone allowed to use your trading keys, computer, Telegram shortcuts or a paired phone can act with your funds. Start small, with money you can afford to lose.
 
-A paired device opens the panel through a page our server delivers. If that page, our servers or our web address were taken over, whoever did it could act on every Can-trade device opened in the meantime, with your funds, and read what a Read-only device shows. Set a device to Read-only if it should never trade, and remove one you lose or no longer use.
+A paired browser opens the panel through a page our server delivers. If that page, our servers or our web address were taken over, whoever did it could act on every Can-trade device opened in the meantime, with your funds, and read what a Read-only device shows. Set a device to Read-only if it should never trade, and remove one you lose or no longer use.
 
 ## 7. No warranty
 

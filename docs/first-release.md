@@ -2,7 +2,7 @@
 
 **[Download goodcryptoX for Mac](https://goodcrypto.app/download/mac?utm_source=docs&utm_medium=page&utm_campaign=first-release)** · or [set it up on a server](install/server.md) or [on a NAS](install/nas.md), and use it from any computer or your phone.
 
-[Why we moved](#why-we-moved) · [What it is](#what-it-is) · [Roadmap](#roadmap) · [How it works](#how-it-works) · [Secure and free to run](#secure-and-free-to-run) · [Set up on your Mac](install/mac.md) · [Set up on a NAS](install/nas.md) · [Set up on a server](install/server.md) · [Phone access](phone.md) · [Telegram alerts](telegram.md) · [Moving](install/moving.md)
+[Why we moved](#why-we-moved) · [What it is](#what-it-is) · [Roadmap](#roadmap) · [How it works](#how-it-works) · [Secure and free to run](#secure-and-free-to-run) · [Set up on your Mac](install/mac.md) · [Set up on a NAS](install/nas.md) · [Set up on a server](install/server.md) · [Phone access](phone.md) · [Telegram alerts](telegram.md) · [AI agents and the API](#ai-agents-and-the-api) · [Moving](install/moving.md)
 
 ## Why we moved
 
@@ -55,3 +55,7 @@ Wherever it runs, your phone sees and does everything: pair it once in Settings 
 ## Telegram alerts
 
 Alerts reach you in your own Telegram bot, with buttons to act on them ([Telegram alerts](telegram.md)).
+
+## AI agents and the API
+
+Give an AI agent or your own program a key in Settings › MCP & API. **Read** sees your orders, positions and bots; **Propose** also proposes orders and bots for you to launch; **Trade** places orders and runs its own bots within the accounts, markets and limits you set. A key never withdraws or moves funds, and you can suspend or revoke it at any time ([AI agents](agents/README.md), [API](agents/api.md)).

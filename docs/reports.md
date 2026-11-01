@@ -29,12 +29,12 @@ A send is stored and posted once. If the server does not answer, **Send again** 
 
 The last row is **Send bug reports and daily usage to goodcryptoX**. Turning it off asks first, at that row, why these anonymous reports help us find problems and choose what to build. **Keep on** leaves the setting unchanged. Turning it on asks nothing.
 
-With automatic sending off, goodcryptoX sends only a daily sign that it exists: the random number and the date. Reports still get written and kept on your computer. You can send a report yourself from an order's or bot's **What happened?**, with a line of your own if you wish.
+With automatic sending off, goodcryptoX sends only a daily sign that it exists: the random number and the date. Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are. Reports still get written and kept on your computer. You can send a report yourself from an order's or bot's **What happened?**, with a line of your own if you wish.
 
 ## What is recorded
 
 Problem reports contain the orders, bots and positions involved, the exchange messages around the problem, the app and system versions and the error if goodcryptoX stopped unexpectedly. Repeated instances of the same problem join the open report. Trading continues regardless of the reports server's state. Before a record is kept to be sent, goodcryptoX checks for addresses; if one is found, the record is held locally.
 
-Daily records include whether you opened the Dashboard; for each exchange, whether a bot ran or an order rested, whether you created one, and the volume goodcryptoX's orders filled in the market's quote currency. They also say where goodcryptoX runs and the system, chip and browser families. Demo accounts are excluded. A day with goodcryptoX entirely off has no record.
+Daily records include whether you opened the Dashboard; for each exchange, whether a bot ran or an order rested, whether you created one, and the volume goodcryptoX's orders filled in the market's quote currency, how much of it carried goodcryptoX's fee, and the rest counted by cause (spot buys, sub-accounts, vaults, other). They also say where goodcryptoX runs and the system, chip and browser families. Demo accounts are excluded. A day with goodcryptoX entirely off has no record.
 
 Reports and daily records stay in your data folder until you delete them. A report is at most 1 MB. The automatic sending queue is bounded at 500 reports or 50 MB; older reports skipped from it remain readable and can be sent manually. Your installation number in the introduction is the reference to include when asking us to delete records from our server, as the Privacy policy explains.

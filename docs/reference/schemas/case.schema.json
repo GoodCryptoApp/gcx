@@ -383,7 +383,7 @@
             "pattern": {
               "type": "string",
               "maxLength": 200,
-              "description": "The registry row that matched (errors.ts MESSAGES), absent for UNKNOWN."
+              "description": "The registry row that matched (errors.ts MESSAGES), absent for UNKNOWN. On a journal-only case with status fee-missing: fee-missing, the account's role (master, subAccount or vault) and the instrument's family (spot, perp or dex), e.g. fee-missing subAccount perp (the fleet signature carries no status)."
             },
             "status": {
               "type": "string",

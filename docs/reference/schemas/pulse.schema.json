@@ -64,6 +64,47 @@
                     "amount": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" }
                   }
                 }
+              },
+              "feeVolume": {
+                "type": "array",
+                "maxItems": 8,
+                "description": "Per quote currency: the part of volume whose fills carried gcx's builder fee (the venue charged it; a spot buy carries none), summed the same way. Optional, additive, added in the build that follows the reports server's deploy: absent on a day no fill carried it, and on a record from an older build, which says nothing about a split.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["quote", "amount"],
+                  "properties": {
+                    "quote": { "type": "string", "pattern": "^[A-Z0-9]{1,16}$", "description": "The instruments' quote asset, e.g. USDC." },
+                    "amount": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" }
+                  }
+                }
+              },
+              "unpaid": {
+                "type": "array",
+                "maxItems": 4,
+                "description": "The other part of volume: the day's fills that carried no builder fee, one entry per class that explains it, with how many fills and their volume per quote; totals only, nothing per order. Optional, additive, added with feeVolume: absent on a day every fill paid, and on a record from an older build. volume = feeVolume + the unpaid volumes.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "fills", "volume"],
+                  "properties": {
+                    "kind": { "enum": ["spot-buy", "sub-account", "vault", "other"], "description": "spot-buy: a buy on a spot instrument (Hyperliquid charges no builder fee on one); sub-account: the account is a sub-account; vault: the account is a vault's own; other: nothing known explains it." },
+                    "fills": { "type": "integer", "minimum": 1 },
+                    "volume": {
+                      "type": "array",
+                      "maxItems": 8,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["quote", "amount"],
+                        "properties": {
+                          "quote": { "type": "string", "pattern": "^[A-Z0-9]{1,16}$" },
+                          "amount": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -74,7 +115,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["schema", "v", "install", "day", "off"],
-      "description": "The heartbeat (section 21 (5)): reports are off; this install exists and sends nothing else.",
+      "description": "The heartbeat (section 21 (5)): reports are off; this install exists. Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are.",
       "properties": {
         "schema": { "const": "gcx-pulse" },
         "v": { "const": 1 },

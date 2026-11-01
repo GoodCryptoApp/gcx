@@ -93,8 +93,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "order",
+          "title": "Read an order",
           "description": "One order: its row, its bracket children, its chain and its events. The order's id comes from the `orders` snapshot or from `history`.",
           "annotations": {
+            "title": "Read an order",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -260,8 +262,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "bot",
+          "title": "Read a bot",
           "description": "One bot: its row, its plan, the orders of one iteration, its notification settings, and its open `items` (what waits for the person's answer, with the answers' codes and, on those Exchange is right answers, the rebuild's preview). The bot's id comes from the `bots` snapshot.",
           "annotations": {
+            "title": "Read a bot",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -823,8 +827,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "history",
+          "title": "Read finished orders",
           "description": "Finished orders (filled, cancelled, failed), newest first, a page at a time; pass `nextCursor` back as `cursor` for the next page.",
           "annotations": {
+            "title": "Read finished orders",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -1120,8 +1126,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "instruments",
+          "title": "Read markets",
           "description": "The instruments of a venue with their trading rules (tick, size decimals, minimum notional, leverage) and 24-hour figures. The whole list is several hundred markets: pass `q` (a coin or part of an id, such as `ETH` or `MU`) to get only those that match. A HIP-3 market's id holds its dex: `xyz:MU`.",
           "annotations": {
+            "title": "Read markets",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -1568,6 +1576,56 @@
         "x-gcx-scope": "person"
       }
     },
+    "/api/v1/connect/relay": {
+      "get": {
+        "operationId": "get_connect_relay",
+        "summary": "One hello to the wallet relay (WalletConnect's) from this computer, with the panel's own origin: what the wallet window's QR code needs. The panel asks it only after the window got no code.",
+        "responses": {
+          "200": {
+            "description": "`{ok: true}`, or `{ok: false, says}` with the relay's own words or `no answer` (10 s); 404 where this runtime has no such check."
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only a person signed in to the panel can do this, never an access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "person"
+      }
+    },
     "/api/v1/accounts": {
       "get": {
         "operationId": "get_accounts",
@@ -1625,8 +1683,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "accounts",
+          "title": "Read accounts",
           "description": "The venue accounts goodcryptoX trades on: id, venue, label, kind (master, sub-account, vault) and whether the exchange accepts its key.",
           "annotations": {
+            "title": "Read accounts",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -2720,8 +2780,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "snapshot",
+          "title": "Read the current state",
           "description": "The current state of a topic: `orders`, `positions`, `bots`, `balances` or `account-state`, each a snapshot with its rows; `runtime`, goodcryptoX's state and its `attention` rows, among them what waits for the person's answer (a `bot` row per bot, an `order` row per order, each with its `items` and their answer codes, which the person gives in goodcryptoX or Telegram). A topic that has said nothing yet answers an error, not an empty list.",
           "annotations": {
+            "title": "Read the current state",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -2909,30 +2971,27 @@
             "name": "from",
             "in": "query",
             "required": true,
-            "description": "Start of the range, epoch milliseconds.",
+            "description": "Start of the ordered range, epoch milliseconds; clamped to the venue's oldest candle.",
             "schema": {
-              "type": "integer",
-              "minimum": 0
+              "$ref": "#/components/schemas/chart-api.candleTime"
             }
           },
           {
             "name": "to",
             "in": "query",
             "required": true,
-            "description": "End of the range, epoch milliseconds.",
+            "description": "End of the range, epoch milliseconds; clamped to now.",
             "schema": {
-              "type": "integer",
-              "minimum": 0
+              "$ref": "#/components/schemas/chart-api.candleTime"
             }
           },
           {
             "name": "countBack",
             "in": "query",
             "required": true,
-            "description": "How many bars before `to` to return at most.",
+            "description": "How many bars before `to` to return at most",
             "schema": {
-              "type": "integer",
-              "minimum": 0
+              "$ref": "#/components/schemas/chart-api.candleCount"
             }
           }
         ],
@@ -2999,8 +3058,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "candles",
+          "title": "Read candles",
           "description": "Candles of an instrument between two times, oldest first; prices and volumes are decimal strings.",
           "annotations": {
+            "title": "Read candles",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -3016,19 +3077,16 @@
                 "description": "The bar size."
               },
               "from": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "Start of the range, epoch milliseconds."
+                "$ref": "#/$defs/chart-api.candleTime",
+                "description": "Start of the ordered range, epoch milliseconds; clamped to the venue's oldest candle."
               },
               "to": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "End of the range, epoch milliseconds."
+                "$ref": "#/$defs/chart-api.candleTime",
+                "description": "End of the range, epoch milliseconds; clamped to now."
               },
               "countBack": {
-                "type": "integer",
-                "minimum": 0,
-                "description": "How many bars before `to` to return at most."
+                "$ref": "#/$defs/chart-api.candleCount",
+                "description": "How many bars before `to` to return at most"
               }
             },
             "required": [
@@ -3057,6 +3115,17 @@
                   "1M"
                 ],
                 "description": "Hyperliquid's own intervals; no seconds."
+              },
+              "chart-api.candleTime": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Exact safe epoch milliseconds; planning clamps the range to the venue horizon and now."
+              },
+              "chart-api.candleCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             }
           }
@@ -3066,7 +3135,7 @@
     "/api/v1/orders": {
       "post": {
         "operationId": "post_orders",
-        "summary": "Places an order. A trading key places within the limits a person set on it (docs/agents/trading-api.md).",
+        "summary": "Places an order. A trading key places within the limits a person set on it (docs/agents/README.md#keys-and-limits).",
         "requestBody": {
           "required": true,
           "content": {
@@ -3163,8 +3232,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "place_order",
+          "title": "Place an order",
           "description": "Places an order within this key's limits. `body` is the order command (every number a decimal string) with a `requestId`: new for each new order, the same when retrying after no answer. A refusal is an error with the reason; nothing was placed and the same requestId may be sent again after a change. A Close or a reduce-only order (on spot a sell) counts nothing against the limits for what this key's own orders hold; the rest counts as an order that adds risk. A take-profit and stop-loss that does not say `reduceOnly` is reduce-only. The order is sent past the form's warnings: `preview_order` names them first.",
           "annotations": {
+            "title": "Place an order",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -3931,8 +4002,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "preview_order",
+          "title": "Preview an order",
           "description": "Checks an order without placing it: the errors and warnings placing it would meet now, with their texts, and the receipt (the size that would be sent, its price and value). `body` is the order command, as for placing it. Nothing is placed or recorded. A trading key's limits are checked only when it places the order.",
           "annotations": {
+            "title": "Preview an order",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -4726,8 +4799,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "cancel_all_orders",
+          "title": "Cancel all orders",
           "description": "Cancels every open order on the accounts ticked for this key that matches the filter (the person's and other keys' too; a running bot's own orders are left). `body` is `{requestId, sourceId?, instrumentId?, side?, type?, status?, source?, q?, children?}`: every filter optional; with none, every open order. The answer names what was cancelled (`ids`, `count`) and what was refused; `count: 0` means the filter matched nothing and nothing was cancelled.",
           "annotations": {
+            "title": "Cancel all orders",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -4929,8 +5004,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "positions_close_all",
+          "title": "Close all positions",
           "description": "Closes every position on the accounts ticked for this key that matches the filter (the person's too). `body` is `{requestId, sourceId?, instrumentId?, side?, q?, bots?}`: every filter optional; with none, every position. A bot's part of a position is never sold: `bots: \"keep\"` (the default) leaves it and closes the rest; `bots: \"stop\"` also stops the bots this key created, each closing its own position. Each close is within this key's limits. The answer names what was closed (`ids`, `count`), the bots stopped (`bots`) and what was refused; `count: 0` means the filter matched nothing and nothing was closed.",
           "annotations": {
+            "title": "Close all positions",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -5110,8 +5187,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "stop_all_bots",
+          "title": "Stop all bots",
           "description": "Stops every DCA or Grid bot this key created that matches the filter. `body` is `{requestId, sourceId?, instrumentId?, side?, type?, status?, q?}`: every filter optional; with none, all of this key's running bots. The answer names what was stopped (`ids`, `count`) and what was refused; `count: 0` means the filter matched nothing and nothing was stopped.",
           "annotations": {
+            "title": "Stop all bots",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -5314,8 +5393,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "cancel_order",
+          "title": "Cancel an order",
           "description": "Cancels an order on an account ticked for this key (its own, the person's, another key's, or one placed outside goodcryptoX by `ext:<the exchange's id>`; never a running bot's own), by its id. `body` is `{requestId}`: new for each new cancel, the same when retrying.",
           "annotations": {
+            "title": "Cancel an order",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -5721,8 +5802,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "modify_order",
+          "title": "Change an order",
           "description": "Changes an order this key placed. `body` is `{requestId, changes}` with only the fields that change (`size`, `price`, `triggerPrice`, `triggerTimeout`, `distance`, `trailStart`, decimal strings; `postOnly`, `reduceOnly`, `improveOnly`, booleans), or `{requestId, field, price}` to move its price or trigger. A refusal is an error with the reason; nothing changed. The changed order is judged by this key's limits as a new one would be, and counts against its 24 hours at its new value.",
           "annotations": {
+            "title": "Change an order",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -6119,7 +6202,7 @@
     "/api/v1/bots": {
       "post": {
         "operationId": "post_bots",
-        "summary": "Creates a DCA or Grid bot. A trading key creates one within the limits a person set on it (docs/agents/trading-api.md). A perpetual's `leverage` and `marginMode`, when left out, are the open position's own on the exchange, else 5x isolated.",
+        "summary": "Creates a DCA or Grid bot. A trading key creates one within the limits a person set on it (docs/agents/README.md#keys-and-limits). A perpetual's `leverage` and `marginMode`, when left out, are the open position's own on the exchange, else 5x isolated.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6216,8 +6299,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "create_bot",
+          "title": "Create a bot",
           "description": "Creates a DCA or Grid bot within this key's limits (`kind: grid` for Grid; absent means DCA): each order of its ladder within the largest order, the whole ladder within what is left of the 24 hours, its leverage within the key's (left out, the open position's, else 5x isolated). `body` is the bot's create command (`requestId`, `sourceId`, `instrumentId`, `settings`, every number a decimal string): `requestId` new for each new bot, the same when retrying. `instrumentId` is the market's id from `instruments` (a HIP-3 market's holds its dex: `xyz:MU`). `preview_bot` shows the ladder these settings make before you create it. A refusal is an error with the reason; nothing was created. Each new cycle is counted against the 24 hours again: over them the bot waits, and goes on by itself once they have room.",
           "annotations": {
+            "title": "Create a bot",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -7716,7 +7801,10 @@
                     "$ref": "#/$defs/grid-rule.decimal"
                   },
                   "i0": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Exact safe index; i0 + count must also be a safe integer before cells are derived."
                   },
                   "count": {
                     "type": "integer",
@@ -8006,8 +8094,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "preview_bot",
+          "title": "Preview a bot",
           "description": "Checks a DCA or Grid bot's settings without creating it (`kind: grid` for Grid; absent means DCA): the receipt the bot form shows, at goodcryptoX's price of the market now (each order of the ladder with its price, size and value, and what the bot needs), one per side it can enter on. `body` is `{sourceId, instrumentId, settings}`, with `leverage` and `marginMode` if you set them: create_bot's body without its `requestId`. Nothing is created. A trading key's limits are checked only when it creates the bot.",
           "annotations": {
+            "title": "Preview a bot",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -9429,7 +9519,10 @@
                     "$ref": "#/$defs/grid-rule.decimal"
                   },
                   "i0": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Exact safe index; i0 + count must also be a safe integer before cells are derived."
                   },
                   "count": {
                     "type": "integer",
@@ -9705,8 +9798,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "bot_command",
+          "title": "Stop or close a bot",
           "description": "Stops or closes a bot this key created: `body` is `{requestId, kind}` with `kind` `stop` (with `close: true` to close its position too), `end-iteration` (close the position now; a repeating bot starts its next cycle) or `force-close` (close what a stopped bot still holds). `requestId` new for each command, the same when retrying. Supported commands and mutable fields follow the schema; the runtime checks ownership and current permissions at execution.",
           "annotations": {
+            "title": "Stop or close a bot",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -10688,7 +10783,10 @@
                     "$ref": "#/$defs/grid-rule.decimal"
                   },
                   "i0": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Exact safe index; i0 + count must also be a safe integer before cells are derived."
                   },
                   "count": {
                     "type": "integer",
@@ -12071,8 +12169,10 @@
         "x-gcx-scope": "trade",
         "x-gcx-tool": {
           "name": "set_leverage",
+          "title": "Set leverage",
           "description": "Sets the leverage on a market before this key trades there: within the key's limit, in either margin mode. `body` is `{requestId, sourceId, instrumentId, leverage, marginMode}`, numbers as decimal strings.",
           "annotations": {
+            "title": "Set leverage",
             "readOnlyHint": false,
             "destructiveHint": true,
             "idempotentHint": true,
@@ -13606,7 +13706,20 @@
     "/api/v1/keys/summary": {
       "get": {
         "operationId": "get_keys_summary",
-        "summary": "Five indexed attention-first key rows for the Dashboard; no money totals.",
+        "summary": "Five indexed attention-first key rows for the Dashboard, each with its own figures (its active orders and bots; volume and realized P&L, total and last 24 hours); no totals across keys.",
+        "parameters": [
+          {
+            "name": "demo",
+            "in": "query",
+            "required": false,
+            "description": "1: the demo's keys ranked among them, where the runtime serves demo accounts.",
+            "schema": {
+              "enum": [
+                "1"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -13859,6 +13972,84 @@
         "x-gcx-scope": "person"
       }
     },
+    "/api/v1/keys/{id}/secret": {
+      "get": {
+        "operationId": "get_keys_id_secret",
+        "summary": "The key's secret, kept in the key store, for a person's Show and Copy (a Read-only phone reads it masked); 404 when none is kept, 423 while the key store is locked.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Stable key identity.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/access-key.secret"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only a person signed in to the panel can do this, never an access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such thing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "person"
+      }
+    },
     "/api/v1/keys": {
       "get": {
         "operationId": "get_keys",
@@ -13894,6 +14085,17 @@
             "schema": {
               "type": "integer",
               "minimum": 1
+            }
+          },
+          {
+            "name": "demo",
+            "in": "query",
+            "required": false,
+            "description": "1: the demo's keys too, marked simulated, where the runtime serves demo accounts.",
+            "schema": {
+              "enum": [
+                "1"
+              ]
             }
           }
         ],
@@ -13951,7 +14153,7 @@
       },
       "post": {
         "operationId": "post_keys",
-        "summary": "Makes an access key, a trading key with its limits; its secret is in this answer only.",
+        "summary": "Makes an access key, a trading key with its limits; its secret is in this answer, and kept in the key store to be shown again (`kept`).",
         "requestBody": {
           "required": true,
           "content": {
@@ -14028,7 +14230,7 @@
     "/api/v1/keys/{id}/notifications": {
       "post": {
         "operationId": "post_keys_id_notifications",
-        "summary": "Saves accepted-command notice preference, off by default. Proposal notices are independent.",
+        "summary": "Saves accepted-command notice preference, on by default. Proposal notices are independent.",
         "parameters": [
           {
             "name": "id",
@@ -15706,8 +15908,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "cases",
+          "title": "Read cases",
           "description": "The cases goodcryptoX stored: each report sent to goodcryptoX or held, newest first, with its subject, state and size. Read one with `case`.",
           "annotations": {
+            "title": "Read cases",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -15827,8 +16031,10 @@
         "x-gcx-scope": "read",
         "x-gcx-tool": {
           "name": "case",
+          "title": "Read what happened to an order or bot",
           "description": "What happened to an order or a bot: its rows in goodcryptoX's ledger, what goodcryptoX and the exchange said to each other around it, what was live on the account, and with `timeline` a line per step. The id is `order:<id>` or `bot:<id>` (ids from the `orders` and `bots` snapshots), `runtime` for the installation's state, open warnings and redacted recent log, with the failure lines it shows now, or a stored case's id from `cases`.",
           "annotations": {
+            "title": "Read what happened to an order or bot",
             "readOnlyHint": true
           },
           "inputSchema": {
@@ -16107,8 +16313,10 @@
         "x-gcx-scope": "propose",
         "x-gcx-tool": {
           "name": "propose_order",
+          "title": "Propose an order",
           "description": "Proposes an order for the person to review and launch in goodcryptoX; nothing is sent until they press the form's button. `body` is `{requestId, kind: \"order\", command}`: `requestId` new for each proposal, the same when retrying; `command` the order command with its own `requestId` (required, any value: it is not kept), every number a decimal string. Tell the person why in your own words: goodcryptoX stores no note. At most 20 wait per key.",
           "annotations": {
+            "title": "Propose an order",
             "readOnlyHint": false,
             "destructiveHint": false,
             "idempotentHint": true,
@@ -17044,8 +17252,10 @@
         "x-gcx-scope": "propose",
         "x-gcx-tool": {
           "name": "propose_bot",
+          "title": "Propose a bot",
           "description": "Proposes a DCA or Grid bot. Body: requestId, kind bot-create, command (the bot create body without requestId). No trade before the person launches it. DCA is the default; Grid uses kind grid. Decimal strings for money. The existing twenty waiting proposals per key are shared with orders.",
           "annotations": {
+            "title": "Propose a bot",
             "readOnlyHint": false,
             "destructiveHint": false,
             "idempotentHint": true,
@@ -18552,7 +18762,10 @@
                     "$ref": "#/$defs/grid-rule.decimal"
                   },
                   "i0": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Exact safe index; i0 + count must also be a safe integer before cells are derived."
                   },
                   "count": {
                     "type": "integer",
@@ -18886,6 +19099,174 @@
         "x-gcx-scope": "person"
       }
     },
+    "/api/v1/proposals/{id}/withdraw": {
+      "post": {
+        "operationId": "post_proposals_id_withdraw",
+        "summary": "Takes back a proposal this key made, while it waits: it leaves the person's list and Needs your attention at once, and nothing is sent to them. A second call answers the same.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The proposal's id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/proposal-api.withdraw"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`{accepted: true}`; 404 no such proposal of this key (another key's proposal is unknown to it); 422 `proposal-launched` once the person launched it, `proposal-rejected` once they rejected it."
+          },
+          "400": {
+            "description": "The request does not match its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "This access key's scope does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such thing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This requestId was used before with another body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused: `{rejected, text}`. Nothing changed; the same requestId may be sent again after a change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "goodcryptoX is in a state that cannot take this now (starting, stopping, locked, out of disk for an order that adds risk, no price yet).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "propose",
+        "x-gcx-tool": {
+          "name": "withdraw_proposal",
+          "title": "Withdraw a proposal",
+          "description": "Withdraws a proposal this key made that still waits for the person (a proposal it made and no longer wants). `body` is `{requestId}`: new for each withdrawal, the same when retrying. A second withdrawal answers the same; a launched proposal cannot be withdrawn.",
+          "annotations": {
+            "title": "Withdraw a proposal",
+            "readOnlyHint": false,
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": false
+          },
+          "inputSchema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The proposal's id."
+              },
+              "body": {
+                "$ref": "#/$defs/proposal-api.withdraw",
+                "description": "The request's JSON, as the operation's request body."
+              }
+            },
+            "required": [
+              "id",
+              "body"
+            ],
+            "$defs": {
+              "proposal-api.withdraw": {
+                "description": "POST /api/v1/proposals/{proposalId}/withdraw (MH 2026-10-31: a program can take back what it proposed): the key that made the proposal takes it back while it waits. A second call answers the same.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "requestId"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/proposals/{id}/reject": {
       "post": {
         "operationId": "post_proposals_id_reject",
@@ -19010,7 +19391,7 @@
     "/api/v1/usage": {
       "get": {
         "operationId": "get_usage",
-        "summary": "The install reference that stands for this goodcryptoX in every report, and each daily usage record (or, with reports off, the daily sign that it exists) built, newest first, with where it stands.",
+        "summary": "The install reference that stands for this goodcryptoX in every report, and each daily usage record (or, with reports off, the daily sign that it exists) built, newest first, with where it stands. Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are.",
         "responses": {
           "200": {
             "description": "`{install, days}`; 404 where the runtime keeps no records.",
@@ -19680,6 +20061,399 @@
         "x-gcx-scope": "person"
       }
     },
+    "/api/v1/program-devices": {
+      "get": {
+        "operationId": "get_program_devices",
+        "summary": "Public program admission identities, oldest first. Every program request still needs its own access key.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/program-device.list"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only a person signed in to the panel can do this, never an access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "person"
+      }
+    },
+    "/api/v1/program-devices/pair": {
+      "post": {
+        "operationId": "post_program_devices_pair",
+        "summary": "The waiting one-use program code: the same to every request until a connector uses it or a day has passed, then a new one. Held in memory only.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/program-device.empty"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/program-device.pair"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only a person signed in to the panel can do this, never an access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "person"
+      }
+    },
+    "/api/v1/program-devices/pair/cancel": {
+      "post": {
+        "operationId": "post_program_devices_pair_cancel",
+        "summary": "Cancel the waiting program code.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/program-device.empty"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`{}`."
+          },
+          "400": {
+            "description": "The request does not match its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only a person signed in to the panel can do this, never an access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "person"
+      }
+    },
+    "/api/v1/program-devices/{id}/rename": {
+      "post": {
+        "operationId": "post_program_devices_id_rename",
+        "summary": "Rename a program device.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The program fingerprint.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/program-device.rename"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/program-device.device"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only a person signed in to the panel can do this, never an access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such thing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "person"
+      }
+    },
+    "/api/v1/program-devices/{id}/remove": {
+      "post": {
+        "operationId": "post_program_devices_id_remove",
+        "summary": "Remove program admission and close all its tunnels within one second. Existing commands may finish.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The program fingerprint.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/program-device.empty"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`{}`; 404 if absent."
+          },
+          "400": {
+            "description": "The request does not match its schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the access key is unknown or revoked; with `verify: true`, the panel's session has not confirmed it is you on this computer (the local passkey).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only a person signed in to the panel can do this, never an access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such thing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "More than 20 requests in a second from this access key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "session": []
+          }
+        ],
+        "x-gcx-scope": "person"
+      }
+    },
     "/api/v1/devices": {
       "get": {
         "operationId": "get_devices",
@@ -20246,6 +21020,16 @@
           "changes": {
             "type": "integer",
             "minimum": 0
+          },
+          "orders": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "description": "A key in MH's shape of 2026-10-30 (its limits carry `bots`): what its own orders that add risk filled in the last 24 hours plus what of them is open now, in USD (the figure `per24h` bounds)."
+          },
+          "bots": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+            "description": "A key in MH's shape: the money of the bots it started in the last 24 hours, in USD (the figure `botsPer24h` bounds). `value` keeps its meaning for every key."
           }
         }
       },
@@ -20319,7 +21103,8 @@
               "enum": [
                 "waiting",
                 "launched",
-                "rejected"
+                "rejected",
+                "withdrawn"
               ]
             }
           }
@@ -20348,7 +21133,7 @@
         }
       },
       "access-key.created": {
-        "description": "The answer to POST /api/v1/keys: the new key and its secret, which is never shown again.",
+        "description": "The answer to POST /api/v1/keys: the new key and its secret. `kept`: whether the secret is kept in the key store, to be shown again; false when it could not be (a locked key store), and then this answer is the only time it is shown.",
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -20389,6 +21174,9 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]{43}$"
           },
+          "kept": {
+            "type": "boolean"
+          },
           "limits": {
             "oneOf": [
               {
@@ -20406,6 +21194,28 @@
               "null"
             ],
             "description": "When a person suspended the key (A10); null while it runs. Absent from an answer of a version before keys traded: null."
+          }
+        }
+      },
+      "access-key.currencyFigure": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "total",
+          "last24h"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
+          },
+          "last24h": {
+            "type": "string",
+            "pattern": "^-?\\d+(\\.\\d+)?$"
           }
         }
       },
@@ -20463,9 +21273,52 @@
             "enum": [
               "waiting",
               "launched",
-              "rejected"
+              "rejected",
+              "withdrawn"
             ],
             "description": "What became of a proposal."
+          }
+        }
+      },
+      "access-key.figures": {
+        "description": "A key's own figures, as its row shows them on the Dashboard and in Settings (GET /api/v1/keys, GET /api/v1/keys/{id} and GET /api/v1/keys/summary). `active`: the orders the key placed that are still open (a launched proposal of the key included) and the bots it created that run or wait (not finished); a bot's own orders are the bot's, never counted here. `volume` and `realized`: its volume and realized P&L per native currency, never added across currencies (the key card's measures), each ever (`total`) and in the last 24 hours (`last24h`, by the time each thing happened, the key limits' own window). Counts are integers, money decimal strings.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "active",
+          "volume",
+          "realized"
+        ],
+        "properties": {
+          "active": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "orders",
+              "bots"
+            ],
+            "properties": {
+              "orders": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "bots": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "volume": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/access-key.currencyFigure"
+            }
+          },
+          "realized": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/access-key.currencyFigure"
+            }
           }
         }
       },
@@ -20550,20 +21403,56 @@
           },
           "stats": {
             "$ref": "#/components/schemas/access-key.stats"
+          },
+          "figures": {
+            "$ref": "#/components/schemas/access-key.figures"
+          },
+          "simulated": {
+            "const": true,
+            "description": "Added 2026-10-31: one of the demo's keys, listed with `demo=1` where the runtime serves demo accounts; it has no secret and cannot be changed. Absent on every real key."
+          },
+          "kept": {
+            "type": "boolean",
+            "description": "Whether the key's secret is kept in the key store, so a person can show it again (GET /api/v1/keys/{keyId}/secret). False for a key made before it was kept, or made while it could not be. Absent while the key store is locked (unknown), and from an older version."
           }
         }
       },
+      "access-key.limitAmount": {
+        "description": "A limit's value: a decimal string above zero, at most 15 whole digits (MH 2026-10-28: every input is checked at the door).",
+        "type": "string",
+        "maxLength": 32,
+        "pattern": "^(0\\.[0-9]*[1-9][0-9]*|[1-9][0-9]{0,14}(\\.[0-9]+)?)$"
+      },
       "access-key.limits": {
-        "description": "A trading key's limits (Amendment 1 A4), set only by a person, in force from the key's next command. `accounts`: the account ids it may trade, or `all` for every account held now or added later. `markets`: the instruments it may trade, each by its exact id (the key form offers every perpetual), or `all` for every market on those accounts, whatever it is quoted in. `perOrder`: the largest order value in USDC at the runtime's price. `per24h`: the most in USDC of what the key's orders that add risk filled in the last 24 hours plus what of them is open now (RULINGS 74 (b): a cancelled order gives its value back). `leverage`: the highest leverage on a market where the key adds risk. Decimal strings; the panel pre-fills 1000, 10000 and 5 (the owner's defaults).",
+        "description": "A trading key's limits (Amendment 1 A4; MH's shape of 2026-10-30, 0010 amendment 3 \"A Trade key's limits\"), set only by a person, in force from the key's next command. `accounts`: the account ids it may trade, or `all` for every account held now or added later. `markets`: the instruments it may trade, each by its exact id (the key form offers every perpetual and spot pair of the chosen accounts' exchanges), or `all` for every market on those accounts, `spot` for every spot market on them, `perps` for every perpetual on them (every futures market, of every dex), those listed later included; the kind is the market's own in the instrument list (0010 amendment 5). Every money limit is in USD (a stablecoin quote counts one to one) and absent means no limit. For the orders the key places: `perOrder`, one order's value at the runtime's price; `per24h`, what its own orders that add risk filled in the last 24 hours plus what of them is open now (a cancelled order gives its value back; a bot's orders are never counted here). For its bots: `bots`, `off` (manual orders only), `all`, or the kinds it may launch; `perBot`, one bot's money (a DCA bot's whole cycle, its entry and every averaging order; a Grid bot's total invested); `botsPer24h`, the money of the bots it started in the last 24 hours (a DCA cycle counts when it starts, a Grid its total invested when launched and any rise after); a launch that finds no room is made and waits. A bot's orders meet no order limit. For its positions on perpetuals: `perPosition`, one market's position value after the order; `totalPositions`, all its positions together after the order; an order that does not make a position larger is never refused by them. `leverage`: the highest leverage on a market where it adds risk, and for a bot at its launch and its change. `margin`: `isolated` refuses cross margin for its orders, its leverage writes and its bots; `any`, the meaning when absent, does not. Without `bots`, `perOrder`, `per24h` and `leverage` are required, as before this shape, and the key keeps the meaning it had: its bots' every order fits `perOrder` and a bot's whole cycle counts up front against the one `per24h`, shared with its orders. Values are decimal strings above zero.",
         "type": "object",
         "additionalProperties": false,
         "required": [
           "accounts",
-          "markets",
-          "perOrder",
-          "per24h",
-          "leverage"
+          "markets"
         ],
+        "if": {
+          "not": {
+            "properties": {
+              "bots": true
+            },
+            "required": [
+              "bots"
+            ]
+          }
+        },
+        "then": {
+          "properties": {
+            "perOrder": true,
+            "per24h": true,
+            "leverage": true
+          },
+          "required": [
+            "perOrder",
+            "per24h",
+            "leverage"
+          ]
+        },
         "properties": {
           "accounts": {
             "oneOf": [
@@ -20588,20 +21477,62 @@
               },
               {
                 "const": "all"
+              },
+              {
+                "const": "spot"
+              },
+              {
+                "const": "perps"
               }
             ]
           },
           "perOrder": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+            "$ref": "#/components/schemas/access-key.limitAmount"
           },
           "per24h": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+            "$ref": "#/components/schemas/access-key.limitAmount"
           },
           "leverage": {
-            "type": "string",
-            "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+            "$ref": "#/components/schemas/access-key.limitAmount"
+          },
+          "margin": {
+            "enum": [
+              "isolated",
+              "any"
+            ]
+          },
+          "bots": {
+            "oneOf": [
+              {
+                "enum": [
+                  "off",
+                  "all"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "dca",
+                    "grid"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            ]
+          },
+          "perBot": {
+            "$ref": "#/components/schemas/access-key.limitAmount"
+          },
+          "botsPer24h": {
+            "$ref": "#/components/schemas/access-key.limitAmount"
+          },
+          "perPosition": {
+            "$ref": "#/components/schemas/access-key.limitAmount"
+          },
+          "totalPositions": {
+            "$ref": "#/components/schemas/access-key.limitAmount"
           }
         }
       },
@@ -20621,10 +21552,10 @@
         "properties": {
           "commands": {
             "type": "boolean",
-            "default": false
+            "default": true
           }
         },
-        "description": "Optional accepted-command notices; absent means off. Proposals are always notified independently. Retained after revocation."
+        "description": "Optional accepted-command notices; a key never set reads on, an explicit off stays off. Proposals are always notified independently. Retained after revocation."
       },
       "access-key.permissions": {
         "type": "object",
@@ -20657,6 +21588,20 @@
           "propose",
           "trade"
         ]
+      },
+      "access-key.secret": {
+        "description": "GET /api/v1/keys/{keyId}/secret, a signed-in person's only: the key's secret as kept in the key store (MH 3.1.1 item 25). 404 for an unknown or revoked key, or one whose secret is not kept; 423 while the key store is locked.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "secret"
+        ],
+        "properties": {
+          "secret": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        }
       },
       "access-key.setLimits": {
         "description": "POST /api/v1/keys/{keyId}/limits: a trading key's new limits, in force from its next command. Answers the key, or 404 for a key that does not exist or is revoked.",
@@ -22902,7 +23847,7 @@
               "pattern": {
                 "type": "string",
                 "maxLength": 200,
-                "description": "The registry row that matched (errors.ts MESSAGES), absent for UNKNOWN."
+                "description": "The registry row that matched (errors.ts MESSAGES), absent for UNKNOWN. On a journal-only case with status fee-missing: fee-missing, the account's role (master, subAccount or vault) and the instrument's family (spot, perp or dex), e.g. fee-missing subAccount perp (the fleet signature carries no status)."
               },
               "status": {
                 "type": "string",
@@ -23536,6 +24481,17 @@
             "$ref": "#/components/schemas/chart-api.decimal"
           }
         }
+      },
+      "chart-api.candleCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "chart-api.candleTime": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991,
+        "description": "Exact safe epoch milliseconds; planning clamps the range to the venue horizon and now."
       },
       "chart-api.candles": {
         "description": "Oldest first, no duplicate t. noData once the range lies beyond what the venue serves (its most recent 5,000 bars per interval).",
@@ -24730,6 +25686,13 @@
           "rows"
         ],
         "properties": {
+          "programs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/program-device.device"
+            },
+            "description": "0042 additive program admission rows; absent from older runtimes."
+          },
           "rows": {
             "type": "array",
             "items": {
@@ -26167,7 +27130,10 @@
             "$ref": "#/components/schemas/grid-rule.decimal"
           },
           "i0": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Exact safe index; i0 + count must also be a safe integer before cells are derived."
           },
           "count": {
             "type": "integer",
@@ -28062,6 +29028,11 @@
           "words": {
             "type": "string"
           },
+          "refusals": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Added 2026-10-31 (0028 ruling 2): on a refused-flat item only, how many of the bot's sales the exchange has refused (a DCA bot: in the current cycle, whatever the refusal's words; a Grid bot: its closes since it started). From 2 the panel adds a sentence saying what to press; the answers do not change. Absent on every other item and before the first refusal is counted."
+          },
           "facts": {
             "description": "Added with 0028 d15, d26 (repair-item-facts): what the item shows beside it and the records give. refused-held (C2h): `orders`, the person's resting sells on the pair that hold the coins the bot's sale needs (the venue's id, or a gcx order's own); foreign (the yellow notice): `fills`, the trades by others since the last agreement (the venue's time), and `orders`, the resting orders by others. Absent on every other item.",
             "type": "object",
@@ -28714,6 +29685,10 @@
           "openPrice": {
             "$ref": "#/components/schemas/order-row.decimal",
             "description": "The market price when the order was created."
+          },
+          "trailStartPrice": {
+            "$ref": "#/components/schemas/order-row.decimal",
+            "description": "Added 2026-10-29 (F5): the market price when this trailing revision started, retained independently of later extremes. Absent before trailing starts and from older runtimes; the panel falls back to openPrice (equal when trailing starts at placement). Open price and the grid exit level/fee base are unchanged."
           },
           "feeRates": {
             "type": "object",
@@ -30715,6 +31690,138 @@
         },
         "description": "C66 144: display-only facts from existing admitted liquidation/ADL fills in the preceding 24 hours. No live size, entry, leverage or margin is fabricated. pnl is canonical closed PnL less priced fee; absent for unpriced fee. Partial binding requires positive fill-stream episode evidence; absent/false is unknown or a later episode. Older liquidation records without position metadata yield no fact."
       },
+      "program-device.device": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deviceId",
+          "publicKey",
+          "name",
+          "pairedAt",
+          "lastUsedAt"
+        ],
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "description": "SHA-256 of the raw Ed25519 public key, base64url."
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "pairedAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastUsedAt": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      },
+      "program-device.empty": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "program-device.list": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rows"
+        ],
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/program-device.device"
+            }
+          }
+        }
+      },
+      "program-device.pair": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "expiresAt",
+          "relay",
+          "mailbox",
+          "key"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "relay": {
+            "type": "string"
+          },
+          "mailbox": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{22}$"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        }
+      },
+      "program-device.rename": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "program-device.target": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "relay",
+          "mailbox",
+          "key"
+        ],
+        "properties": {
+          "version": {
+            "const": 2
+          },
+          "relay": {
+            "type": "string",
+            "pattern": "^wss://[^/?#]+$"
+          },
+          "mailbox": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{22}$"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        }
+      },
       "proposal-api.launch": {
         "oneOf": [
           {
@@ -30772,8 +31879,13 @@
             "enum": [
               "waiting",
               "launched",
-              "rejected"
+              "rejected",
+              "withdrawn"
             ]
+          },
+          "simulated": {
+            "const": true,
+            "description": "Added 2026-10-31: one of the demo's proposals (its key a demo key, its account a demo account), where the runtime serves demo accounts; it launches on its demo account only. Absent on every real proposal."
           }
         }
       },
@@ -30962,6 +32074,21 @@
         "type": "object",
         "additionalProperties": false
       },
+      "proposal-api.withdraw": {
+        "description": "POST /api/v1/proposals/{proposalId}/withdraw (MH 2026-10-31: a program can take back what it proposed): the key that made the proposal takes it back while it waits. A second call answers the same.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestId"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
       "pulse": {
         "title": "Pulse",
         "description": "One install's daily usage record (decision 0020 d16; RULINGS_FOR_MH section 21): one per install per UTC day, sent to our reports server through the same Worker, the same switch (reports.auto) and the same install reference as cases. Two closed shapes: the record (reports on) and the heartbeat (reports off: the install reference and the date, nothing else). Never a balance, an address, an order or gcx's version. Passes the last check of d4.5 like a case. Version 1; a new field is additive and optional and needs a schema addition, never a policy.",
@@ -31120,6 +32247,81 @@
                           }
                         }
                       }
+                    },
+                    "feeVolume": {
+                      "type": "array",
+                      "maxItems": 8,
+                      "description": "Per quote currency: the part of volume whose fills carried gcx's builder fee (the venue charged it; a spot buy carries none), summed the same way. Optional, additive, added in the build that follows the reports server's deploy: absent on a day no fill carried it, and on a record from an older build, which says nothing about a split.",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "quote",
+                          "amount"
+                        ],
+                        "properties": {
+                          "quote": {
+                            "type": "string",
+                            "pattern": "^[A-Z0-9]{1,16}$",
+                            "description": "The instruments' quote asset, e.g. USDC."
+                          },
+                          "amount": {
+                            "type": "string",
+                            "pattern": "^\\d+(\\.\\d+)?$"
+                          }
+                        }
+                      }
+                    },
+                    "unpaid": {
+                      "type": "array",
+                      "maxItems": 4,
+                      "description": "The other part of volume: the day's fills that carried no builder fee, one entry per class that explains it, with how many fills and their volume per quote; totals only, nothing per order. Optional, additive, added with feeVolume: absent on a day every fill paid, and on a record from an older build. volume = feeVolume + the unpaid volumes.",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "kind",
+                          "fills",
+                          "volume"
+                        ],
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "spot-buy",
+                              "sub-account",
+                              "vault",
+                              "other"
+                            ],
+                            "description": "spot-buy: a buy on a spot instrument (Hyperliquid charges no builder fee on one); sub-account: the account is a sub-account; vault: the account is a vault's own; other: nothing known explains it."
+                          },
+                          "fills": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "volume": {
+                            "type": "array",
+                            "maxItems": 8,
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "quote",
+                                "amount"
+                              ],
+                              "properties": {
+                                "quote": {
+                                  "type": "string",
+                                  "pattern": "^[A-Z0-9]{1,16}$"
+                                },
+                                "amount": {
+                                  "type": "string",
+                                  "pattern": "^\\d+(\\.\\d+)?$"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -31136,7 +32338,7 @@
               "day",
               "off"
             ],
-            "description": "The heartbeat (section 21 (5)): reports are off; this install exists and sends nothing else.",
+            "description": "The heartbeat (section 21 (5)): reports are off; this install exists. Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are.",
             "properties": {
               "schema": {
                 "const": "gcx-pulse"
@@ -32709,6 +33911,10 @@
             "type": "string",
             "description": "The runtime's loopback API origin, including its port, for MCP clients and API programs. Present in Docker too; absent from older runtimes."
           },
+          "programRelay": {
+            "$ref": "#/components/schemas/program-device.target",
+            "description": "0042 remote program capability; absent when unsupported or relay access is disabled."
+          },
           "connector": {
             "type": "object",
             "additionalProperties": false,
@@ -32716,7 +33922,7 @@
               "url",
               "run"
             ],
-            "description": "What Settings › API & Agents shows any MCP client: the runtime's loopback address and the program that starts the connector (`gcx mcp`) on this computer, this Node and the connector file; absent in Docker (its paths are the container's), where the file is missing, and from older runtimes.",
+            "description": "What Settings › MCP & API shows any MCP client: the runtime's loopback address and the program that starts the connector (`gcx mcp`) on this computer, this Node and the connector file; absent in Docker (its paths are the container's), where the file is missing, and from older runtimes.",
             "properties": {
               "url": {
                 "type": "string"
@@ -32812,7 +34018,7 @@
             "required": [
               "auto"
             ],
-            "description": "Settings › About › Reports to goodcryptoX (decision 0020 d13): auto, gcx sends reports of what went wrong and the daily usage record by itself; off, only the daily sign that this gcx exists (the heartbeat). Absent reads as {auto: true}.",
+            "description": "Settings › About › Reports to goodcryptoX (decision 0020 d13): auto, gcx sends reports of what went wrong and the daily usage record by itself; off, only the daily sign that this gcx exists (the heartbeat). Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are. Absent reads as {auto: true}.",
             "properties": {
               "auto": {
                 "type": "boolean"

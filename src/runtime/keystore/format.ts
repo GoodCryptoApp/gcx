@@ -7,9 +7,9 @@
  * The AES key is Argon2id(secret, salt), 32 bytes. KDF parameters outside the bounds below are refused before any
  * derivation (at most 256 MiB, 4 passes, 4 lanes), so a damaged header can never ask for more.
  *
- * Plaintext: u16 count, then per source: u8 id length, id (UTF-8), u8 flags (1 = a pending rotation key follows;
- * 2 was the same-key hold of builds before 0024 amendment 3: read and ignored, never written), the 32-byte key, the 32-byte
- * pending key if flagged. Binary, so a key is never a string.
+ * Plaintext: u16 count, then per entry: u8 id length, id (UTF-8), u8 flags (1 = a pending rotation key follows;
+ * 2 was the same-key hold of builds before 0024 amendment 3: read and ignored, never written; 4 = an access key's value, its id
+ * the key's id, never an agent: MH 3.1.1 item 25), the 32 bytes, the 32-byte pending key if flagged. Binary, so a key is never a string.
  *
  * Writes are atomic (`writeAtomic`, src/runtime/fs/atomic.ts): temp file (mode 600), fsync, read back and decrypt, rename, fsync the directory. The previous file
  * stays in place until the new one has been read back.
@@ -118,21 +118,29 @@ export async function unseal(file: Buffer, secret: Buffer): Promise<{ sealer: Se
 }
 
 export interface Entry { key: Buffer; pending: Buffer | null }
+/** The flag of an access key's value (MH 3.1.1 item 25): read into `access`, never into the agents. */
+const ACCESS = 4;
+/** An access key's value is its 32 random bytes (auth.ts `secret`); any other length would misalign every entry after it. */
+export const ACCESS_BYTES = KEY;
 
-export function encodeEntries(entries: ReadonlyMap<string, Entry>): Buffer {
-  const parts: Buffer[] = [Buffer.from([entries.size >> 8, entries.size & 255])];
-  for (const [id, e] of entries) {
-    const idBytes = Buffer.from(id, "utf8");
+export function encodeEntries(entries: ReadonlyMap<string, Entry>, access: ReadonlyMap<string, Buffer> = new Map()): Buffer {
+  const parts: Buffer[] = [Buffer.from([(entries.size + access.size) >> 8, (entries.size + access.size) & 255])];
+  const id = (s: string) => {
+    const idBytes = Buffer.from(s, "utf8");
     if (idBytes.length === 0 || idBytes.length > 255) throw new KeystoreError("unknown-source", "a source id is 1 to 255 bytes");
-    parts.push(Buffer.from([idBytes.length]), idBytes, Buffer.from([e.pending ? 1 : 0]), e.key);
+    return [Buffer.from([idBytes.length]), idBytes];
+  };
+  for (const [sourceId, e] of entries) {
+    parts.push(...id(sourceId), Buffer.from([e.pending ? 1 : 0]), e.key);
     if (e.pending) parts.push(e.pending);
   }
+  for (const [keyId, value] of access) parts.push(...id(keyId), Buffer.from([ACCESS]), value);
   return Buffer.concat(parts);
 }
 
 /** Keys are copied into their own Buffers, so the caller can zero the plaintext. */
-export function decodeEntries(b: Buffer): Map<string, Entry> {
-  const out = new Map<string, Entry>();
+export function decodeEntries(b: Buffer): { entries: Map<string, Entry>; access: Map<string, Buffer> } {
+  const out = new Map<string, Entry>(), access = new Map<string, Buffer>();
   const take = (at: number, n: number) => {
     if (at + n > b.length) throw new KeystoreError("damaged", "key store contents are truncated");
     return b.subarray(at, at + n);
@@ -146,9 +154,10 @@ export function decodeEntries(b: Buffer): Map<string, Entry> {
     at += 2 + n;
     const key = Buffer.from(take(at, KEY));
     at += KEY;
+    if (flags & ACCESS) { access.set(id, key); continue; }
     let pending: Buffer | null = null;
     if (flags & 1) { pending = Buffer.from(take(at, KEY)); at += KEY; }
     out.set(id, { key, pending });
   }
-  return out;
+  return { entries: out, access };
 }

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/access-key.schema.json",
   "title": "Access key",
-  "description": "An access key for an AI agent or a script (decision 0010 d2, Amendment 1). Sent as `Authorization: Bearer <secret>`. Scope `read` reads; `propose` also proposes orders that a person launches in the panel; `trade` also places, cancels and sets leverage within the limits a person sets on the key (Amendment 1 A1 to A8): it acts on nothing until its limits are set, it closes or sells only what it bought, it never sends past a warning, and a suspended key's writes are refused (403). No key can read a bot's signal URL, or make, change, suspend or revoke a key: those are a signed-in person's. Only the key's SHA-256 is kept; the secret is shown once, when the key is made. Times are Unix milliseconds. See docs/reference/runtime/api.md and docs/agents/trading-api.md.",
+  "description": "An access key for an AI agent or a script (decision 0010 d2, Amendment 1). Sent as `Authorization: Bearer <secret>`. Scope `read` reads; `propose` also proposes orders that a person launches in the panel; `trade` also places, cancels and sets leverage within the limits a person sets on the key (Amendment 1 A1 to A8): it acts on nothing until its limits are set, it closes or sells only what it bought, it never sends past a warning, and a suspended key's writes are refused (403). No key can read a bot's signal URL, or make, change, suspend or revoke a key: those are a signed-in person's. Its SHA-256 is the check of every request; the secret itself is kept encrypted in the key store, where a signed-in person can show and copy it again (MH 3.1.1 item 25), and no list or card answer carries it. Times are Unix milliseconds. See docs/reference/runtime/api.md and docs/agents/README.md#keys-and-limits.",
   "$defs": {
     "scope": { "enum": ["read", "propose", "trade"] },
     "key": {
@@ -39,6 +39,17 @@
         },
         "stats": {
           "$ref": "#/$defs/stats"
+        },
+        "figures": {
+          "$ref": "#/$defs/figures"
+        },
+        "simulated": {
+          "const": true,
+          "description": "Added 2026-10-31: one of the demo's keys, listed with `demo=1` where the runtime serves demo accounts; it has no secret and cannot be changed. Absent on every real key."
+        },
+        "kept": {
+          "type": "boolean",
+          "description": "Whether the key's secret is kept in the key store, so a person can show it again (GET /api/v1/keys/{keyId}/secret). False for a key made before it was kept, or made while it could not be. Absent while the key store is locked (unknown), and from an older version."
         }
       }
     },
@@ -59,7 +70,7 @@
       }
     },
     "created": {
-      "description": "The answer to POST /api/v1/keys: the new key and its secret, which is never shown again.",
+      "description": "The answer to POST /api/v1/keys: the new key and its secret. `kept`: whether the secret is kept in the key store, to be shown again; false when it could not be (a locked key store), and then this answer is the only time it is shown.",
       "type": "object",
       "additionalProperties": false,
       "required": ["keyId", "name", "scope", "createdAt", "lastUsedAt", "revokedAt", "secret"],
@@ -71,6 +82,7 @@
         "lastUsedAt": { "type": ["integer", "null"] },
         "revokedAt": { "type": ["integer", "null"] },
         "secret": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$" },
+        "kept": { "type": "boolean" },
         "limits": {
           "oneOf": [{ "$ref": "#/$defs/limits" }, { "type": "null" }],
           "description": "A trading key's limits; null until set (it then acts on nothing), and for a key that does not trade. Absent from an answer of a version before keys traded: null."
@@ -80,6 +92,13 @@
           "description": "When a person suspended the key (A10); null while it runs. Absent from an answer of a version before keys traded: null."
         }
       }
+    },
+    "secret": {
+      "description": "GET /api/v1/keys/{keyId}/secret, a signed-in person's only: the key's secret as kept in the key store (MH 3.1.1 item 25). 404 for an unknown or revoked key, or one whose secret is not kept; 423 while the key store is locked.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secret"],
+      "properties": { "secret": { "type": "string", "pattern": "^[A-Za-z0-9_-]{43}$" } }
     },
     "setScope": {
       "description": "POST /api/v1/keys/{keyId}/scope: the key's new scope, in force from its next request. Answers the key, or 404 for a key that does not exist or is revoked.",
@@ -94,19 +113,33 @@
       "additionalProperties": false
     },
     "limits": {
-      "description": "A trading key's limits (Amendment 1 A4), set only by a person, in force from the key's next command. `accounts`: the account ids it may trade, or `all` for every account held now or added later. `markets`: the instruments it may trade, each by its exact id (the key form offers every perpetual), or `all` for every market on those accounts, whatever it is quoted in. `perOrder`: the largest order value in USDC at the runtime's price. `per24h`: the most in USDC of what the key's orders that add risk filled in the last 24 hours plus what of them is open now (RULINGS 74 (b): a cancelled order gives its value back). `leverage`: the highest leverage on a market where the key adds risk. Decimal strings; the panel pre-fills 1000, 10000 and 5 (the owner's defaults).",
+      "description": "A trading key's limits (Amendment 1 A4; MH's shape of 2026-10-30, 0010 amendment 3 \"A Trade key's limits\"), set only by a person, in force from the key's next command. `accounts`: the account ids it may trade, or `all` for every account held now or added later. `markets`: the instruments it may trade, each by its exact id (the key form offers every perpetual and spot pair of the chosen accounts' exchanges), or `all` for every market on those accounts, `spot` for every spot market on them, `perps` for every perpetual on them (every futures market, of every dex), those listed later included; the kind is the market's own in the instrument list (0010 amendment 5). Every money limit is in USD (a stablecoin quote counts one to one) and absent means no limit. For the orders the key places: `perOrder`, one order's value at the runtime's price; `per24h`, what its own orders that add risk filled in the last 24 hours plus what of them is open now (a cancelled order gives its value back; a bot's orders are never counted here). For its bots: `bots`, `off` (manual orders only), `all`, or the kinds it may launch; `perBot`, one bot's money (a DCA bot's whole cycle, its entry and every averaging order; a Grid bot's total invested); `botsPer24h`, the money of the bots it started in the last 24 hours (a DCA cycle counts when it starts, a Grid its total invested when launched and any rise after); a launch that finds no room is made and waits. A bot's orders meet no order limit. For its positions on perpetuals: `perPosition`, one market's position value after the order; `totalPositions`, all its positions together after the order; an order that does not make a position larger is never refused by them. `leverage`: the highest leverage on a market where it adds risk, and for a bot at its launch and its change. `margin`: `isolated` refuses cross margin for its orders, its leverage writes and its bots; `any`, the meaning when absent, does not. Without `bots`, `perOrder`, `per24h` and `leverage` are required, as before this shape, and the key keeps the meaning it had: its bots' every order fits `perOrder` and a bot's whole cycle counts up front against the one `per24h`, shared with its orders. Values are decimal strings above zero.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["accounts", "markets", "perOrder", "per24h", "leverage"],
+      "required": ["accounts", "markets"],
+      "if": { "not": { "properties": { "bots": true }, "required": ["bots"] } },
+      "then": { "properties": { "perOrder": true, "per24h": true, "leverage": true }, "required": ["perOrder", "per24h", "leverage"] },
       "properties": {
         "accounts": { "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "const": "all" }] },
         "markets": {
-          "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "const": "all" }]
+          "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "const": "all" }, { "const": "spot" }, { "const": "perps" }]
         },
-        "perOrder": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
-        "per24h": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
-        "leverage": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" }
+        "perOrder": { "$ref": "#/$defs/limitAmount" },
+        "per24h": { "$ref": "#/$defs/limitAmount" },
+        "leverage": { "$ref": "#/$defs/limitAmount" },
+        "margin": { "enum": ["isolated", "any"] },
+        "bots": { "oneOf": [{ "enum": ["off", "all"] }, { "type": "array", "items": { "enum": ["dca", "grid"] }, "minItems": 1, "uniqueItems": true }] },
+        "perBot": { "$ref": "#/$defs/limitAmount" },
+        "botsPer24h": { "$ref": "#/$defs/limitAmount" },
+        "perPosition": { "$ref": "#/$defs/limitAmount" },
+        "totalPositions": { "$ref": "#/$defs/limitAmount" }
       }
+    },
+    "limitAmount": {
+      "description": "A limit's value: a decimal string above zero, at most 15 whole digits (MH 2026-10-28: every input is checked at the door).",
+      "type": "string",
+      "maxLength": 32,
+      "pattern": "^(0\\.[0-9]*[1-9][0-9]*|[1-9][0-9]{0,14}(\\.[0-9]+)?)$"
     },
     "setLimits": {
       "description": "POST /api/v1/keys/{keyId}/limits: a trading key's new limits, in force from its next command. Answers the key, or 404 for a key that does not exist or is revoked.",
@@ -135,7 +168,7 @@
         "instrumentId": { "type": "string" },
         "leverage": { "type": "string" },
         "sizeUnit": { "enum": ["base", "quote"], "description": "A proposal's size unit: the base asset, or the pair's quote currency." },
-        "outcome": { "enum": ["waiting", "launched", "rejected"], "description": "What became of a proposal." }
+        "outcome": { "enum": ["waiting", "launched", "rejected", "withdrawn"], "description": "What became of a proposal." }
       }
     },
     "activity": {
@@ -150,7 +183,9 @@
           "description": "For the 24 hours (RULINGS 74 (b)): what its orders that open or add filled in the last 24 hours plus what of them is open now, in USDC; and its changes (orders, cancels, leverage, bot commands) of the last 24 hours, a count with no cap (MH 2026-10-05, audit line 39).",
           "properties": {
             "value": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
-            "changes": { "type": "integer", "minimum": 0 }
+            "changes": { "type": "integer", "minimum": 0 },
+            "orders": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "A key in MH's shape of 2026-10-30 (its limits carry `bots`): what its own orders that add risk filled in the last 24 hours plus what of them is open now, in USD (the figure `per24h` bounds)." },
+            "bots": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "A key in MH's shape: the money of the bots it started in the last 24 hours, in USD (the figure `botsPer24h` bounds). `value` keeps its meaning for every key." }
           }
         },
         "holds": {
@@ -188,10 +223,10 @@
       "properties": {
         "commands": {
           "type": "boolean",
-          "default": false
+          "default": true
         }
       },
-      "description": "Optional accepted-command notices; absent means off. Proposals are always notified independently. Retained after revocation."
+      "description": "Optional accepted-command notices; a key never set reads on, an explicit off stays off. Proposals are always notified independently. Retained after revocation."
     },
     "permissions": {
       "type": "object",
@@ -302,6 +337,35 @@
         }
       }
     },
+    "figures": {
+      "description": "A key's own figures, as its row shows them on the Dashboard and in Settings (GET /api/v1/keys, GET /api/v1/keys/{id} and GET /api/v1/keys/summary). `active`: the orders the key placed that are still open (a launched proposal of the key included) and the bots it created that run or wait (not finished); a bot's own orders are the bot's, never counted here. `volume` and `realized`: its volume and realized P&L per native currency, never added across currencies (the key card's measures), each ever (`total`) and in the last 24 hours (`last24h`, by the time each thing happened, the key limits' own window). Counts are integers, money decimal strings.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active", "volume", "realized"],
+      "properties": {
+        "active": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["orders", "bots"],
+          "properties": {
+            "orders": { "type": "integer", "minimum": 0 },
+            "bots": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "volume": { "type": "array", "items": { "$ref": "#/$defs/currencyFigure" } },
+        "realized": { "type": "array", "items": { "$ref": "#/$defs/currencyFigure" } }
+      }
+    },
+    "currencyFigure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "total", "last24h"],
+      "properties": {
+        "currency": { "type": "string" },
+        "total": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$" },
+        "last24h": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$" }
+      }
+    },
     "summary": {
       "type": "object",
       "additionalProperties": false,
@@ -335,7 +399,7 @@
           "action": { "enum": ["place", "cancel", "leverage", "propose", "modify", "bot-create", "bot-modify", "bot-stop", "bot-close", "propose-bot"] },
           "orderId": { "type": "string" }, "botId": { "type": "string" }, "proposalId": { "type": "string" }, "sourceId": { "type": "string" }, "instrumentId": { "type": "string" },
           "side": { "enum": ["buy", "sell"] }, "size": { "type": "string" }, "sizeUnit": { "enum": ["base", "quote"] }, "leverage": { "type": "string" }, "edited": { "type": "boolean" },
-          "outcome": { "enum": ["waiting", "launched", "rejected"] }
+          "outcome": { "enum": ["waiting", "launched", "rejected", "withdrawn"] }
         }
       }
     }
