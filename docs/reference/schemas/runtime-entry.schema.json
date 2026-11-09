@@ -1,8 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/runtime-entry.schema.json",
+  "$comment": "0049 adds no journal kind or bot input. Existing walletUntil and wallet rows retain their folds/comparisons; the optional verified credential fact lives in store meta, not a bot input.",
   "title": "Runtime entry",
-  "description": "An entry the runtime itself writes to the ledger beside the engine's inputs (decision 0008 §1.7 and §2.2; a send, 0013 d1; a send's refusal, 0003 Amendment 3 d5; a request, 0010 d4; a funding payment, 0011 d12; an account's source events, 0003b d1; an account write, 0013 S10), as the payload of a journal row (journal-row.schema.json). The engine's fold skips these. Times are milliseconds since the epoch on the runtime's wall clock. Mirrors src/runtime/store/store.ts, RuntimeEntry.",
+  "description": "An entry the runtime itself writes to the ledger beside the engine's inputs (decision 0008 §1.7 and §2.2; a send, 0013 d1; a send's refusal, 0003 Amendment 3 d5; a request, 0010 d4; a funding payment, 0011 d12; an account's source events, 0003b d1; an account write, 0013 S10; a credits fee, 0038 d10, and since amendment 2 the fee with the starter and the starter's row), as the payload of a journal row (journal-row.schema.json). The engine's fold skips these. Times are milliseconds since the epoch on the runtime's wall clock. Mirrors src/runtime/store/store.ts, RuntimeEntry.",
   "oneOf": [
     {
       "title": "Grid runtime step",
@@ -247,7 +248,8 @@
         "cloid": { "type": "string", "pattern": "^0x[0-9a-f]{32}$", "description": "The attempt's client order id, as recorded in its intent.recorded." },
         "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce: above every nonce this account's agent signed before, across restarts." },
         "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline (ms since the epoch): the venue refuses the action after it. The stamp time plus 10 s." },
-        "address": { "type": "string", "pattern": "^0x[0-9a-f]{40}$", "description": "The account (master address) the action trades for; lookups by cloid ask about it." },
+        "address": { "type": "string", "pattern": "^(0x[0-9a-f]{40}|[0-9]+)$", "description": "The account (master address) the action trades for; lookups by cloid ask about it." },
+        "request": { "type": "object", "additionalProperties": false, "required": ["endpoint", "query"], "description": "Unsigned routing/query evidence; never an API key or signature. Absent on nonce-venue sends.", "properties": { "endpoint": { "type": "string", "pattern": "^(spot|equity|(portfolio:)?(usdm|coinm)):(place|cancel)$" }, "query": { "type": "string", "minLength": 1 } } },
         "resigned": { "type": "boolean" },
         "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
       }
@@ -319,7 +321,7 @@
         "cross": { "type": "boolean", "description": "leverage: cross margin (true) or isolated (false)." },
         "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce, above every nonce signed before." },
         "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline: the stamp time plus 10 s." },
-        "address": {"type": "string", "pattern": "^0x[0-9a-f]{40}$"},
+        "address": {"type": "string", "pattern": "^(0x[0-9a-f]{40}|[0-9]+)$"},
         "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
       }
     },
@@ -333,11 +335,12 @@
         "type": { "const": "write" },
         "action": { "const": "margin" },
         "instrumentId": { "type": "string", "minLength": 1 },
-        "usdc": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "margin: USDC added (positive) or removed (negative), on the venue's 0.000001 grid." },
+        "usdc": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "margin: the amount added (positive) or removed (negative), in USDC, or in `asset` where it is given." },
         "long": { "type": "boolean", "description": "margin: the position's side." },
+        "asset": { "type": "string", "minLength": 1, "description": "Additive (BN-ACCOUNT-CAPS, 2026-11-07): the coin `usdc` is counted in where it is not USDC (a Binance position's margin asset). Absent: the market's quote in the catalogue (Hyperliquid's desk names it too since KEY-MARGIN-DID, so a HIP-3 dex's own collateral is not read as USDC)." },
         "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce, above every nonce signed before." },
         "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline: the stamp time plus 10 s." },
-        "address": {"type": "string", "pattern": "^0x[0-9a-f]{40}$"},
+        "address": {"type": "string", "pattern": "^(0x[0-9a-f]{40}|[0-9]+)$"},
         "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
       }
     },
@@ -355,7 +358,7 @@
         "orderId": { "type": "string", "minLength": 1, "description": "0004 amendment 3 d4: the engine's cancel of an imported send (an order placed outside gcx, taken into the book on its first change): its order (ext:<oid>); its answer is the engine's as for any cancel. Absent on a person's cancel of an order outside gcx. Added 2026-10-18; an older build folds the row as a write and ignores it." },
         "nonce": { "type": "integer", "minimum": 0, "description": "The signed nonce, above every nonce signed before." },
         "expiresAfter": { "type": "integer", "minimum": 0, "description": "The signed deadline: the stamp time plus 10 s." },
-        "address": {"type": "string", "pattern": "^0x[0-9a-f]{40}$"},
+        "address": {"type": "string", "pattern": "^(0x[0-9a-f]{40}|[0-9]+)$"},
         "at": { "type": "integer", "minimum": 0, "description": "When it was stamped, after the rate governor granted the write." }
       }
     },
@@ -467,26 +470,74 @@
       "description": "An account enters gcx (decision 0003b d1; roadmap A1): one trading address on a venue, lower case, fixed for good; the same address again is a `source.restored` of this record, never a second one. A master (`master` = its own address) carries its API wallet's name at the venue (0007 d18) and its referral line, `pending` when the person left it checked, else `declined` (0007 d19), and starts waiting for its API wallet; a sub-account or vault names its master's address and starts active. Since 0003b amendment 2 v2 (2026-10-05) the API wallet is its own record, folded from these rows: a master's row adds the main's account (active at once) and, when no API wallet of that main stands, the wallet under this row's id (its name, its referral line, waiting); a master's row written while its wallet stands (the main account added back) adds the account only and carries no name. `requestId`: the connect request that added it. Mirrors src/domain/accounts/source.ts, SourceEvent.",
       "type": "object",
       "additionalProperties": false,
+      "allOf": [{ "if": { "properties": { "venue": { "type": "string", "const": "hyperliquid" } } }, "then": { "properties": { "address": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" }, "master": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" }, "agent": { "type": "string", "maxLength": 16 } } } }, { "if": { "properties": { "venue": { "type": "string", "const": "binance" } } }, "then": { "properties": { "address": { "type": "string", "pattern": "^[1-9][0-9]{0,19}$" }, "master": { "type": "string", "pattern": "^[1-9][0-9]{0,19}$" } } } }],
       "required": ["type", "id", "venue", "kind", "address", "master", "label", "at"],
       "properties": {
         "type": { "const": "source.added" },
         "id": { "type": "string", "minLength": 1 },
-        "venue": { "const": "hyperliquid" },
+        "venue": { "type": "string", "minLength": 1, "description": "hyperliquid; additive (0037 §10 d2, 2026-10-22): any other venue, folded and held by a build that has no adapter for it (binance: a decimal user id as its address)." },
         "kind": { "enum": ["master", "subAccount", "vault"] },
-        "address": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" },
-        "master": { "type": "string", "pattern": "^0x[0-9a-f]{40}$" },
+        "address": { "type": "string", "minLength": 1 },
+        "master": { "type": "string", "minLength": 1 },
         "label": { "type": "string", "minLength": 1, "maxLength": 50 },
-        "agent": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "agent": { "type": "string", "minLength": 1, "maxLength": 64, "description": "Hyperliquid: the API wallet's name (at most 16). A key venue (0037 §10 d3): the key's id in the key store, never the API key." },
         "referral": { "enum": ["pending", "declined"] },
         "requestId": { "type": "string", "minLength": 1 },
         "at": { "type": "integer", "minimum": 0 }
       }
     },
     {
+      "title": "Source position mode",
+      "description": "Additive (0037 B5): the confirmed position mode of one Binance account and futures family. Older builds skip this source kind; an absent fact is unknown. A mode observation sends no order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "family",
+        "dual",
+        "at"
+      ],
+      "properties": {
+        "type": {
+          "const": "source.position-mode"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "enum": [
+            "usdm",
+            "coinm"
+          ]
+        },
+        "dual": {
+          "type": "boolean"
+        },
+        "at": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    {
+      "title": "Source BNB fees",
+      "description": "Additive (BN-ACCOUNT-CAPS, 2026-11-07): Pay fees in BNB of one Binance account as Binance said it on a read: spot (spotBNBBurn) and, where the account has futures, USD-M (feeBurn). Written only when it changed. No row means never read. It sends nothing by itself.",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "spot", "at"],
+      "properties": { "type": { "const": "source.bnb-fees" }, "id": { "type": "string", "minLength": 1 }, "spot": { "type": "boolean" }, "usdm": { "type": "boolean" }, "at": { "type": "integer", "minimum": 0 } }
+    },
+    {
+      "title": "Source keep-alive",
+      "description": "Additive (0037 amendment 5): the box Keep my API key alive of one Binance account, set by the person or a trading key. No row means on (every account added before it). It sends no order by itself.",
+      "type": "object", "additionalProperties": false, "required": ["type", "id", "on", "at"],
+      "properties": { "type": { "const": "source.keep-alive" }, "id": { "type": "string", "minLength": 1 }, "on": { "type": "boolean" }, "by": { "type": "string", "minLength": 1, "maxLength": 32, "description": "Additive: the kind of actor that changed it (person). Absent on a row before it." }, "at": { "type": "integer", "minimum": 0 } }
+    },
+    {
       "title": "Source active",
       "description": "A master's API wallet was seen listed by the venue (`extraAgents`, 0007 d17.8): from now on gcx trades the accounts under it (`id`: the wallet's, its master's row id); the start-up checks still read the wallet at every start (0013 d7).",
       "type": "object", "additionalProperties": false, "required": ["type", "id", "at"],
-      "properties": { "type": { "const": "source.active" }, "id": { "type": "string", "minLength": 1 }, "at": { "type": "integer", "minimum": 0 } }
+      "properties": { "type": { "const": "source.active" }, "id": { "type": "string", "minLength": 1 }, "agent": { "type": "string", "minLength": 1, "maxLength": 64, "description": "Additive (0037 §10 d3, 2026-10-22): a key venue's Replace key, the new key's id in the key store, never the API key. Absent on every row before it." }, "at": { "type": "integer", "minimum": 0 } }
     },
     {
       "title": "Source renamed",
@@ -572,7 +623,43 @@
         }
       ]
     },
-    {"title": "P11 bot liquidation approach", "type": "object", "additionalProperties": false, "required": ["type", "botId", "sourceId", "instrumentId", "botType", "near", "price", "liquidationPrice", "at"], "properties": {"type": {"const": "runtime.bot-risk"}, "botId": {"type": "string"}, "sourceId": {"type": "string"}, "instrumentId": {"type": "string"}, "botType": {"enum": ["grid", "dca"]}, "venue": {"type": "string"}, "near": {"type": "boolean"}, "price": {"type": "string"}, "liquidationPrice": {"type": "string"}, "size": {"type": "string"}, "at": {"type": "integer"}}}
+    {
+      "title": "Credits fee",
+      "description": "goodcryptoX's fee on one fill of an order this installation placed on an exchange without a builder fee (decision 0038 d2.6, d10), written in the same transaction as the fill, so a crash leaves both or neither; never an account's, so removing an account or erasing a month keeps it. Added 2026-10-22; an older build skips it.",
+      "$ref": "credits-fee.schema.json"
+    },
+    {
+      "title": "Credits fee with the starter",
+      "description": "goodcryptoX's fee on one fill on a credit exchange since the starter volume (decision 0038 amendment 2, S2), written in the fill's own transaction like the credits fee: n the fill's whole value in USD, free the part of it the starter's CEX volume paid (at most n), f the fee on the rest at 0.03% less discountPct percent, half-even to 8 decimals (src/domain/credits/fee.ts, faultV2, checks what a schema cannot see). The installation's, never an account's. Mirrors CreditsFeeV2. Added 2026-10-30; an older build skips it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "venue", "fill", "n", "free", "discountPct", "f", "time", "at"],
+      "properties": {
+        "type": { "const": "credits.fee.v2" },
+        "venue": { "type": "string", "minLength": 1 },
+        "fill": { "$ref": "credits-fee-row.schema.json#/properties/fill" },
+        "n": { "$ref": "credits-fee.schema.json#/$defs/amount" },
+        "free": { "$ref": "credits-fee.schema.json#/$defs/amount" },
+        "discountPct": { "enum": ["0", "5", "10", "20", "30", "40", "50"], "description": "The discount in percent: 10 × a code's steps, or 0021 amendment 5's 5." },
+        "f": { "$ref": "credits-fee-row.schema.json#/properties/f" },
+        "time": { "type": "integer", "minimum": 0, "description": "The exchange's time of the fill, milliseconds since the epoch." },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {
+      "title": "Credits starter",
+      "description": "The starter's CEX volume granted to this installation, in USD (decision 0038 amendment 2, S2): written once, just before the first credits fee with the starter, in its transaction; the fold rebuilds what is left from it and every such fee's free. The installation's. Added 2026-10-30; an older build skips it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "remaining", "at"],
+      "properties": {
+        "type": { "const": "credits.starter" },
+        "remaining": { "$ref": "credits-fee.schema.json#/$defs/amount" },
+        "at": { "type": "integer", "minimum": 0 }
+      }
+    },
+    {"title": "P11 bot liquidation approach", "type": "object", "additionalProperties": false, "required": ["type", "botId", "sourceId", "instrumentId", "botType", "near", "price", "liquidationPrice", "at"], "properties": {"type": {"const": "runtime.bot-risk"}, "botId": {"type": "string"}, "sourceId": {"type": "string"}, "instrumentId": {"type": "string"}, "botType": {"enum": ["grid", "dca"]}, "venue": {"type": "string"}, "near": {"type": "boolean"}, "price": {"type": "string"}, "liquidationPrice": {"type": "string"}, "size": {"type": "string"}, "at": {"type": "integer"}}},
+    {"type": "object", "additionalProperties": false, "required": ["type", "requestId", "destinationRevision", "at"], "properties": {"type": {"const": "referral.payout.request"}, "requestId": {"type": "string", "pattern": "^[0-9a-f]{32}$"}, "destinationRevision": {"type": "integer", "minimum": 1}, "at": {"type": "integer", "minimum": 0}}, "description": "Write-ahead referral payout intent. Committed with the latest-id meta row before sending; recovered by an owner-scoped read, never a new request."}
   ],
   "$defs": {
     "reason": {

@@ -7,6 +7,18 @@
   "additionalProperties": false,
   "required": ["id", "kind", "venue", "pair", "base", "quote", "baseId", "quoteId", "szDecimals", "minNotional", "maxLeverage", "marginModes", "isDelisted", "priceRule", "rungs", "volume24h", "change24h"],
   "properties": {
+    "underlyingSchedule": { "type": "object", "required": ["updateTime", "stale", "sessions"], "additionalProperties": false, "properties": { "updateTime": {"type":"integer"}, "stale":{"type":"boolean"}, "sessions":{"type":"array", "items":{"type":"object", "additionalProperties":false, "required":["startTime","endTime","type"], "properties":{"startTime":{"type":"integer"},"endTime":{"type":"integer"},"type":{"type":"string"}}}} } },
+    "selectorKind": { "enum": ["tradfi", "stocks"], "description": "Effective selector kind is selectorKind ?? kind; absent retains the execution classification. No producer sets it until B10.2, including TradFi migration. Old requests exclude Stocks unless selectorKinds opts in." },
+    "sizeStep": { "$ref": "#/$defs/decimal", "not": { "type": "string", "pattern": "^0+(\\.0+)?$" }, "description": "Exact lot step, including non-power-of-ten share lots. Absent: 10^-szDecimals." },
+    "fractionable": { "type": "boolean", "description": "Venue fractional-share support; absent unknown." },
+    "fractionableEh": { "type": "boolean", "description": "Venue fractional-share support outside regular hours; absent unknown." },
+    "extendedSession": { "type": "boolean", "description": "Venue extended-session support; absent unknown, no session choice inferred." },
+    "overnightSupported": { "type": "boolean", "description": "Venue overnight support; absent unknown." },
+    "contractType": { "type": "string", "description": "Native contract type; TRADIFI_PERPETUAL selects the TradFi picker kind while arithmetic remains perpetual." },
+    "underlyingType": { "type": "string", "description": "Native underlying category, when supplied by the venue." },
+    "marginAsset": { "type": "string", "description": "Native margin currency; not inferred from the market name." },
+    "deliveryDate": { "type": "integer", "minimum": 0, "description": "Dated contract settlement time, UTC epoch milliseconds. Omitted for perpetuals." },
+    "contract": { "$ref": "contract.schema.json" },
     "id": { "type": "string", "minLength": 1, "description": "The venue's instrument id, with the dex prefix on HIP-3 (xyz:SPCX)." },
     "kind": { "enum": ["perp", "spot"] },
     "venue": { "type": "string", "minLength": 1 },
@@ -18,10 +30,10 @@
     "dex": { "type": "string", "description": "HIP-3 dex name." },
     "szDecimals": { "type": "integer", "minimum": 0, "description": "Sizes are floored to 10^-szDecimals (a count, not money)." },
     "minNotional": { "$ref": "#/$defs/decimal", "description": "Minimum order value in quote; \"0\" = none." },
-    "maxLeverage": { "$ref": "#/$defs/decimal" },
+    "maxLeverage": { "anyOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }], "description": "Maximum leverage from venue facts; null until known, never an invented 1x." },
     "marginModes": { "type": "array", "uniqueItems": true, "items": { "enum": ["cross", "isolated"] }, "description": "[\"isolated\"] on an isolated-only instrument; [] on spot." },
     "isDelisted": { "type": "boolean" },
-    "limitBandPct": { "$ref": "#/$defs/decimal", "description": "Added 2026-10-04 (ruling 158): the exchange refuses a limit order priced further than this percent from its reference price (Hyperliquid perpetuals: 80; venue-caps.schema.json limitBandPct). The DCA form warns of a planned order beyond it, less a 1 % cushion, before Launch; the runtime refuses such a bot. Absent: no bound (spot)." },
+    "limitBandPct": { "$ref": "#/$defs/decimal", "description": "Added 2026-10-04 (ruling 158): the exchange refuses a limit order priced further than this percent from its reference price (Hyperliquid perpetuals: 80; venue-caps.schema.json limitBandPct). The DCA form warns of a planned order beyond it, less a 1% cushion, before Launch; the runtime refuses such a bot. Absent: no bound (spot)." },
     "priceRule": {
       "type": "object",
       "additionalProperties": false,
@@ -39,8 +51,9 @@
         "properties": { "nSigFigs": { "enum": [2, 3, 4, 5, null] }, "mantissa": { "enum": [1, 2, 5] } }
       }
     },
-    "volume24h": { "$ref": "#/$defs/decimal", "description": "24-hour volume, a quote notional." },
-    "change24h": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "24-hour Hyperliquid mark-price change versus prevDayPx, percent; used by the selector column, sorts and Gainers/Losers (MH ruling 373)" }
+    "lastPrice": { "anyOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }], "description": "Last traded price in quote; Binance fills it while statistics are read, and Hyperliquid rows omit it. Absent/null until known. Used to value 24h volume in the base currency on display." },
+    "volume24h": { "anyOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }], "description": "24-hour volume, a quote notional; null until read." },
+    "change24h": { "type": ["string", "null"], "pattern": "^-?\\d+(\\.\\d+)?$", "description": "24-hour change, percent; Hyperliquid mark-price change versus prevDayPx. Null until read; never an invented zero. Used by the selector column, sorts and Gainers/Losers (MH ruling 373)." }
   },
   "$defs": {
     "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
@@ -62,7 +75,10 @@
             "types": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["market", "gc-market", "limit", "stop-market", "stop-limit", "trailing-stop", "trailing-stop-limit", "trailing-reverse", "trailing-reverse-limit"] } },
             "flags": { "type": "array", "uniqueItems": true, "items": { "enum": ["postOnly", "reduceOnly", "improveOnly"] } },
             "maxTimeInForce": { "type": "string", "pattern": "^\\d+$", "description": "The venue's longest time in force, milliseconds." },
-            "trailStartImproveOnly": { "type": "boolean" }
+            "trailStartImproveOnly": { "type": "boolean" },
+            "builderFee": { "type": "boolean", "description": "Added 2026-10-26 (0037 §10 d1): our fee is taken on each order as the exchange's builder fee (Hyperliquid: true); false where the exchange has none and the fee is paid with credits. Optional; when absent it is true." },
+            "defaultMarket": { "type": "string", "minLength": 1, "description": "Added 2026-11-07 (FIRST-MARKET): the instrument id the Trade page opens on when nothing is remembered for the venue or the remembered market is no longer listed (goodcryptoX's default_symbol), for example, Hyperliquid `BTC` (the main dex's BTC perpetual), Binance `binance:spot:BTCUSDT`. Optional; when absent, or not in the list, the list's first row." },
+            "feeRates": { "type": "object", "additionalProperties": false, "properties": { "spot": { "type": "object", "additionalProperties": false, "required": ["maker", "taker"], "properties": { "maker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }, "taker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" } } }, "perp": { "type": "object", "additionalProperties": false, "required": ["maker", "taker"], "properties": { "maker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }, "taker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" } } } }, "description": "Added 2026-10-26 (0040 amendment d28.4): the exchange's published base maker and taker fee rates per market kind, fractions, shown until the account's own rates are read. Optional; absent where the exchange serves none." }
           }
         },
         "rows": { "type": "array", "items": { "$ref": "#" } }

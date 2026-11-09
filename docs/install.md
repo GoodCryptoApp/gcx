@@ -15,7 +15,7 @@ macOS 13.5 or later, Apple silicon or Intel: one file, `gcx-<version>-<build>.dm
 
 From then on:
 
-- **The dot on the goodcryptoX mark** tells you at a glance how things stand. **Green**: goodcryptoX is running and nothing waits for you. **Yellow**: something to look at, no rush (for example, your API wallet expires in a month). **Red**: something needs you now (for example, your API wallet expires within 24 hours, orders were not placed and wait for you, or the disk is full). **No dot and a dimmed mark**: you stopped goodcryptoX. The first line of the menu repeats it in the dot's colour: "goodcryptoX is running" when all is well; when the dot is yellow or red it says what is happening ("2 orders need a look: …", "Your API wallet expires in 5 hours"); choose such a line to open the Dashboard.
+- **The dot on the goodcryptoX mark** tells you at a glance how things stand. **Green**: goodcryptoX is running and nothing waits for you. **Yellow**: something to look at, no rush (for example, your API key or wallet expires in a month). **Red**: something needs you now (for example, your API key or wallet expires within 24 hours, orders were not placed and wait for you, or the disk is full). **No dot and a dimmed mark**: you stopped goodcryptoX. The first line of the menu repeats it in the dot's colour: "goodcryptoX is running" when all is well; when the dot is yellow or red it says what is happening ("2 orders need a look: …", "Key expires within 24 hours"); choose such a line to open the Dashboard.
 - **goodcryptoX in the menu bar** shows whether it runs, **Open the dashboard** (a new browser tab, signed in; double-clicking the app does the same), **Copy sign-in link** (with the grey line "to open the dashboard in another browser": it puts a one-time link on the clipboard), **Reset passkey…** once the panel is protected ([Signing in](panel/signing-in.md#recovering-access)), the version ("Version 3.0.0"; Settings › General › Installation shows the build number in brackets after it), and **Quit goodcryptoX**.
 - **goodcryptoX starts when you log in** and opens no browser then. To turn that off: Settings › General › **Start goodcryptoX when I log in** in the panel, or System Settings › General › Login Items; each shows what the other set.
 - If goodcryptoX stops unexpectedly it is started again within about 10 seconds.
@@ -104,24 +104,7 @@ volumes:
 
 **4. Open the container's log.** At the first start it shows how to reach the panel and how to sign in.
 
-**5. Sign in.** On your computer, open Terminal (PowerShell on Windows) and run the tunnel line from the log, with your server's user and address, then its password if it asks:
-
-```
-ssh -N -L 8128:127.0.0.1:8128 <user>@<your server's address>
-```
-
-Keep it open while you use the panel, and run it again at every later visit. Then run `gcx open --print` in the container's terminal (in the server's own terminal: `docker exec gcx gcx open --print`) and open the link it prints in your browser within 60 seconds. goodcryptoX opens at `http://localhost:8128/gcx`.
-
-<details>
-<summary>If this does not work</summary>
-
-Do it all from your computer over SSH. Keep the tunnel open in one Terminal window; in a second one, run `ssh <user>@<your server's address>`, then `docker exec gcx gcx open --print` (with `sudo` where Docker needs it), and open the printed link within 60 seconds. If the log names a port other than 8128, use that number on both sides of the tunnel line and in the address.
-
-</details>
-
-<!-- 0014: unhide when 0014 ships. Replace step 5 above and its fold with the text below, then delete this line and the closing mark.
-
-**5. Sign in.** At the first start, the log shows a link and a QR code. Scan the code with your phone, or open the link in your computer's browser, and create a passkey with Face ID or Touch ID. The link works once, for 10 minutes: if it has expired, restart the container, or run `gcx pair` in the container's terminal for a fresh one. The link is a key: never share it or paste it anywhere.
+**5. Sign in.** At the first start, the log shows a link. Open it in your computer's or phone's browser and create a passkey with Face ID or Touch ID. The link works once, for 10 minutes; for a fresh one, restart the container or run `gcx pair` in the container's terminal (`docker exec gcx gcx pair` on the machine). If my.goodcrypto.app says Offline since, the link's 10 minutes have passed and no device is paired yet: get a fresh link and open it within 10 minutes. The link is a key: never share it or paste it anywhere.
 
 The link goes through goodcryptoX's relay.
 
@@ -131,7 +114,6 @@ The link goes through goodcryptoX's relay.
 Reach the panel through a tunnel instead. On your computer, open Terminal and run the tunnel line from the log, with your server's user and address, then enter its password, and keep it open: `ssh -N -L 8128:127.0.0.1:8128 <user>@<your server's address>`. Then run `gcx open --print` in the container's terminal (in the server's own terminal: `docker exec gcx gcx open --print`) and open the link it prints in your browser within 60 seconds. goodcryptoX opens at `http://localhost:8128/gcx`.
 
 </details>
--->
 
 Low-cost and even free servers exist; [Free and low-cost servers](install/server.md#free-and-low-cost-servers) explains the options and the catches.
 
@@ -155,32 +137,20 @@ At every start goodcryptoX prepares its data folder, keeps its port (8128 the fi
 
 ### Opening the panel
 
-<!-- 0014: unhide when 0014 ships. Put the text below in place of the next paragraph, its two commands and "It prints the tunnel line again under the link.", then delete this line and the closing mark.
+At the first start, while no device is paired, the log shows a link first. Open it in your computer's or phone's browser and create a passkey with Face ID or Touch ID: from then on that device opens the panel from a bookmark, see [Devices](panel/devices.md). The link works once, for 10 minutes; for a fresh one, restart the container or run `gcx pair` in the container's terminal (`docker exec gcx gcx pair` on the machine). If my.goodcrypto.app says Offline since, the link's 10 minutes have passed and no device is paired yet: get a fresh link and open it within 10 minutes. The log's link is a key: never paste it.
 
-At the first start, while no device is paired, the log shows a link and its QR code first. Open the link in your computer's browser, or scan the code with your phone, and create a passkey with Face ID or Touch ID: from then on that device opens the panel from a bookmark, see [Devices](panel/devices.md). The link works once, for 10 minutes; for a fresh one, restart the container or run `gcx pair` in the container's terminal (`docker exec gcx gcx pair` on the machine). The log's link is a key: never paste it.
+<details>
+<summary>For engineers</summary>
 
-**For engineers:** the line under it reaches the panel without our relay, through a private SSH tunnel from your computer: `ssh -N -L 8128:127.0.0.1:8128 <user>@<your NAS or server>`, kept open, then `docker exec gcx gcx open --print` on the machine and the printed link opened within 60 seconds at `http://localhost:8128/gcx` (another port in the log: the same number at both ends).
--->
-
-The panel listens on the machine itself only (`127.0.0.1`): nothing on your network or the internet can reach it. From your computer, open a private SSH tunnel and keep it open while you use the panel:
-
-```
-ssh -N -L 8128:127.0.0.1:8128 <user>@<your NAS or server>
-```
-
-Then open `http://localhost:8128/gcx` in your browser. If the log names another port, use it on both sides: the number must be the same at both ends. To sign in, print a one-time link on the machine and open it in that browser within 60 seconds:
-
-```
-docker exec gcx gcx open --print
-```
-
-It prints the tunnel line again under the link.
+The line under it reaches the panel without our relay, through a private SSH tunnel from your computer: `ssh -N -L 8128:127.0.0.1:8128 <user>@<your NAS or server>`, kept open, then `docker exec gcx gcx open --print` on the machine and the printed link opened within 60 seconds at `http://localhost:8128/gcx` (another port in the log: the same number at both ends).
 
 - **Every visit to the panel needs the tunnel:** connecting an account, the passkey, Telegram, creating a bot, renewing the API wallet every 180 days. Once an account and Telegram are set up, Telegram's messages and buttons work without it.
 - **A network address such as `http://192.168.1.20:8128` does not work, by design:** nothing listens there, and a passkey works only at `localhost`.
 - **The passkey** you make there is kept by your computer and belongs to this goodcryptoX: the goodcryptoX on your Mac and the one on your NAS are two entries when your browser asks which one.
 - **On a Synology:** SSH is off until you turn it on (Control Panel › Terminal & SNMP › Terminal › Enable SSH service); only an administrator account may sign in over SSH; and `docker` commands need `sudo`. Whether your DSM version lets the tunnel through has not been checked yet.
-- **A lost passkey:** on the machine, `docker exec gcx gcx passkey reset` (the lock screen shows this line, with Copy), with `sudo` where Docker needs it. It prints a fresh sign-in link.
+- **A lost passkey:** on the machine, `sudo docker exec gcx gcx passkey reset` (the lock screen shows this line, with Copy). It prints a fresh sign-in link.
+
+</details>
 
 ### Stopping, updating and removing
 
@@ -207,7 +177,7 @@ If you restore `gcx-data` without its `gcx-secret`, goodcryptoX starts with your
 sudo mkdir -p /volume1/docker/gcx && sudo chown 1000:1000 /volume1/docker/gcx && sudo chmod 700 /volume1/docker/gcx
 ```
 
-then, in `compose.yaml`, replace `gcx-data:/data` with `/volume1/docker/gcx:/data`. Keep `gcx-secret` as it is, or give it a folder of its own the same way, and back up both. If `docker logs gcx` says `gcx-unlock could not be written (EACCES)` or `could not be read (EACCES)`, the folder is not goodcryptoX's user's: run the ownership line above on it and start goodcryptoX again.
+then, in `compose.yaml`, replace `gcx-data:/data` with `/volume1/docker/gcx:/data`. Keep `gcx-secret` as it is, or give it a folder of its own the same way, and back up both. If `docker logs gcx` says `gcx-unlock could not be written (EACCES)` or `could not be read (EACCES)`, the folder is not goodcryptoX's user's: run the ownership line above on it and start goodcryptoX again. If `docker logs gcx` says other users may be able to read the data folder, run the ownership line above on it and start goodcryptoX again.
 
 ## Moving to another machine
 
@@ -215,7 +185,7 @@ goodcryptoX moves as one encrypted file: your ledger (orders, bots, history), se
 
 **First install goodcryptoX on the other machine and open it, but do not connect an account there yet.**
 
-**On the old machine:** Settings › General › **Move or remove goodcryptoX** › **Move to another machine**, then **Export**. Choose a passphrase and type it again. Keep the locked file the browser saves; a copy remains in goodcryptoX's data folder as `gcx-export-<date>.gcx` (after **Bring it back** or **Start fresh here**, inside `moved-<date>/` with the rest of the old data). From that moment this copy places no new orders and sees no executions until you bring the file to the other machine. Then everything continues there by itself. Once the file is saved and checked, goodcryptoX deletes its own key files here: the keys then exist only in the export file (the download and its copy in the data folder), which opens only with its passphrase. A failed export leaves the folder as it was.
+**On the old machine:** Settings › General › **Move or remove goodcryptoX** › **Move to another machine**, then **Export**. Choose a passphrase and type it again. goodcryptoX saves the locked file `gcx-export-<date>.gcx` on that machine and shows where, with Copy: in your Downloads folder on a computer, in the data folder on a server or a NAS (`/data` in the container). The file never leaves the machine by itself, and only the machine makes it: on a phone or another device the page has no Export and says to press it on that computer. On a NAS or a server no page has Export: each shows the line to paste in the machine's terminal over SSH, which tells you where the file is and how to copy it to your computer. From that moment this copy places no new orders and sees no executions until you bring the file to the other machine. Then everything continues there by itself. Once the file is saved and checked, goodcryptoX deletes its own key files here: the keys then exist only in the export file, which opens only with its passphrase. A failed export leaves the folder as it was.
 
 **On the new machine:** Settings › General › Move or remove goodcryptoX › **Bring goodcryptoX from another machine** (or its card on the Dashboard), choose the file, enter its passphrase and press **Import**. goodcryptoX restarts, and this browser stays signed in. Your accounts and bots continue on the new machine with the same API wallets: nothing to approve. Two installations cannot be merged: with accounts connected, the Bring page links to Export first.
 
@@ -223,9 +193,9 @@ goodcryptoX moves as one encrypted file: your ledger (orders, bots, history), se
 
 For the whole path, use [Moving goodcryptoX](install/moving.md). On a NAS or VPS, the same Bring form receives the file through the panel's private connection; no container file copy is needed.
 
-**From a terminal:** `gcx export [<file>]` and, with goodcryptoX stopped, `gcx import <file>`: each asks for the passphrase in the terminal, never on the command line.
+**From a terminal:** `gcx export [<file>]` (running or stopped; in Docker `sudo docker exec -it gcx gcx export`, then the line it prints, `sudo docker cp gcx:/data/<file> . && sudo chown $USER <file>`, copies the file out of the container and makes it yours) and, with goodcryptoX stopped, `gcx import <file>`: each asks for the passphrase in the terminal, never on the command line.
 
-**Keep the file and its passphrase safe.** Together they hold your API wallet keys: they can trade your accounts, not withdraw. goodcryptoX sends the file nowhere. If someone may have it, replace the API wallet (**Replace API wallet** in Settings › Exchanges › Hyperliquid › Edit account) from the goodcryptoX you keep. If you forget the passphrase, connect each account again on the new machine (new API wallets); your funds are not touched.
+**Keep the file and its passphrase safe.** Together they hold your keys: they can trade your accounts, not withdraw. goodcryptoX sends the file nowhere. If someone may have it, replace the API wallet (**Replace API wallet** in Settings › Exchanges › Hyperliquid › Edit account) from the goodcryptoX you keep. If you forget the passphrase, connect each account again on the new machine (new API wallets); your funds are not touched.
 
 **What the move does not reach:** A backup made before the export, or the same file brought in on a second machine or back here, runs the same API wallets twice: keep one copy running; removing or replacing the API wallet from the one you keep ends the other. A backup here means any copy of the old data folder: a disk image, a cloned virtual machine, a NAS snapshot.
 
@@ -243,6 +213,6 @@ The app carries the `gcx` commands (`status`, `open`, `stop`, `install`, `uninst
 /Applications/gcx.app/Contents/MacOS/node /Applications/gcx.app/Contents/Resources/app/gcx.mjs status
 ```
 
-A lost passkey is reset from the menu bar, not from Terminal: **Reset passkey…** asks for your Mac's password first ([Signing in](panel/signing-in.md#recovering-access)). On a NAS or a VPS, `docker exec gcx gcx passkey reset` on the machine does it ([above](#opening-the-panel)).
+A lost passkey is reset from the menu bar, not from Terminal: **Reset passkey…** asks for your Mac's password first ([Signing in](panel/signing-in.md#recovering-access)). On a NAS or a VPS, `sudo docker exec gcx gcx passkey reset` on the machine does it ([above](#opening-the-panel)).
 
 Use the menu's **Quit goodcryptoX** to stop goodcryptoX: a `gcx stop` typed while the menu-bar item watches a goodcryptoX it did not start itself is undone by a restart.

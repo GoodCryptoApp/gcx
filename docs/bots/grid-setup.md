@@ -2,9 +2,11 @@
 
 <!-- Source: the setup section of https://docs.goodcrypto.app/perp-dexs/bots/grid-bot, adapted to the 3.1 form. Current dark picture requests are in DOCS-STYLE-BOTS-HANDBACK.md. -->
 
+You set up goodcryptoX's Grid bot on the Trade page, in the form beside the chart: its start, mode, range, levels, sizing, Follow and stops. It can start at once, at a price or on a signal from RSI, MACD, Bollinger bands, a price move or the TA rating.
+
 On **Trade**, choose your account and pair, select **Bots**, then **Grid**. Work down the form and check the chart as you go.
 
-Tick **Only this bot trades BTC.USDC perp in this account** if you intend only this bot to trade that instrument there. The instrument changes with your pair. It does not prevent trades elsewhere; [Running a Grid](grid-running.md#when-the-bot-needs-you) explains what to do if the position needs review.
+**Only this bot trades this pair** is ticked for a new bot unless a position is already open on that perp. Leave it ticked if nobody else will trade this pair in this account, neither you nor another bot. When another bot is on the pair the box is unticked and a short line under it names that bot (with "and others" when there are several); if that bot has it ticked, launching this one turns it off for both. It does not prevent trades elsewhere; [Running a Grid](grid-running.md#when-the-bot-needs-you) explains what to do if the position needs review.
 
 ## Entry condition
 
@@ -16,7 +18,7 @@ Tick **Only this bot trades BTC.USDC perp in this account** if you intend only t
 
 {% include "../../.gitbook/includes/signals.md" %}
 
-![The Grid form with Signal chosen, the arrow at Signal](../pictures/grid/setup-1-entry.webp)
+<figure><img src="../pictures/grid/setup-1-entry.webp" alt="The Grid form with Signal chosen, the arrow at Signal" width="430"><figcaption></figcaption></figure>
 
 ## Grid mode
 
@@ -28,7 +30,7 @@ After selecting a signal, check **Grid mode**. Any mode can wait for either sign
 
 **Grid top** and **Grid bottom** define your range. Set prices in the quote currency, or percentages from the starting price. At 100, a range of +2% and −2% gives 98–102. Those are the initial percentage settings; choose the range for the market you want to trade.
 
-![The Grid form, the arrow at Grid top, with Levels and Between levels below](../pictures/grid/setup-2-range-levels.webp)
+<figure><img src="../pictures/grid/setup-2-range-levels.webp" alt="The Grid form, the arrow at Grid top, with Levels and Between levels below" width="430"><figcaption></figcaption></figure>
 
 For example, a Price entry of 95 with a ±2% range gives 93.10–96.90. Use prices instead if you want the bounds to stay at specific chart levels regardless of the starting market.
 
@@ -54,11 +56,11 @@ Choose % for consistent percentage gaps, or the quote currency for fixed price g
 
 **Profit in the coin**, on spot, keeps profit in the coin by selling less. A profit of 0.001 BTC stays as BTC. Choose it when you want to accumulate the coin.
 
-![The spot Grid form, the arrow at Profit in the coin](../pictures/grid/setup-3b-spot-sizing.webp)
+<figure><img src="../pictures/grid/setup-3b-spot-sizing.webp" alt="The spot Grid form, the arrow at Profit in the coin" width="430"><figcaption></figcaption></figure>
 
 **Reinvest** increases future openings with profit; losses make them smaller. Resting openings keep their sizes until they trade. With % of account it stays on: account value already includes the result. Check the preview after changing sizing. A closing order keeps its opening's quantity unless Profit in the coin reduces it. Review the coin amount as well as its quote value before choosing your unit. Choose quote sizing if you want each planned opening to spend the same amount, or coin sizing if the quantity matters more to you.
 
-![The Grid form, the arrow at Investment](../pictures/grid/setup-3-sizing.webp)
+<figure><img src="../pictures/grid/setup-3-sizing.webp" alt="The Grid form, the arrow at Investment" width="430"><figcaption></figcaption></figure>
 
 ## Trailing exits and Follow
 
@@ -68,7 +70,7 @@ Choose % for consistent percentage gaps, or the quote currency for fixed price g
 
 **Up to** limits following above Grid top; **Down to** limits it below Grid bottom. Choose a price or percentage: top 100 with Up to 10% gives 110. The limit stays at that price as the grid moves. Empty means no limit; switching Follow off keeps the current range. At a limit, trading continues in the last range. For example, reaching Up to 110 does not close the position or cancel the grid. Use a stop if you want a price to end the strategy.
 
-![The Grid form with Trailing exits and both Follow switches on, the arrow at Trailing exits](../pictures/grid/setup-4-trailing-follow.webp)
+<figure><img src="../pictures/grid/setup-4-trailing-follow.webp" alt="The Grid form with Trailing exits and both Follow switches on, the arrow at Trailing exits" width="430"><figcaption></figcaption></figure>
 
 > Following against your grid's direction can close a level at a loss; either direction can do so on Neutral. Review the estimated loss and funds needed, especially with coin sizing at higher prices.
 
@@ -76,7 +78,7 @@ Choose % for consistent percentage gaps, or the quote currency for fixed price g
 
 **Stop above** and **Stop below** stop at a percentage beyond Grid top or bottom. With Follow, the distance is beyond Up to or Down to: Up to 150 plus Stop above 5% gives 157.50. That stop stays fixed while the grid follows. A direction following without a limit has no price stop; set its Follow limit first. Check the stop price on the chart. Set the stop for the point where you want the trading plan to end, and check that liquidation would not come first.
 
-![The Grid form, the arrow at Stop above](../pictures/grid/setup-5-stops.webp)
+<figure><img src="../pictures/grid/setup-5-stops.webp" alt="The Grid form, the arrow at Stop above" width="430"><figcaption></figcaption></figure>
 
 **Close position on stop** decides whether a price stop, your Stop or an error also closes the position at market. Unticked, the remaining position stays yours to manage.
 
@@ -100,12 +102,34 @@ Actions you take yourself send no message when their result is there at once. La
 
 **Position** is the maximum possible exposure the grid can build. On perpetuals, check it alongside **Approx. margin** and **Approx. liquidation**, including the [margin warning](grid.md#margin-and-liquidation).
 
-![The Grid form with the liquidation warning, the arrow at Launch](../pictures/grid/setup-6-launch.webp)
+<figure><img src="../pictures/grid/setup-6-launch.webp" alt="The Grid form with the liquidation warning, the arrow at Launch" width="300"><figcaption></figcaption></figure>
 
 On spot, **Funds needed** shows coins and quote currency, with the starting purchase. **You hold** and **Use them** let free coins replace part of that purchase. Starting fees are included. Review both currencies before launching.
 
-![The spot Grid form, the arrow at Use them](../pictures/grid/setup-7-spot-funds.webp)
+<figure><img src="../pictures/grid/setup-7-spot-funds.webp" alt="The spot Grid form, the arrow at Use them" width="430"><figcaption></figcaption></figure>
 
 Levels below the exchange minimum are not placed. Increase Investment or use fewer levels if needed; the warning still offers **Launch anyway**.
 
 Add a **Bot name** and **Note**, review the summary under **Launch**, then launch. Manual starts now; Price and Signal wait. Open the bot to [monitor it and change settings](grid-running.md).
+
+## Coin-margined contracts and hedge mode
+
+On coin-margined inverse contracts, Level size defaults to **Contracts**, with the settlement coin and USD also available. The bot rounds each level down to the contract step at that level's price. Prices are in USD; Investment, margin, PnL and the money amounts in Take profit, Stop loss and Max drawdown are in the settlement coin.
+
+On a hedge-mode account, a Long grid trades the Long position and a Short grid the Short position. A Neutral grid can hold both. Each closing order uses the same position side as its opening, and Close position on stop closes both holdings.
+
+If the account’s API key expires in under 24 hours, the form warns before launching. **Launch anyway** creates the Grid bot; its automatic openings still wait. Exactly 24 hours remaining does not ask for this confirmation.
+
+## Questions
+
+### How much money does a Grid bot need?
+
+Its **Investment**, the planned orders' total, or a share of your account with **% of account**. On perpetuals, check **Approx. margin**; on spot, **Funds needed** shows coins and quote currency with the starting purchase.
+
+### Can the grid follow the price?
+
+Yes: **Follow up** and **Follow down** move the range when price leaves it, up to a limit you choose. Following against the grid's direction can close a level at a loss.
+
+### When does a Grid bot stop?
+
+At a price with **Stop above** and **Stop below**, beyond the range, or on total PnL with **Take profit**, **Stop loss** and **Max drawdown**. With **Close position on stop**, a price stop also closes the position at market.

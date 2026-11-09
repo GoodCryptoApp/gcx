@@ -26,7 +26,7 @@ The API wallet or a signature was not accepted, or the builder fee is not approv
 The nonce was refused: signed again once, only when nothing had left goodcryptoX.
 
 ## `RATE_IP`
-Too many requests from this internet address (HTTP 429): goodcryptoX waits.
+Too many requests from this IP address (HTTP 429): goodcryptoX waits.
 
 ## `RATE_ADDRESS`
 The account's request allowance is spent. Hyperliquid's text names the allowance and the account's lifetime volume in dollars; a case keeps the text only up to its first words.
@@ -134,6 +134,9 @@ An answer goodcryptoX does not know: new risk is held and you are paged; nothing
 
 ## "Invalid nonce"
 `NONCE`.
+
+## "Action already expired"
+`NONCE`: the order was signed, then waited too long before it was sent (a computer that slept, for one), and Hyperliquid refused it unexecuted. Observed 2026-11-01. It is signed again once and goes by itself.
 
 ## "Too many cumulative requests sent"
 `RATE_ADDRESS`.

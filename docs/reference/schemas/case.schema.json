@@ -841,7 +841,9 @@
                 "agentAddress",
                 "destination",
                 "liquidatedUser",
-                "liquidator"
+                "liquidator",
+                "uid",
+                "userId"
               ]
             },
             "strip": {
@@ -879,9 +881,18 @@
                 "level1Amount",
                 "usdc",
                 "closedPnl",
-                "pnl"
+                "pnl",
+                "gridProfit",
+                "realized",
+                "realizedPnl",
+                "profit",
+                "upnl",
+                "funding",
+                "pnlPct",
+                "upnlPct",
+                "realizedPct"
               ],
-              "description": "By unit: every amount of a bot's create, step or command in the quote currency under sizingMode cost (today entryAmount, level1Amount), a funding usdc, a fill's closedPnl, a liquidation record's position pnl (C66 144)."
+              "description": "By unit: every amount of a bot's create, step or command in the quote currency under sizingMode cost (today entryAmount, level1Amount), a funding usdc, a fill's closedPnl, a liquidation record's position pnl (C66 144), a Grid record's profit, PnL and funding figures."
             },
             "principal": {
               "enum": [
@@ -916,7 +927,9 @@
                 "$..liquidated_user",
                 "$..liquidator",
                 "$..liquidation.liquidatedUser",
-                "$[*].address"
+                "$[*].address",
+                "$..uid",
+                "$..userId"
               ],
               "description": "$.data.user: a userFills frame (src/venues/hyperliquid/user.ts:220); $[*].address: the extraAgents answer, a bare array (http.ts:209)."
             },

@@ -29,7 +29,7 @@
         "pattern": "^[0-9]+(\\.[0-9]+)?$"
       },
       "heldArea": {
-        "description": "Incremental quote × ms since the preceding recorded bucket update, accumulated within this bucket; never add this replacement twice.",
+        "description": "Incremental settlement currency × ms since the preceding recorded bucket update, accumulated within this bucket; never add this replacement twice.",
         "type": "string",
         "pattern": "^[0-9]+(\\.[0-9]+)?$"
       }

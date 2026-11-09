@@ -28,7 +28,7 @@
         "price": { "$ref": "#/$defs/decimal" },
         "trigger": { "$ref": "#/$defs/decimal" },
         "capPct": { "$ref": "#/$defs/decimal", "description": "Market: 1 for an entry (not read when book is given); 2, 5, 10 across the attempts of a protective order. A native market stop: 10, the venue's own market-trigger slippage." },
-        "book": { "type": "object", "additionalProperties": false, "properties": { "ceilingPct": { "$ref": "#/$defs/decimal" } }, "description": "Ruling 141: a market entry priced from the book at its send, max(10 %, 1.5 × the distance its size reaches), at most ceilingPct when given (absent: a person sent the warning anyway). A spot market buy sized in quote has none: it is sent at capPct (1 %) through the ask (MH's ruling (b), 2026-10-02)." },
+        "book": { "type": "object", "additionalProperties": false, "properties": { "ceilingPct": { "$ref": "#/$defs/decimal" } }, "description": "Ruling 141: a market entry priced from the book at its send, max(10%, 1.5 × the distance its size reaches), at most ceilingPct when given (absent: a person sent the warning anyway). A spot market buy sized in quote has none: it is sent at capPct (1%) through the ask (MH's ruling (b), 2026-10-02)." },
         "quote": { "$ref": "#/$defs/decimal", "description": "A spot market buy sized in quote (MH's ruling (b)): the amount. The runtime sends at most quote ÷ the price it sends at, floored to the lot, so the venue never holds more than the amount when the ask rose after the size was set. Absent: the size as planned (every other place, and every place written before this field)." },
         "reduceOnly": { "type": "boolean" },
         "postOnly": { "type": "boolean" },

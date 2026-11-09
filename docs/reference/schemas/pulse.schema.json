@@ -82,7 +82,7 @@
               "unpaid": {
                 "type": "array",
                 "maxItems": 4,
-                "description": "The other part of volume: the day's fills that carried no builder fee, one entry per class that explains it, with how many fills and their volume per quote; totals only, nothing per order. Optional, additive, added with feeVolume: absent on a day every fill paid, and on a record from an older build. volume = feeVolume + the unpaid volumes.",
+                "description": "The other part of volume: the day's fills that carried no builder fee, one entry per class that explains it, with how many fills and their volume per quote; totals only, nothing per order. Optional, additive, added with feeVolume: absent on a day every fill paid, and on a record from an older build. volume = feeVolume + the unpaid volumes, except on a venue without a builder fee (its fee is taken from credits), whose fills count in volume only.",
                 "items": {
                   "type": "object",
                   "additionalProperties": false,

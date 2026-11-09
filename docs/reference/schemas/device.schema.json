@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/device.schema.json",
+  "title": "Devices",
+  "description": "The devices that reach the panel through the phone tunnel (decision 0014 d5, d12; docs/panel/devices.md): a phone, or a laptop reaching a server. One row per pairing; each device has a switch, Can trade or Read-only. Routes, a signed-in person's only, never an access key's: GET /api/v1/devices (`{rows}`, oldest pairing first), POST /api/v1/devices/pair (a pairing link for 10 minutes, the one before it void), POST /api/v1/devices/pair/cancel (the dialog closed: its link void), POST /api/v1/devices/{deviceId}/rename and /switch (the row as it is now), and /remove (`{}`); every answer is JSON. Every POST is a write: a Read-only device is answered 403 `Read-only device`. Remove closes the device's open tunnels within a second. Added in 0014; an older runtime answers these routes 404.",
+  "$defs": {
+    "device": {
+      "type": "object", "additionalProperties": false, "required": ["deviceId", "name", "canTrade", "pairedAt", "lastUsedAt"],
+      "properties": {
+        "deviceId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{22}$", "description": "16 random bytes, base64url, minted at the pairing; the last 16 bytes of its passkey's user handle." },
+        "name": { "type": "string", "minLength": 1, "maxLength": 50, "description": "The browser and the system at the pairing (\"Safari on iPhone\"), renamed by the person." },
+        "canTrade": { "type": "boolean", "description": "The switch: true Can trade (everything the person can do at the computer), false Read-only (reads only; every write 403). A device starts at Can trade (ruling 3)." },
+        "pairedAt": { "type": "integer", "minimum": 0, "description": "ms since the epoch." },
+        "lastUsedAt": { "type": ["integer", "null"], "minimum": 0, "description": "The last sign-in or request, written at most once a minute; null before the first." }
+      }
+    },
+    "list": { "type": "object", "additionalProperties": false, "required": ["rows"], "properties": { "network": { "type": "array", "items": { "$ref": "#/$defs/device" }, "description": "Added with 0044: the devices added over the home network (Connect directly at home), within their life (90 days unused), oldest pairing first; their routes are under /api/v1/network/devices. Answered with the relay off too, `rows` then empty; absent from older runtimes." }, "programs": { "type": "array", "items": { "$ref": "program-device.schema.json#/$defs/device" }, "description": "0042 additive program admission rows; absent from older runtimes." }, "rows": { "type": "array", "items": { "$ref": "#/$defs/device" } }, "machine": { "type": "string", "description": "Added 2026-10-18 (0014, ruling 17): the name of the machine goodcryptoX runs on, its network name as the passkey sheet shows it, without a trailing \".local\" (\"MacBook-Pro-3\"). The panel's first row is this computer under it; an older runtime leaves it out, an empty one reads as absent." } } },
+    "pair": {
+      "description": "The answer to POST /api/v1/devices/pair: the link, which holds the pairing code in its fragment (it reaches no server), and when it stops working. The panel draws its QR from the link.",
+      "type": "object", "additionalProperties": false, "required": ["link", "expiresAt"],
+      "properties": { "link": { "type": "string", "pattern": "^https://[^/#]+/#1\\.[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}\\.[A-Za-z0-9_-]{43}$" }, "expiresAt": { "type": "integer", "minimum": 0 } }
+    },
+    "networkLink": {
+      "description": "Added with 0044 amendment 2: the answer to GET /api/v1/network/link (a person's, never a key's; masked for a Read-only device), the home link: a page of this machine at the address the request came to (else the first saved address, else the first this machine has), with the code in its fragment. The same link until Connect directly at home is turned off (turning it on again makes a new one); each device that opens it at home is added. 409 while the switch is not applied on or no address exists; 423 while the key store is locked.",
+      "type": "object", "additionalProperties": false, "required": ["link"],
+      "properties": { "link": { "type": "string", "pattern": "^https?://[^/#]+/pair#[A-Za-z0-9_-]{43}$" } }
+    },
+    "networkPair": {
+      "description": "Added with 0044: the body of POST /api/v1/pair, which only a network address answers while the switch is applied on: the code from the home link's fragment and the page's name for the device. 204 with the device's cookie, a new device each time; 204 with no new device for a browser already added at that address (its cookie came); 410 `This link no longer works` (voided by turning the switch off, or not this machine's); 500 when the row could not be written.",
+      "type": "object", "additionalProperties": false, "required": ["code"],
+      "properties": { "code": { "type": "string", "minLength": 43, "maxLength": 43 }, "name": { "type": "string", "maxLength": 50 } }
+    },
+    "empty": { "type": "object", "additionalProperties": false, "properties": {} },
+    "rename": { "type": "object", "additionalProperties": false, "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 50 } } },
+    "switch": { "type": "object", "additionalProperties": false, "required": ["canTrade"], "properties": { "canTrade": { "type": "boolean" } } }
+  }
+}

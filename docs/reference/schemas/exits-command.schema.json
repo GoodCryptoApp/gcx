@@ -23,6 +23,7 @@
           "trade.bracket.msgInvalidMtpsSizeBiggerThanMinAmount",
           "trade.bracket.msgInvalidMtpsValue",
           "trade.bracket.msgSlMinNotional",
+          "trade.msgKeyExpiry",
           "trade.msgMarketSlippage",
           "trade.msgNoPrice",
           "trade.msgLimitBand",

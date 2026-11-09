@@ -88,6 +88,10 @@
         "bots": { "type": "array", "description": "Close all with bots stop: each bot whose Stop (or a stopped one's Force close) was accepted. Absent otherwise, and from a runtime older than this field. Added 2026-10-09.", "items": { "type": "object", "additionalProperties": false, "required": ["botId"], "properties": { "botId": { "type": "string" } } } }
       }
     },
+    "refreshBody": {
+      "description": "POST /api/v1/orders/{id}/refresh (ORDER-ENDS O4, MH 2026-11-08): the order card's Refresh, a read: the order asked about at the exchange now (its status by its id, its own trades), what the exchange answers is recorded as every read's is; nothing changes at the exchange. No fields. Answers {checked: true} when the exchange answered, with gone: true when it no longer has the order; {checked: false} when it could not be reached; 404 no such order; 503 while goodcryptoX starts or stops. Added 2026-11-08.",
+      "type": "object", "additionalProperties": false, "properties": {}
+    },
     "resendBody": {
       "description": "POST /api/v1/orders/{id}/resend (the docs judge's G1): a manual order in repair (its row's status unknown, with why) sent again, the order as it stands (0013 amendment 1's Re-place; an unanswered cancel of it is sent again instead). Journaled with the request before anything is sent; the same request answers the same. Answers {accepted: true}; 422 {rejected, text} when the order is no longer in repair, while a send of it has no answer yet, for a missed order (it takes execute-now or place-back), or for a bot's order; 503 when an order that adds risk cannot be sent now. The runtime deduplicates on requestId, per order and per action. Added 2026-10-04.",
       "type": "object", "additionalProperties": false, "required": ["requestId"],

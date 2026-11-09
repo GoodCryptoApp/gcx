@@ -13,12 +13,26 @@
  *
  * Writes are atomic (`writeAtomic`, src/runtime/fs/atomic.ts): temp file (mode 600), fsync, read back and decrypt, rename, fsync the directory. The previous file
  * stays in place until the new one has been read back.
+ *
+ * **The second file** (0008 amendment 4; 0037 §11 d3): a key venue's private keys do not fit the first file's fixed 32 bytes,
+ * and a new version of the first file would read as damaged to every older build, which then could not sign for Hyperliquid
+ * either. So they live in `keystore.cex.enc`: the same header, version, KDF and unlock source; since 0037 B2 a written second file
+ * carries the first file's salt (and so its derived key) with a fresh nonce at every write, and an import's keeps its own salt until
+ * the first write (the header carries it either way, so a reader derives as before); its
+ * plaintext a u16 count, then per entry a u8 id length, the id, a u8 kind (1 HMAC, 2 RSA, 3 Ed25519), a u16 length and the
+ * private bytes. A missing second file is an empty set. The API keys sit in `keystore.cex.keys.json`, outside the sealed
+ * file so a locked store still opens the futures streams, and private, mode 600: the key alone reads the account's futures
+ * streams (0037 §3 d3). A build before B0 opens neither.
  */
 import { argon2, createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 
 export const KEYSTORE_FILE = "keystore.enc";
+/** The second file (0008 amendment 4): a key venue's private keys. */
+export const CEX_FILE = "keystore.cex.enc";
+/** Each key venue key's API key by its id in the key store, plain JSON, private, mode 600 (0037 §3 d3). */
+export const CEX_KEYS_FILE = "keystore.cex.keys.json";
 /** Source id → agent address, plain JSON: the address is public, and a locked store must still answer it. */
 export const ADDRESSES_FILE = "keystore.addresses.json";
 /**
@@ -34,11 +48,10 @@ export const OLD_MOVED_FILE = "keystore.moved";
  * key. Needs no unlock source, so the next start finishes what a cut export left (`resumeMoved`). Called only on a marked folder.
  */
 export function removeKeyFiles(dir: string): void {
-  rmSync(join(dir, KEYSTORE_FILE), { force: true });
-  rmSync(join(dir, ADDRESSES_FILE), { force: true });
+  for (const f of [KEYSTORE_FILE, ADDRESSES_FILE, CEX_FILE, CEX_KEYS_FILE]) rmSync(join(dir, f), { force: true });
 }
 
-export type KeystoreErrorCode = "unavailable" | "bad-secret" | "damaged" | "exists" | "unknown-source" | "no-rotation";
+export type KeystoreErrorCode = "unavailable" | "bad-secret" | "damaged" | "cex-unreadable" | "exists" | "unknown-source" | "no-rotation";
 /** Messages name the failure, never a secret, a key, or a tool's output. */
 export class KeystoreError extends Error {
   constructor(readonly code: KeystoreErrorCode, message: string) {
@@ -160,4 +173,39 @@ export function decodeEntries(b: Buffer): { entries: Map<string, Entry>; access:
     out.set(id, { key, pending });
   }
   return { entries: out, access };
+}
+
+/** A key venue's private key in the second file, by its kind. */
+export interface CexEntry { kind: "hmac" | "rsa" | "ed25519"; key: Buffer }
+const CEX_KINDS = ["hmac", "rsa", "ed25519"] as const;
+
+export function encodeCex(entries: ReadonlyMap<string, CexEntry>): Buffer {
+  const parts: Buffer[] = [Buffer.from([entries.size >> 8, entries.size & 255])];
+  for (const [id, e] of entries) {
+    const idBytes = Buffer.from(id, "utf8");
+    if (idBytes.length === 0 || idBytes.length > 255) throw new KeystoreError("unknown-source", "a key id is 1 to 255 bytes");
+    if (e.key.length > 65535) throw new KeystoreError("damaged", "a key is at most 65535 bytes");
+    parts.push(Buffer.from([idBytes.length]), idBytes, Buffer.from([CEX_KINDS.indexOf(e.kind) + 1, e.key.length >> 8, e.key.length & 255]), e.key);
+  }
+  return Buffer.concat(parts);
+}
+
+/** Keys are copied into their own Buffers, so the caller can zero the plaintext. A kind this build does not know is damage. */
+export function decodeCex(b: Buffer): Map<string, CexEntry> {
+  const out = new Map<string, CexEntry>();
+  const take = (at: number, n: number) => {
+    if (at + n > b.length) throw new KeystoreError("damaged", "the second key file's contents are truncated");
+    return b.subarray(at, at + n);
+  };
+  const count = take(0, 2).readUInt16BE(0);
+  let at = 2;
+  for (let i = 0; i < count; i++) {
+    const n = take(at, 1).readUInt8(0), id = take(at + 1, n).toString("utf8");
+    at += 1 + n;
+    const kind = CEX_KINDS[take(at, 1).readUInt8(0) - 1], len = take(at + 1, 2).readUInt16BE(0);
+    if (kind === undefined) throw new KeystoreError("damaged", "an unknown key kind in the second key file");
+    out.set(id, { kind, key: Buffer.from(take(at + 3, len)) });
+    at += 3 + len;
+  }
+  return out;
 }

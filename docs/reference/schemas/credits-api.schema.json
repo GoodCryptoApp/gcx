@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/credits-api.schema.json",
+  "title": "Credits API",
+  "description": "GET /api/v1/credits (decision 0038 d7, d10): the prepaid balance for goodcryptoX's fee on credit exchanges (where goodcryptoX cannot collect its fee with the trade), read by a person and by any access key (API-MCP-320; before it a signed-in person's only); and the 402 a new order or bot on such an exchange is refused with once the starter's CEX volume is used and the balance is not above zero (d3.6, amendment 2; restart rule replaced by MH 2026-11-03). Money is decimal strings, never JSON numbers. Mirrors src/runtime/credits/routes.ts and gate.ts. Closed.",
+  "$defs": {
+    "amount": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]{1,8})?$", "description": "A decimal string of at most 8 decimals; a balance may be negative (d1.5)." },
+    "day": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "A UTC day." },
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["balance", "stale", "remaining", "below", "rate", "id", "fp", "days", "history"],
+      "properties": {
+        "venues": {"type":"array","description":"Live venues without a builder fee, from the same capability as creditsOn. Additive for older panels.","items":{"type":"object","additionalProperties":false,"required":["id","title"],"properties":{"id":{"type":"string"},"title":{"type":"string"}}}},
+        "balance": { "$ref": "#/$defs/amount", "description": "The local balance in USD: the server's last answered figure less the fees not yet reported. What the launch gate reads; never absent." },
+        "stale": { "type": "boolean", "description": "goodcryptoX's server did not answer the last read: the balance and the history are the kept ones." },
+        "remaining": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]{1,8})?$", "description": "The starter's CEX volume left in USD (0038 amendment 2, S2): each new installation trades its first 10,000 USD on credit exchanges without paying our fee; while it remains, new orders and bots start whatever the balance." },
+        "below": { "type": "boolean", "description": "Trading paused by the balance (0038 amendment 2, restart rule replaced by MH 2026-11-03): a commit below zero sets it, a new balance above zero clears it, exactly zero retains it. New orders and bots on a credit exchange wait while it holds and the starter is used up." },
+        "rate": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$", "description": "goodcryptoX's fee in percent of each trade's value, after this gcx's partner discount." },
+        "id": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "This gcx's number as the person shows it: the first 16 hex of its installation key's fingerprint." },
+        "fp": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "The whole fingerprint, which a payment of credits carries so goodcryptoX's server finds it (d6.2)." },
+        "buyBurn": { "type": "boolean", "description": "Last applied server answer enables buy-and-burn; absent defaults to false." },
+        "goodPrice": { "deprecated": true, "type": "object", "additionalProperties": false, "required": ["price", "at"], "description": "Deprecated cached GOOD quote price P for older runtimes (0038 d6.7; amendment 4). Exact decimal string, not rounded to eight places; at is the priced UTC hour in ms, not receipt time. Omitted before a price or after a server answer without it. A burn quote uses it only while the hour it names lasts; new Workers credit from confirmed buy cost and do not use this price.", "properties": {
+          "price": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$", "description": "Positive USD per GOOD." },
+          "at": { "type": "integer", "minimum": 0 }
+        } },
+        "days": {
+          "type": "array", "maxItems": 30, "description": "The fees per UTC day, newest first; ?before=<day> the next page.",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["day", "volume", "fee"],
+            "properties": { "day": { "$ref": "#/$defs/day" }, "volume": { "$ref": "#/$defs/amount", "description": "The day's trades' value in USD." }, "fee": { "$ref": "#/$defs/amount", "description": "The day's fees in USD." } }
+          }
+        },
+        "low": { "type": "boolean", "description": "Additive (API-MCP-320): the Dashboard's credits-low warning: while not out or `below`, CEX volume left is strictly below a fifth of the newest positive payment or grant at today’s rate; before any top-up, below 2,000 USD. Absent from an older version: false." },
+        "out": { "type": "boolean", "description": "Additive (API-MCP-320): the Dashboard's credits-ran-out warning: while the starter's CEX volume is used up, the volume left is zero or less, or `below` holds. Absent from an older version: false." },
+        "daysLeft": { "deprecated": true, "oneOf": [{ "type": "string", "pattern": "^[0-9]+$" }, { "type": "null" }], "description": "Additive (API-MCP-320): about how many days the volume left lasts at the last seven UTC days' pace, whole days rounded down and at least 1; null with nothing traded in those days. Absent from an older version: null." },
+        "networks": { "type": "array", "description": "Additive (API-MCP-320): what Add credits offers, in its order: each network (`chain` as a payment names it, `title` as the page shows it) with the coins it takes now (while `swaps` is false, only those paid without a swap: the dollar tokens and GOOD). Static.", "items": { "type": "object", "additionalProperties": false, "required": ["chain", "title", "tokens"], "properties": { "chain": { "type": "string" }, "title": { "type": "string" }, "tokens": { "type": "array", "items": { "type": "string" } } } } },
+        "swaps": { "type": "boolean", "description": "Additive (PAY-ADDRESSES): whether Add credits takes a coin that is swapped into a dollar token first (a native coin or any other token). False: only the listed dollar tokens and GOOD; a payment that needs a swap is refused `no-route`. Absent from an older version: false." },
+        "paymentsOpen": { "type": "boolean", "description": "Additive (0038 amendment 6): a payment can be received here (a receiving address is placed); false: Add credits says credits cannot be added yet. Absent on older runtimes: open." },
+        "minimum": { "$ref": "#/$defs/amount", "description": "Deprecated: always \"0\" since 3.2.0, there is no minimum purchase (MH 2026-11-07). It was the smallest purchase, USD." },
+        "goodDiscount": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$", "description": "Additive (API-MCP-320): the discount in percent for paying in GOOD (on Solana): 90 USD of GOOD buys 100 USD of credits at 10." },
+        "totals": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "0054 additive lifetime totals and pace. USD decimal strings; idle UTC dates included from first trade through today. Monthly means total times 30 divided by at least 30 UTC dates from firstDay for both volume and fees. Absent on older runtimes: panel uses known days/history, with a partial-history notice. balanceDifference = paymentCredits + grants - totalFees - balance; a nonzero value alerts, never blocks. Cash estimates are marked paidEstimated.",
+          "required": [
+            "totalPaid",
+            "paymentCredits",
+            "grants",
+            "totalVolume",
+            "totalFees",
+            "dailyVolume",
+            "dailyFees",
+            "monthlyVolume",
+            "monthlyFees",
+            "balanceDifference",
+            "firstDay",
+            "throughDay",
+            "dayCount",
+            "paidEstimated"
+          ],
+          "properties": {
+            "totalPaid": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "paymentCredits": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "grants": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "totalVolume": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "totalFees": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "dailyVolume": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "dailyFees": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "monthlyVolume": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "monthlyFees": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "balanceDifference": {
+              "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+            },
+            "firstDay": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/day"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "throughDay": {
+              "$ref": "#/$defs/day"
+            },
+            "dayCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "paidEstimated": {
+              "type": "boolean"
+            }
+          }
+        },
+        "history": {
+          "description": "The payments and grants goodcryptoX's server answered, newest first, each with its kind and the sequence of the balance change it made, its other fields as the server sent them; null before it ever answered.",
+          "oneOf": [
+            { "type": "null" },
+            { "type": "array", "items": { "type": "object", "required": ["kind", "seq"], "properties": { "kind": { "enum": ["payment", "grant"] }, "seq": { "type": "integer", "minimum": 0 } } } }
+          ]
+        }
+      }
+    },
+    "refused": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["error", "balance", "text"],
+      "description": "402: a new order or bot on a credit exchange, refused for want of credits; nothing was journaled or sent.",
+      "properties": {
+        "error": { "const": "credits" },
+        "balance": { "$ref": "#/$defs/amount" },
+        "text": { "type": "string", "minLength": 1, "description": "goodcryptoX's sentence for the person." }
+      }
+    }
+  }
+}

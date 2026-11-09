@@ -43,8 +43,17 @@
     "instrumentId": {
       "type": "string"
     },
+    "display": {
+      "$ref": "instrument-display.schema.json",
+      "description": "The instrument as the lists name it, added to the served row when the instrument is known (as on order and position rows). Absent otherwise."
+    },
+    "createdBy": {
+      "$ref": "order-row.schema.json#/$defs/createdBy",
+      "description": "Who made the take-profit and stop-loss, added to the served row (as on order and position rows)."
+    },
     "venue": {
-      "const": "hyperliquid"
+      "type": "string",
+      "description": "The venue the exits trade on, from the instrument id (\"hyperliquid\", \"binance\"). Before 2026-10-30 always \"hyperliquid\"."
     },
     "subject": {
       "enum": [

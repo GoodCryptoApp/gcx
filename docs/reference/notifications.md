@@ -47,11 +47,12 @@ The DCA bot's own messages (its stops, a level not placed, its repairs, a liquid
 
 | Event | Template id | Kind | When |
 |---|---|---|---|
-| The API wallet expires within 30 days, within 7 days | `account.agent-expires` | information | once per wallet and threshold; checked every hour while Telegram is linked |
-| The API wallet expires within 24 hours | `account.agent-expires-day` | needs you | once per wallet |
-| The API wallet expired | `account.agent-expired` | needs you | once per wallet |
+| The API wallet expires within 30 days, within 7 days | `account.agent-expires` | information | once per credential, verified deadline and threshold; runtime boundary schedule, independent of Telegram linkage |
+| The API wallet expires within 24 hours | `account.agent-expires-day` | needs you | once per credential and verified deadline |
+| The API wallet expired | `account.agent-expired` | needs you | once per credential and verified deadline |
+| A date-bearing venue's API key expires / last day / expired | `account.key-expires`, `account.key-expires-day`, `account.key-expired` | information / needs you / needs you | same shared schedule; venue/account/days/action variables; no Binance reader |
 | goodcryptoX started with its key store locked | `runtime.locked` | needs you | once until a start that unlocks: restarting while locked sends nothing more |
-| goodcryptoX was away (asleep, not running, updating) and something happened meanwhile | `runtime.away` | information | once, when the exchange has been read again and the late fills' window (3 minutes) has passed; per bot and manual order in the order they came, a line per message of that time (`•`) and its state now (`↳`, `runtime.away-now`); a manual order closed with no message (`runtime.away-order`), a trailing stop's extreme from that time (`runtime.away-trail`), a page of that time (`runtime.away-page`) and the API wallet's reminder are lines too; a time away with nothing in it sends nothing |
+| goodcryptoX was away (asleep, not running, updating) and something happened meanwhile | `runtime.away` | information | once, when the exchange has been read again and the late fills' window (3 minutes) has passed; per bot and manual order in the order they came, a line per message of that time (`•`) and its state now (`↳`, `runtime.away-now`); a manual order closed with no message (`runtime.away-order`), a trailing stop's extreme from that time (`runtime.away-trail`) and a page of that time (`runtime.away-page`) are lines too; a time away with nothing in it sends nothing |
 | Something goodcryptoX cannot settle by itself (a fill on a position goodcryptoX does not manage was a liquidation, the disk is full, an order held for "Send now or cancel", an answer from the exchange it does not know) | `runtime.page` | needs you | once per text while goodcryptoX runs |
 | Another copy of goodcryptoX reads the same bot | `runtime.poller-stopped` | needs you | once; goodcryptoX stops reading the bot and keeps sending |
 | An agent's trading key met one of its limits (largest order, 24 hours, leverage; a bot's ladder counts as its orders) | `agent.limit` | alert | once per agent and limit, until a command of it that fits that limit is accepted; a restart of goodcryptoX starts afresh |

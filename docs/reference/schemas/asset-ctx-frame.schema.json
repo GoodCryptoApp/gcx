@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/asset-ctx-frame.schema.json",
   "title": "Asset context frame",
-  "description": "Hyperliquid's `activeAssetCtx` for one perp as the adapter publishes it: the mark (the price native triggers fire on), the venue's mid (null when a side of the book is empty), the oracle (the index price), the day's notional volume and the hourly funding rate. The venue stamps no time on it: its age is our receipt time. Also the data of the panel socket's `asset-ctx/<instrumentId>` topic (the trade screen's price header). Mirrors src/domain/marketdata/frames.ts (AssetCtxFrame).",
+  "description": "One perp's asset context: mark, mid (nullable), oracle/index, day's notional volume and the venue's native funding rate. Hyperliquid supplies activeAssetCtx with hourly funding and no venue timestamp; Binance B4 adds nextFundingTime for its native settlement period. Also the data of the panel socket's `asset-ctx/<instrumentId>` topic (the trade screen's price header). Mirrors src/domain/marketdata/frames.ts (AssetCtxFrame).",
   "type": "object",
   "additionalProperties": false,
   "required": ["venue", "instrument", "mark", "mid", "oracle", "dayNtlVlm", "funding"],
@@ -13,7 +13,8 @@
     "mid": { "oneOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }] },
     "oracle": { "$ref": "#/$defs/decimal" },
     "dayNtlVlm": { "$ref": "#/$defs/decimal", "description": "Notional volume over the last 24 hours, in the collateral token." },
-    "funding": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "The current hourly funding rate as a signed fraction (\"0.0000125\" is 0.00125 % an hour): positive, longs pay shorts." }
+    "funding": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "The venue's current funding rate as a signed fraction: positive, longs pay shorts. Hyperliquid's rate is hourly; Binance's is its native settlement-period rate and is not divided into hours." },
+    "nextFundingTime": { "type": "integer", "description": "Additive (0037 B4): Binance's next funding time, epoch milliseconds, for its native countdown. Absent retains the existing venue behavior." }
   },
   "$defs": { "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." } }
 }

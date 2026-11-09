@@ -1,61 +1,97 @@
-# Partner codes
+# Referral program
 
-A partner of goodcryptoX brings people to goodcryptoX. With his code they pay less of goodcryptoX's fee, and he earns a share of it. You have no account with us: the code is checked on your own machine against goodcryptoX's partner signing key, and nothing in trading waits for a server.
+Anyone can share a goodcryptoX referral code and earn from the people who join it.
 
-## If a partner gave you a code
+## Share a code
 
-Settings › Installation › **Referral code**: the page says "Have a referral code? Paste it here to get its perks"; paste the code (it starts with `gcx-`) in the field and press **Join**.
+Settings › Referral program shows **all three codes** under **Invite friends**. A code is `gcx-` and eight letters and digits, such as `gcx-7K3MQ2AD`; each of your three gives your friend its own discount, the one beside it. Press **Copy** beside one (or click the code), goodcryptoX says Copied, and send it to a friend. Each code shares **10%** of goodcryptoX's fee: keep it all, give it to your friend as a discount, or split it:
+
+| You earn | Your friend saves |
+|---|---|
+| 0% | 10% |
+| 5% | 5% |
+| 10% | 0% |
+
+Your friend saves on goodcryptoX's trading fee. On Hyperliquid, a 5/5 code charges **0.028%** of the trade's value.
+
+Your friend pastes it under **Become a referral** and presses **Join**, which turns on once the field holds a code. goodcryptoX's server checks the code and the page says what your friend gets. If the server gives no answer, the page says "No confirmation. Try again", nothing is saved, and your friend presses Join again.
+
+An installation can join **one code**, permanently. Your own code is refused.
+
+You earn your code's share of the full goodcryptoX trading fee before discounts, and of your referrals' credit purchases. On Hyperliquid, a 5/5 code earns 0.15 USD per 10,000 traded. Spending credits earns no further share. Earnings come from what goodcryptoX actually receives: a trade that brings no fee, such as a spot buy on Hyperliquid, earns nothing, and buying credits with $GOOD earns nothing (the $GOOD used is burned). Existing partner earnings keep their agreed terms.
+
+## Request payout
+
+**Your earnings** shows Referral income earned, Paid out and Current unpaid balance in USD, since you started. A fee earned in a coin keeps its dollar value when earned; a later price change does not change it. An earning without a dollar value counts as zero toward payout. Each of your three codes shows **Joined**, how many people joined with it, and **Traded**, how many of them have placed an order since; the list ends with the **Total** of both.
+
+The **Payout address** row is always there. With nothing saved it ends in **Add**: press it, pick the network (**Arbitrum, Avalanche, Base, BNB Smart Chain, Optimism, Polygon or Solana**), paste your wallet's address and press **Save**. The field opens by itself once 50 USD is waiting. A saved address shows with a pencil after it: press the pencil to change the network or the address. An address is checked against its network before Save turns on: an Ethereum-style address is 0x and 40 hex digits, and when it mixes capitals and small letters the capitals must match its checksum, so a mistyped letter is refused; a Solana address is a base58 key. Request payout is on from **50 USD** of unpaid earnings once an address is saved; below 50 USD **min 50 USD** stands beside the button. The requested amount arrives whole in **USDC or USDT**, chosen by goodcryptoX, within **7 days**; goodcryptoX pays the network fee.
+
+While the request waits, the address stays fixed. Press **Cancel request** to take it back before goodcryptoX starts sending it, then save a different address or request again. If payment processing has started, the page says **Payout in progress**. After payment, **Payout sent** shows the amount and a link to the transaction.
+
+If you have only an **Ethereum or Tron** wallet, contact support for payment by hand. These networks are not in the app's payout list. Support will help you choose an address on a supported network and arrange the payment.
+
+## Partner codes
+
+Existing partners keep their agreed terms.
+
+A partner of goodcryptoX brings people to goodcryptoX. With his code they pay less of goodcryptoX's fee, and he earns a share of it.
+
+### If a partner gave you a code
+
+Open **Settings › General › Referral program** ("Have a referral code? Paste it here to get the perks"), paste the code and press **Join**. The field goes and the page says the code is applied and what you get: "You joined with a friend's code: 10% off your fees".
 
 - **One code for your whole goodcryptoX.** Every account in it, sub-accounts and vaults included, carries the code's fee from your next order on. Orders already resting keep the fee they were sent with.
-- **The fee.** goodcryptoX charges 0.03 % of each trade's value on Hyperliquid. A code gives a discount of 0 % to 50 % of that fee, in steps of 10 %: with a 10 % code you pay 0.027 %, with a 50 % code 0.015 %. Some codes give no discount; with one of them you pay 0.03 % as before.
-- **It cannot be changed or removed once entered**, even if it is not the one you meant. The page says so in its help text at the top.
+- **The fee.** goodcryptoX charges 0.03% of each trade's value on Hyperliquid. A code gives a discount of 0% to 50% of that fee, in steps of 10%: with a 10% code you pay 0.027%, with a 50% code 0.015%. Some codes give no discount; with one of them you pay 0.03% as before.
+- **It cannot be changed or removed once entered**, even if it is not the one you meant.
 - **What the page says when it refuses a code:** "Invalid code" (not a partner code of goodcryptoX's), "You're already referred" (this goodcryptoX has a code already), "You can't refer yourself" (the code is your own, from your own partner key on this goodcryptoX).
-- **The help text at the top of the page**, joined or not, says "Your code, your account addresses and the orders goodcryptoX sends are recorded with goodcryptoX so your partner can be paid; this cannot be turned off."
-- **Once joined** the page shows what you get: "You get 10 % off the goodcryptoX fee". The partner's share is not shown to you.
+- **Once joined** the page shows what you get: "You joined with a friend's code: 10% off your fees". The partner's share is not shown to you.
 
-Spot buys carry no builder fee at Hyperliquid, so a code changes nothing there.
+If the page refuses a code, it says why: "Invalid code" (not a goodcryptoX partner code), "You're already referred" (this goodcryptoX has a code already) or "You can't refer yourself" (the code is your own).
 
-## If you are a partner
+### If you are a partner
 
-goodcryptoX gives a partner a **partner key**: one long line that starts with `gcx-partner-`. It holds your partner number, your maximum share of goodcryptoX's fee (up to 50 %), and every code you may hand out, each signed by goodcryptoX. It never expires.
+goodcryptoX gives a partner a **partner key**: one long line that starts with `gcx-partner-`. It holds your partner number, your maximum share of goodcryptoX's fee (up to 50%), and every code you may hand out. It never expires.
 
-Settings › Installation › Referral code › **I am a partner**: paste the key and press **Add**. A second key replaces the first, after "Replace your partner key?". The section then shows:
+A strong community, a trading group or a creator can become a goodcryptoX partner and receive up to 50% of goodcryptoX's fee on its users' trades, as its agreement with goodcryptoX sets. Write to support at [t.me/goodcrypto](https://t.me/goodcrypto).
 
-- **Partner ID** and your number, then your share of goodcryptoX fees; the words are muted and the figures bright.
-- **Your codes**, a table of every code your key already holds, in ascending 10% discount steps. Each row shows **Your users' discount**, **You receive**, **Joined**, **Trading this week**, **Volume**, the complete code in a read-only box and **Copy** beside it. The 0% row works like every other row. A code for a given discount stays the same: copy it once and publish it where you like.
-- On a phone the heading row stays, **You receive** is left out (it is your share less the discount), and each row puts its code and Copy below its four figures. Each figure's heading explains it on hover.
-- The small **Replace key** link opens the same key field; installing a replacement still asks for confirmation.
+Open **Settings › General › Referral program**, press **I am a partner** on the page's last line, paste the key and press **Add**. The section then shows:
 
-Moving goodcryptoX to another machine carries the partner key; the page has no Copy partner key button. Anyone with that key can make your codes, so keep it private. Your 0 % and 10 % codes side by side make such a key too, one that reads your codes' figures below (never addresses, never money).
+- **Partner ID** and your number, then your share of goodcryptoX fees.
+- **Become a referral** shows the discount from your own partner key above the referral code field until you join with a code.
+- **Invite friends** shows every code your key holds, with **Discount**, **You earn**, **Joined** and **Traded**, and the **Total**. Copy a code and publish it where you like; it stays the same.
+- **Replace key** lets you enter a replacement, after confirmation.
 
-### Your codes' figures
+The first goodcryptoX to use a partner key requests its payouts. Your partner earnings and your own referral earnings appear in the same figures there, and use the same Request payout button. Another installation keeps the key and its discount and statistics; at the key it says “This key’s payouts are requested from another goodcryptoX”. If your old machine is lost, ask support to release the key, then press Add on the new machine.
 
-Each code's row shows, read from goodcryptoX's partner-code server while the section is open (again when you come back to the tab, and after you add or replace your key), at most once a minute:
+Moving goodcryptoX to another machine carries the partner key. Anyone with that key can make your codes, so keep it private. Enter your key here before sharing your codes; ask support if payouts point to another installation.
+
+#### Your codes' figures
+
+Each partner code shows:
 
 - **Joined:** how many goodcryptoX installations joined with this code, ever.
-- **Trading this week:** how many of them sent orders this week. An order counts when it reaches the server, normally within a minute; a goodcryptoX that was asleep or offline reports its orders when it is back.
-- **Volume:** the value of this week's trades with this code that pay you: the same trades, counted the same way, as the ones goodcryptoX pays you for. A day's trades are counted the next day, once Hyperliquid's record of goodcryptoX's fees for that day is in, so Volume runs a day or two behind; hover the heading to see the last day counted. On Monday it is 0 until Monday's trades are counted, usually on Tuesday. Trades that carry no seal of a goodcryptoX with your code are not in it. It can differ from the weekly statement, which is still what you are paid by.
+- **Traded:** how many of them have placed an order since, ever.
 
-The week runs from Monday 00:00 UTC. A 0 is shown muted. If the server cannot be read, the last figures received stay, greyed, with "Not up to date: the last values received are shown"; if none were ever received, "Could not be read. Reload the page to try again". Where the server does not offer the figures, the table shows no figure columns.
+The last row, **Total**, adds them up.
 
-If goodcryptoX ever has to replace its signing key, the section says "Your partner key is no longer valid. Ask goodcryptoX for a new one" and shows no code; the users who joined with your codes keep them. Your own code on your own goodcryptoX is refused; on another goodcryptoX nothing can stop it.
+If the page says “Your partner key is no longer valid. Ask goodcryptoX for a new one”, ask support for a replacement. The users who joined with your codes keep them.
 
-On the goodcryptoX that holds your key, your own trades pay goodcryptoX's fee less your maximum (with a 50 % key, half of it), from your next order on and while your key is valid, and the section says so: "You get 50 % off the goodcryptoX fee". No share is paid on them and nothing is sent for them. If a code was joined on that goodcryptoX, before or after the key, its discount applies instead.
+On the goodcryptoX that holds your key, your own trades pay goodcryptoX's fee less your maximum (with a 50% key, half of it), from your next order on and while your key is valid, and the section says so: “You get 50% off the goodcryptoX fee”. No share is paid on them. If a code was joined on that goodcryptoX, before or after the key, its discount applies instead.
 
-What you earn and when it is paid are set by your agreement with goodcryptoX, not by goodcryptoX. goodcryptoX pays partners by hand each week. With the payment goodcryptoX can send you the week's statement: per code, how many trades your users made through goodcryptoX with your code (trades whose order number carries the seal of their goodcryptoX, which joined with your code), their volume, goodcryptoX's fee on them and your share, and the volume of their trades that carry no such seal or that Hyperliquid no longer serves. It names none of your users' addresses.
+What you earn is set by your agreement with goodcryptoX. Earnings come from what goodcryptoX actually receives: a trade that brings no fee, such as a spot buy on Hyperliquid, earns nothing, and buying credits with $GOOD earns nothing (the $GOOD used is burned). After your key is entered, request payout from the app as above. A partner whose key has not been entered is paid by hand under the existing agreement. With the payment goodcryptoX can send you the week's statement: per code, your users' trades, volume, goodcryptoX's fee and your share. It names none of your users' addresses. Its figures are in each market's own currency, which is USDC on most markets.
 
-## What goodcryptoX sends goodcryptoX
+See the [privacy policy](legal/privacy.md) for what goodcryptoX records and sends.
 
-At its first start goodcryptoX makes a key of its own on your computer. It never leaves the computer, except inside the encrypted file of Move to another machine, so a moved goodcryptoX stays the same. Its public half stands for your goodcryptoX to goodcryptoX; it names no account. A goodcryptoX without a code sends nothing below, even when it holds a partner key; a goodcryptoX with a partner key sends that key and the public half, signed, while the partner section is open, only to read its codes' figures (above), and the server keeps nothing of it.
+## Questions
 
-Every order goodcryptoX sends carries goodcryptoX's own order number, public on Hyperliquid. Half of it is random; the other half is a seal only your goodcryptoX can make with that key, so the number proves which goodcryptoX placed the order. Every goodcryptoX does this, with or without a code; nothing is sent for it.
+### How much does my friend save with my code?
 
-So that goodcryptoX knows which partner to pay, a goodcryptoX with a code sends goodcryptoX's partner-code server, each message signed with that key:
+Up to 10% of goodcryptoX's fee. Each of your three codes divides 10% of the fee between your friend and you: all to your friend, half each, or all to you.
 
-1. **When you enter the code:** the code, the key's public half and goodcryptoX's version. No exchange needs to be connected.
-2. **The orders goodcryptoX places,** on any exchange, from the code on: the account, goodcryptoX's own order number and a proof that this goodcryptoX made it (a signature with that key). No prices, sizes or markets. Not cancels. In batches, at most once a minute.
+### When can I request a payout?
 
-goodcryptoX then reads, from Hyperliquid's public records, the trades of those accounts in each week it pays, and pays your partner for a trade only when its order number carries your goodcryptoX's seal: an account alone never pays, and no other goodcryptoX can claim your trades.
+From 50 USD of unpaid earnings. The amount arrives whole in USDC or USDT within 7 days, and goodcryptoX pays the network fee.
 
-- **It cannot be turned off.** It is sent whatever Settings › Installation › Reports to goodcryptoX says: it is how the partner is paid. The [privacy policy](legal/privacy.md) says so in its own row.
-- **Offline is fine.** Nothing in trading waits for it: your discount applies from your next order, and orders are sent as always. If the server cannot be reached, goodcryptoX keeps everything and sends it later (when it starts, when you open the Partner code page, after an order, or by itself while goodcryptoX is busy), at most once a minute; the orders are read again from goodcryptoX's journal, so none is lost.
+### Can I change the code I joined?
+
+No. An installation joins one code, permanently, and your own code is refused.

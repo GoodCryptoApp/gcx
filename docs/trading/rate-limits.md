@@ -18,7 +18,7 @@ If goodcryptoX stops while orders wait, the next start checks each of them with 
 
 ## Your connection's limit
 
-Hyperliquid documents a limit per internet address: 1,200 units of weight a minute (an order is 1, most reads 2 or 20). goodcryptoX keeps under it and adds no pace of its own. If Hyperliquid answers "too many requests" anyway, goodcryptoX sends nothing for 6 seconds (Hyperliquid was measured serving requests again after 5 to 6 seconds), then sends the same order again; an order is never ended for this. Every account on the computer waits those 6 seconds together.
+Hyperliquid documents a limit per IP address: 1,200 units of weight a minute (an order is 1, most reads 2 or 20). goodcryptoX keeps under it and adds no pace of its own. If Hyperliquid answers "too many requests" anyway, goodcryptoX sends nothing for 6 seconds (Hyperliquid was measured serving requests again after 5 to 6 seconds), then sends the same order again; an order is never ended for this. Every account on the computer waits those 6 seconds together.
 
 ## The daily limit of unified accounts
 
@@ -26,4 +26,4 @@ Hyperliquid allows unified and portfolio-margin accounts at most 50,000 actions 
 
 ## The builder fee
 
-Every order carries goodcryptoX's 0.03 % fee. While an account's builder fee is not approved, goodcryptoX takes no new order and no new bot on it: the panel hides Buy, Sell and Launch with a warning, and through the API or an agent's tools the request is refused with "Approve the builder fee on this account to trade." Cancels, Close, exits and Stop are not refused, and a bot already running is not stopped; Hyperliquid answers what they send. An order Hyperliquid refuses for the fee anyway ends with Hyperliquid's words and you are told where to approve (**Settings › Exchanges › Hyperliquid › Allow builder fees**); it is never sent without the fee.
+Every order carries goodcryptoX's 0.03% fee. While an account's builder fee is not approved, goodcryptoX takes no new order and no new bot on it: the panel hides Buy, Sell and Launch with a warning, and through the API or an agent's tools the request is refused with "Approve the builder fee on this account to trade." Cancels, Close, exits and Stop are not refused, and a bot already running is not stopped; Hyperliquid answers what they send. An order Hyperliquid refuses for the fee anyway ends with Hyperliquid's words and you are told where to approve (**Settings › Exchanges › Hyperliquid › Allow builder fees**); it is never sent without the fee.

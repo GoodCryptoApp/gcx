@@ -2,9 +2,9 @@
 
 <!-- Source: https://docs.goodcrypto.app/perp-dexs/bots/grid-bot. The old introduction, cycle and modes are the base; D2b/D2c and DOCS-AUDIT-3.1 govern the 3.1 facts. -->
 
-A Grid bot buys and sells at set prices within your chosen range. You choose the range, the levels and the amount to trade; the bot repeats those trades as price moves back and forth.
+A Grid bot in goodcryptoX buys and sells at set prices within your chosen range. You choose the range, the levels and the amount to trade; the bot repeats those trades as price moves back and forth.
 
-![The Trade page with the Grid form on the right and its range and orders on the chart](../pictures/grid/trade-page.webp)
+<figure><img src="../pictures/grid/trade-page.webp" alt="The Trade page with the Grid form on the right and its range and orders on the chart" width="563"><figcaption></figcaption></figure>
 
 ## Why use Grid Bot?
 
@@ -84,3 +84,19 @@ Choose a value or coin amount for each level, your investment and whether to rei
 **Approx. margin** shows the funds needed to back your grid. Orders worth 1,000 at 5x need 200 in order margin, before fees and losses. Leverage can bring liquidation before price reaches the grid's edge or stop.
 
 Check **Approx. liquidation** and the warning before launching. Use the offered lower leverage, move your stop before liquidation, or consider Cross where supported. The bot never adds margin by itself. These are estimates: fees, funding, gaps and other positions can change the outcome. Reaching the range's edge gives no protection against a further move.
+
+On an API key’s last day, Launch warns that it expires in under 24 hours. **Launch anyway** creates the bot; new automatic openings still wait. Resting orders, fills and exits continue. After expiry, the exchange answers sends.
+
+## Questions
+
+### Does a Grid bot work in a trend?
+
+It can: a volatile trend can suit **Long** when your view is bullish, or **Short** when it is bearish, and the bot still needs swings within the range to complete trades. A price that keeps moving one way can build exposure on the losing side or leave the range behind.
+
+### When does a Grid bot take profit?
+
+Each round trip, an opening and its closing order one level away, can earn a small realized profit after fees. A **Take profit** target also stops the bot and closes the position when total PnL reaches it.
+
+### Does the Grid bot work on spot?
+
+Yes: spot has one grid mode. You own the coins it buys; it cannot open a short and uses no leverage.

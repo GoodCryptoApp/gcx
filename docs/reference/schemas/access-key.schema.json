@@ -6,7 +6,7 @@
   "$defs": {
     "scope": { "enum": ["read", "propose", "trade"] },
     "key": {
-      "description": "One key as GET /api/v1/keys lists it. `lastUsedAt` is the key's last request, null when never used; gcx writes it to disk at most once a minute and at shutdown, so after a crash it can be older than the key's real last use. `revokedAt` is null for a key in use. `limits` and `suspendedAt` (Amendment 1) are always sent by this version.",
+      "description": "One key as GET /api/v1/keys lists it, and as GET /api/v1/key answers the calling key its own (API-MCP-320, additive). `lastUsedAt` is the key's last request, null when never used; gcx writes it to disk at most once a minute and at shutdown, so after a crash it can be older than the key's real last use. `revokedAt` is null for a key in use. `limits` and `suspendedAt` (Amendment 1) are always sent by this version.",
       "type": "object",
       "additionalProperties": false,
       "required": ["keyId", "name", "scope", "createdAt", "lastUsedAt", "revokedAt"],
@@ -31,6 +31,7 @@
         "pnl": { "$ref": "#/$defs/activity/properties/pnl" },
         "proposals": { "$ref": "#/$defs/activity/properties/proposals" },
         "atLimit": { "$ref": "#/$defs/activity/properties/atLimit" },
+        "usedValue": { "$ref": "#/$defs/activity/properties/usedValue" },
         "notifications": {
           "$ref": "#/$defs/notifications"
         },
@@ -113,7 +114,7 @@
       "additionalProperties": false
     },
     "limits": {
-      "description": "A trading key's limits (Amendment 1 A4; MH's shape of 2026-10-30, 0010 amendment 3 \"A Trade key's limits\"), set only by a person, in force from the key's next command. `accounts`: the account ids it may trade, or `all` for every account held now or added later. `markets`: the instruments it may trade, each by its exact id (the key form offers every perpetual and spot pair of the chosen accounts' exchanges), or `all` for every market on those accounts, `spot` for every spot market on them, `perps` for every perpetual on them (every futures market, of every dex), those listed later included; the kind is the market's own in the instrument list (0010 amendment 5). Every money limit is in USD (a stablecoin quote counts one to one) and absent means no limit. For the orders the key places: `perOrder`, one order's value at the runtime's price; `per24h`, what its own orders that add risk filled in the last 24 hours plus what of them is open now (a cancelled order gives its value back; a bot's orders are never counted here). For its bots: `bots`, `off` (manual orders only), `all`, or the kinds it may launch; `perBot`, one bot's money (a DCA bot's whole cycle, its entry and every averaging order; a Grid bot's total invested); `botsPer24h`, the money of the bots it started in the last 24 hours (a DCA cycle counts when it starts, a Grid its total invested when launched and any rise after); a launch that finds no room is made and waits. A bot's orders meet no order limit. For its positions on perpetuals: `perPosition`, one market's position value after the order; `totalPositions`, all its positions together after the order; an order that does not make a position larger is never refused by them. `leverage`: the highest leverage on a market where it adds risk, and for a bot at its launch and its change. `margin`: `isolated` refuses cross margin for its orders, its leverage writes and its bots; `any`, the meaning when absent, does not. Without `bots`, `perOrder`, `per24h` and `leverage` are required, as before this shape, and the key keeps the meaning it had: its bots' every order fits `perOrder` and a bot's whole cycle counts up front against the one `per24h`, shared with its orders. Values are decimal strings above zero.",
+      "description": "A trading key's limits (Amendment 1 A4; MH's shape of 2026-10-30, 0010 amendment 3 \"A Trade key's limits\"), set only by a person, in force from the key's next command. `accounts`: the account ids it may trade, or `all` for every account held now or added later. `markets`: the instruments it may trade, each by its exact id (the key form offers every perpetual and spot pair of the chosen accounts' exchanges), or `all` for every market on those accounts, `spot` for every spot market on them, `perps` for every perpetual on them (every futures market, of every dex), those listed later included; the kind is the market's own in the instrument list (0010 amendment 5). Every money limit is in `currency` (absent: USD; A write that names no `currency` is stamped with the base currency of that moment; one that names a currency of the list keeps it. 0050 d8), each order, position or bot valued in it at the rates held when it is checked (a dollar coin counts as one USD), and absent means no limit. For the orders the key places: `perOrder`, one order's value at the runtime's price; `per24h`, what its own orders that add risk filled in the last 24 hours plus what of them is open now (a cancelled order gives its value back; a bot's orders are never counted here). For its bots: `bots`, `off` (manual orders only), `all`, or the kinds it may launch; `perBot`, one bot's money (a DCA bot's whole cycle, its entry and every averaging order; a Grid bot's total invested); `botsPer24h`, the money of the bots it started in the last 24 hours (a DCA cycle counts when it starts, a Grid its total invested when launched and any rise after); a launch that finds no room is made and waits. A bot's orders meet no order limit. For its positions on perpetuals: `perPosition`, one market's position value after the order; `totalPositions`, all its positions together after the order; an order that does not make a position larger is never refused by them. `leverage`: the highest leverage on a market where it adds risk, and for a bot at its launch and its change. `margin`: `isolated` refuses cross margin for its orders, its leverage writes and its bots; `any`, the meaning when absent, does not. Without `bots`, `perOrder`, `per24h` and `leverage` are required, as before this shape, and the key keeps the meaning it had: its bots' every order fits `perOrder` and a bot's whole cycle counts up front against the one `per24h`, shared with its orders. Values are decimal strings above zero.",
       "type": "object",
       "additionalProperties": false,
       "required": ["accounts", "markets"],
@@ -132,7 +133,8 @@
         "perBot": { "$ref": "#/$defs/limitAmount" },
         "botsPer24h": { "$ref": "#/$defs/limitAmount" },
         "perPosition": { "$ref": "#/$defs/limitAmount" },
-        "totalPositions": { "$ref": "#/$defs/limitAmount" }
+        "totalPositions": { "$ref": "#/$defs/limitAmount" },
+        "currency": { "enum": ["USD", "EUR", "GBP", "BTC", "ETH", "AED", "ALL", "AUD", "BGN", "BRL", "CAD", "CHF", "CLP", "CNY", "COP", "CZK", "DKK", "EGP", "HKD", "HUF", "IDR", "ILS", "INR", "JPY", "KRW", "MXN", "MYR", "NGN", "NOK", "NZD", "PHP", "PKR", "PLN", "RON", "RUB", "SAR", "SEK", "SGD", "THB", "TRY", "TWD", "UAH", "VND", "ZAR"], "description": "Added with 0050: the currency of the six money limits, one of the 44 base currencies (runtime-api.schema.json#/$defs/currency); absent, USD. A write that names no `currency` is stamped with the base currency of that moment; one that names a currency of the list keeps it. A switch of the base converts the amounts once and stamps the new one." }
       }
     },
     "limitAmount": {
@@ -154,19 +156,21 @@
       "additionalProperties": false
     },
     "did": {
-      "description": "One thing a key did (decision 0010 d12): an order it placed, an order it cancelled, a leverage it set, an order it proposed (with what became of it); newest first. Reads are not logged.",
+      "description": "One thing a key did (decision 0010 d12): an order it placed, an order it cancelled, a leverage it set, isolated margin it added or took out, an order it proposed (with what became of it); newest first. Reads are not logged.",
       "type": "object",
       "additionalProperties": false,
       "required": ["t", "action"],
       "properties": {
         "t": { "type": "integer", "description": "When it was journaled, Unix milliseconds." },
-        "action": { "enum": ["place", "cancel", "leverage", "propose"] },
+        "action": { "enum": ["place", "cancel", "leverage", "margin", "propose"] },
         "orderId": { "type": "string" },
         "side": { "enum": ["buy", "sell"] },
         "size": { "type": "string", "description": "The order's size in the base asset, a decimal string." },
         "display": { "$ref": "instrument-display.schema.json" },
         "instrumentId": { "type": "string" },
         "leverage": { "type": "string" },
+        "amount": { "type": "string", "description": "A margin move: the isolated margin added (positive) or taken out (negative), a decimal string, in `asset`." },
+        "asset": { "type": "string", "description": "A margin move: the coin `amount` is counted in, the position's margin coin as the catalogue names it for the market (the dex's collateral on Hyperliquid, the contract's margin asset on Binance)." },
         "sizeUnit": { "enum": ["base", "quote"], "description": "A proposal's size unit: the base asset, or the pair's quote currency." },
         "outcome": { "enum": ["waiting", "launched", "rejected", "withdrawn"], "description": "What became of a proposal." }
       }
@@ -211,6 +215,18 @@
           "description": "Realized PnL less fees, in USDC, of the orders it placed and the orders launched from its proposals, since it was made; null while gcx has not read its journal yet (unavailable, never 0)."
         },
         "proposals": { "type": "integer", "minimum": 0, "description": "Its proposals waiting for you." },
+        "usedValue": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["amount", "currency"],
+          "description": "Added with 0050: a trading key's 24 hours as its limits' check values them now, in the limits' `currency`: each quote's amount converted at the rates held (a coin with no price counts zero). `orders` and `bots` for a key in MH's shape, as `used` serves them in their quotes. `used` keeps its meaning.",
+          "properties": {
+            "amount": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+            "currency": { "type": "string" },
+            "orders": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+            "bots": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" }
+          }
+        },
         "atLimit": { "const": true, "description": "Added 2026-10-04 (decision 0010 Amendment 1 A9): a command of this key was refused at its per-order, 24-hour or leverage limit, and no command of it has passed that limit since; you were told once. Absent otherwise, and after a restart until it meets a limit again." }
       }
     },
@@ -396,9 +412,9 @@
         "properties": {
           "cursor": { "type": "string" },
           "t": { "type": "integer" },
-          "action": { "enum": ["place", "cancel", "leverage", "propose", "modify", "bot-create", "bot-modify", "bot-stop", "bot-close", "propose-bot"] },
+          "action": { "enum": ["place", "cancel", "leverage", "margin", "propose", "modify", "bot-create", "bot-modify", "bot-stop", "bot-close", "propose-bot"] },
           "orderId": { "type": "string" }, "botId": { "type": "string" }, "proposalId": { "type": "string" }, "sourceId": { "type": "string" }, "instrumentId": { "type": "string" },
-          "side": { "enum": ["buy", "sell"] }, "size": { "type": "string" }, "sizeUnit": { "enum": ["base", "quote"] }, "leverage": { "type": "string" }, "edited": { "type": "boolean" },
+          "side": { "enum": ["buy", "sell"] }, "size": { "type": "string" }, "sizeUnit": { "enum": ["base", "quote"] }, "leverage": { "type": "string" }, "amount": { "type": "string" }, "asset": { "type": "string" }, "edited": { "type": "boolean" },
           "outcome": { "enum": ["waiting", "launched", "rejected", "withdrawn"] }
         }
       }

@@ -21,6 +21,7 @@
         "bound": { "type": "boolean", "description": "A chat was bound by /start <nonce> and messages go to it." },
         "state": { "enum": ["linked", "blocked", "token-invalid", "polling-stopped", null], "description": "blocked: the owner blocked the bot, sending waits until they write to it; token-invalid: Telegram refused the token; polling-stopped: another copy of the runtime reads this bot (Re-check restarts it)." },
         "topics": { "type": "boolean", "description": "Messages go to the three topics (Orders, Bots, Account); false: one chat." },
+        "openLinkHost": { "type": ["string", "null"], "description": "The hostname used by messages' Open links, only while the phone relay is enabled and a device is paired; null otherwise. Absent on older replies: show no browser hint." },
         "outbox": {
           "type": "object", "additionalProperties": false, "required": ["held", "pending", "sent", "dropped"],
           "properties": { "held": { "type": "integer", "minimum": 0 }, "pending": { "type": "integer", "minimum": 0 }, "sent": { "type": "integer", "minimum": 0 }, "dropped": { "type": "integer", "minimum": 0, "description": "Messages given up, each with its reason (the health line)." } }

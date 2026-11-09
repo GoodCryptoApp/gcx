@@ -2,10 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/affiliate-api.schema.json",
   "title": "Referral program routes",
-  "description": "The routes of Settings › Referral program (decision 0021 S1; docs/referral-program.md): this gcx's one partner code, and a partner's own key. A signed-in person's only, never an access key's (the partner key is a secret). All are additions to /api/v1; a runtime with no partner signing key built in answers 404. Percentages are decimal strings.",
+  "description": "The routes of Settings \u203a Referral program (decision 0021 S1; docs/referral-program.md): this gcx's one partner code, and a partner's own key. Every read is any access key's (API-MCP-320), the partner key itself (GET /api/v1/partner) excepted; every action is a signed-in person's only. All are additions to /api/v1; a runtime with no partner signing key built in answers 404. Percentages are decimal strings.",
   "$defs": {
     "join": {
-      "description": "POST /api/v1/referral: a partner's code, as pasted (whitespace around it is trimmed). Verified offline against our key; stored once, never changed or removed. 422 {error: \"Invalid code\"} or {error: \"You can't refer yourself\"} (this gcx's own partner key has the code's partner number); 409 {error: \"You're already referred\"}. Internal startup tier accepts the exact typed text into separate test metadata, without verification or server effects.",
+      "description": "POST /api/v1/referral: a friend's referral code (gcx- and eight characters: gcx-7K3MQ2AD; case and whitespace around it do not matter) or a partner's code, as pasted. A referral code is sent to goodcryptoX's server, which knows the installation that shared it and the split; it is stored from the server's answer only (the join it holds, also when it refuses a second code), once, never changed or removed. A partner's code is verified offline against our key. 422 {error: \"Invalid code\"} or {error: \"You can't refer yourself\"}; 409 {error: \"You're already referred\"} or {error: \"Available in a few minutes\"}; 503 {error: \"unreachable\"} when the server gave no answer (nothing is stored; send it again). Internal startup tier: the same checks; this installation's own code is accepted as separate local test metadata, without fee or server effects.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -48,17 +48,17 @@
             "string",
             "null"
           ],
-          "description": "The code's text (gcx- and 99 characters); null before one is entered."
+          "description": "The code's text (a referral code, gcx-7K3MQ2AD, or a partner's code); null before one is entered."
         },
         "discount": {
           "type": "string",
-          "pattern": "^(0|10|20|30|40|50)$",
+          "pattern": "^(0|5|10|20|30|40|50)$",
           "description": "The discount on gcx's fee the code gives, a percent of the fee."
         },
         "fee": {
           "type": "string",
           "pattern": "^0\\.0[0-9]+$",
-          "description": "gcx's builder fee on every order from the next one on, a percent of the trade (0.03 without a code, 0.027 with a 10 % code)."
+          "description": "gcx's builder fee on every order from the next one on, a percent of the trade (0.03 without a code, 0.027 with a 10% code)."
         },
         "since": {
           "type": [
@@ -70,6 +70,10 @@
         "test": {
           "type": "boolean",
           "description": "True only for an internal local test overlay; no effect on actual fees. Absent on older builds."
+        },
+        "codes": {
+          "$ref": "#/$defs/codes/properties/codes",
+          "description": "Additive (API-MCP-320), GET only: this installation's own three codes, as GET /api/v1/referral/codes answers them; absent where they are not derived, and from an older version."
         }
       }
     },
@@ -114,7 +118,7 @@
             },
             "codes": {
               "type": "array",
-              "description": "One code per discount from 0 to the maximum in 10 % steps; empty when not valid.",
+              "description": "One code per discount from 0 to the maximum in 10% steps; empty when not valid.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -140,6 +144,13 @@
             "test": {
               "type": "boolean",
               "description": "Internal local sample key only; never a verified server key."
+            },
+            "payouts": {
+              "enum": [
+                "here",
+                "elsewhere"
+              ],
+              "description": "The last acknowledged partner-key answer, retained across restart; absent before an answer"
             }
           },
           "allOf": [
@@ -226,7 +237,7 @@
               "trading": {
                 "type": "integer",
                 "minimum": 0,
-                "description": "Of those, the ones whose orders reached the server this week (from Monday 00:00 UTC)."
+                "description": "Traded: of those, the ones whose orders ever reached the server, since the start (decision 0053 amendment 1)."
               },
               "volume": {
                 "type": "array",
@@ -259,6 +270,262 @@
       "description": "C77: internal-only local test reset. No permanent referral, installation/report or fee record is rewritten.",
       "type": "object",
       "additionalProperties": false
+    },
+    "destinationSave": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "network",
+        "address",
+        "expectedRevision"
+      ],
+      "properties": {
+        "network": {
+          "enum": [
+            "arbitrum",
+            "base",
+            "optimism",
+            "polygon",
+            "bsc",
+            "avalanche",
+            "solana"
+          ]
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "expectedRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740990
+        }
+      }
+    },
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "network",
+        "address",
+        "revision"
+      ],
+      "properties": {
+        "network": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "codes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codes"
+      ],
+      "properties": {
+        "codes": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "discount",
+              "code"
+            ],
+            "properties": {
+              "discount": {
+                "enum": [
+                  "0",
+                  "5",
+                  "10"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^gcx-[0-9A-HJKMNP-TV-Z]{8}$",
+                "description": "The code to share (decision 0053 amendment 1): gcx- and 8 Crockford base32 characters goodcryptoX's server minted for this installation and this split; kept from the server's last answer."
+              }
+            }
+          }
+        }
+      }
+    },
+    "earnings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "earned",
+        "paid",
+        "unpaid",
+        "stale",
+        "joined"
+      ],
+      "properties": {
+        "earned": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+        },
+        "paid": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+        },
+        "unpaid": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "joined": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "discountPct",
+              "joined"
+            ],
+            "properties": {
+              "discountPct": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+              },
+              "joined": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "trading": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Traded: of those who joined with this code, the ones who ever placed an order, since the start (decision 0053 amendment 1)."
+              },
+              "volume": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "unit",
+                    "amount"
+                  ],
+                  "properties": {
+                    "unit": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "through": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    },
+    "payout": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "amount",
+            "state",
+            "destination",
+            "payment"
+          ],
+          "properties": {
+            "amount": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+            },
+            "state": {
+              "enum": [
+                "requested",
+                "paid",
+                "cancelled"
+              ]
+            },
+            "destination": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "network",
+                "address"
+              ],
+              "properties": {
+                "network": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "address": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "payment": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "amount",
+                    "tx"
+                  ],
+                  "properties": {
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+                    },
+                    "tx": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

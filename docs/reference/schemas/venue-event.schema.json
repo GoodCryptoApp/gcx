@@ -11,7 +11,8 @@
     { "$ref": "#/$defs/unknown" },
     { "$ref": "#/$defs/lookup" },
     { "$ref": "#/$defs/notPlaced" },
-    { "$ref": "#/$defs/reported" }
+    { "$ref": "#/$defs/reported" },
+    { "$ref": "#/$defs/fillsDue" }
   ],
   "$defs": {
     "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string." },
@@ -58,8 +59,10 @@
         "fillId": { "$ref": "#/$defs/id" },
         "size": { "$ref": "#/$defs/decimal" },
         "price": { "$ref": "#/$defs/decimal" },
-        "fee": { "$ref": "#/$defs/signedDecimal", "description": "In quote; negative for a maker rebate (Hyperliquid pays rebates as negative fees). In the base coin when feeIn is base." },
-        "feeIn": { "const": "base", "description": "Added in 0016 L6. The fee was charged in the instrument's base coin (a spot buy on a venue that charges the coin received: the account got size minus fee). Absent: the fee is in quote, as on every perpetual." },
+        "fee": { "$ref": "#/$defs/signedDecimal", "description": "In the contract’s settlement currency; negative for a maker rebate. In the base coin when feeIn is base." },
+        "feeIn": { "const": "base", "description": "Added in 0016 L6. The fee was charged in the instrument's base coin (a spot buy on a venue that charges the coin received: the account got size minus fee). Absent: the fee is in the contract’s settlement currency." },
+        "feeAsset": { "type": "string", "minLength": 1, "description": "Optional native commission asset, preserved beside its valued fee." },
+        "nativeFee": { "$ref": "#/$defs/signedDecimal", "description": "Optional exact commission in feeAsset; fee remains in the contract's settlement currency (or base under feeIn)." },
         "builderFee": { "$ref": "#/$defs/decimal", "description": "Added in A46. The part of fee that is gcx's platform fee (Hyperliquid's builderFee, in the same coin as fee; the venue's fee includes it). Absent: zero (Hyperliquid leaves it out when zero; a journal from before A46 never carried it)." },
         "time": { "$ref": "#/$defs/time", "description": "Added in 0016 amendment 5. The exchange's time of the fill (ms; Hyperliquid's time). Absent: a fill recorded before it; at is then the only time." },
         "at": { "$ref": "#/$defs/time" }
@@ -74,7 +77,7 @@
         "type": { "const": "cancelled" },
         "orderId": { "$ref": "#/$defs/id" },
         "attempt": { "$ref": "#/$defs/attempt" },
-        "reason": { "enum": ["requested", "ioc-remainder", "reduce-only", "margin", "liquidation", "venue"], "description": "requested: our cancel confirmed. ioc-remainder: the unfilled rest of an Ioc, which the venue does not report; the adapter emits it from its classification of 'filled x of y'. reduce-only: the venue removed a resting reduce-only order because the position closed (reduceOnlyCanceled). margin, liquidation: marginCanceled, liquidatedCanceled. venue: any other removal by the venue." },
+        "reason": { "enum": ["requested", "ioc-remainder", "reduce-only", "margin", "liquidation", "venue", "gone"], "description": "gone (added 2026-11-08, ORDER-ENDS O5): the venue answered 'no such order' for an order it had accepted, and its order read, its open orders and the order's own trades all answered without it. requested: our cancel confirmed. ioc-remainder: the unfilled rest of an Ioc, which the venue does not report; the adapter emits it from its classification of 'filled x of y'. reduce-only: the venue removed a resting reduce-only order because the position closed (reduceOnlyCanceled). margin, liquidation: marginCanceled, liquidatedCanceled. venue: any other removal by the venue." },
         "executed": { "$ref": "#/$defs/decimal", "description": "ioc-remainder only: the size the send's reply said executed (Hyperliquid filled.totalSz). Evidence, never a fill: the fills arrive as fill events, and the reducer re-sends the rest only once they account for this size." },
         "at": { "$ref": "#/$defs/time" }
       }
@@ -146,6 +149,18 @@
         "attempt": { "$ref": "#/$defs/attempt" },
         "origSz": { "$ref": "#/$defs/decimal" },
         "sz": { "$ref": "#/$defs/decimal" },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "fillsDue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "at"],
+      "description": "An accepted market send whose fills the runtime read for 3 s after its reply, then 5 s and 15 s after that, without finding them all (ORDER-ENDS O1). The order waits for them until 180 s after the send, then goes to repair (fills-missing); a fill that comes meanwhile ends it as before. Journaled only on that failure path. Added 2026-11-08; an older build skips the row.",
+      "properties": {
+        "type": { "const": "fills-due" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
         "at": { "$ref": "#/$defs/time" }
       }
     }

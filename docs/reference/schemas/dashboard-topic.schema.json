@@ -540,6 +540,10 @@
           },
           "createdBy": {
             "$ref": "order-row.schema.json#/$defs/createdBy"
+          },
+          "settlement": {
+            "type": "string",
+            "description": "An inverse contract's settlement coin, the currency of its upnl (added in 3.2.0, FIX-21299 S1); absent: the market's quote currency."
           }
         },
         "required": [

@@ -32,7 +32,7 @@
         "unit",
         "amount"
       ],
-      "description": "A3 d100: absent means quote. Quote is form metadata. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+      "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
       "properties": {
         "unit": {
           "enum": [
@@ -79,8 +79,10 @@
         "unit": {
           "enum": [
             "base",
-            "quote"
-          ]
+            "quote",
+            "coin"
+          ],
+          "description": "base is native size (contracts on inverse), quote is price-quote value (USD on inverse), coin is inverse settlement coin sized at each level before flooring to native contracts."
         },
         "amount": {
           "type": "string",

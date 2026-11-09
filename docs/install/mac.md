@@ -1,5 +1,7 @@
 # Set up goodcryptoX on your Mac
 
+goodcryptoX for Mac is an app in the menu bar that you install from one download and use in your browser. It updates itself, starts when you log in and trades while your Mac is on and online.
+
 macOS 13.5 or later, Apple silicon or Intel.
 
 {% hint style="warning" %}
@@ -29,12 +31,14 @@ To use goodcryptoX in another browser on this Mac, type localhost:8118 in its ad
 
 Your phone and your other computers connect from Settings › Devices › **Add a device** ([Phone access](../phone.md)).
 
+At home, turn on **Connect directly at home** in **Settings › Devices**, then open its link on your other devices; it starts **Off**. If your Mac's firewall asks whether goodcryptoX may accept connections, allow it. [Your home network](#your-home-network) walks you through it.
+
 ## Proxy
 
 <!-- proxy:start -->
 A proxy sends every exchange connection through an address you choose, on a computer, a NAS or a server.
 
-Open **Settings › General › Installation › Proxy**, turn **Proxy On**, enter `socks5://host:port` or `http://host:port`, and press **Save**. With no saved address, Save turns it on. With an address saved, the switch saves at once; Off keeps the address for next time. The saved address masks its password; **Edit** opens it with **Save** and **Cancel**, and **Remove** clears it and turns Proxy off. An empty field shows no warning; an address that is not a SOCKS5 or HTTP address warns at the field after Save and is not saved. If the proxy needs a login, use `socks5://user:password@host:port` or `http://user:password@host:port`; encode special characters in the login (for example, `@` as `%40`). Use a proxy you trust. Existing exchange streams reconnect through it without restarting goodcryptoX. If the proxy fails, goodcryptoX alerts you; check the address and login, or turn Proxy Off to connect directly.
+Open **Settings › General › Privacy & security › Proxy**, turn **Proxy On**, enter `socks5://host:port` or `http://host:port`, and press **Save**. With no saved address, Save turns it on. With an address saved, the switch saves at once; Off keeps the address for next time. The saved address masks its password; **Edit** opens it with **Save** and **Cancel**, and **Remove** clears it and turns Proxy off. An empty field shows no warning; an address that is not a SOCKS5 or HTTP address warns at the field after Save and is not saved. If the proxy needs a login, use `socks5://user:password@host:port` or `http://user:password@host:port`; encode special characters in the login (for example, `@` as `%40`). Use a proxy you trust. Existing exchange streams reconnect through it without restarting goodcryptoX. If the proxy fails, goodcryptoX alerts you; check the address and login, or turn Proxy Off to connect directly.
 
 For a terminal or Docker installation, set `GCX_PROXY=socks5://host:port` (or the HTTP address) in its environment before starting goodcryptoX. Once you save Proxy in Settings, that choice wins over the environment, including Off. The proxy covers exchanges; goodcryptoX's relay, reports, updates and other services connect directly.
 
@@ -55,3 +59,27 @@ On a server or NAS, you can run a VPN through a Gluetun sidecar: add the service
     restart: unless-stopped
 ```
 <!-- proxy:end -->
+
+{% include "../../.gitbook/includes/home-network.md" %}
+
+## Questions
+
+### Does goodcryptoX trade while my Mac sleeps?
+
+No: it trades only while this Mac is on and online, though orders resting on the exchange still fill. With **Keep the Mac awake** on, it keeps a plugged-in Mac from sleeping.
+
+### Which Macs does goodcryptoX run on?
+
+macOS 13.5 or later, on Apple silicon or Intel.
+
+### Can I move goodcryptoX from my Mac later?
+
+Yes: move it to a [NAS at home](nas.md) or a [rented server](server.md) in one file, accounts and bots included ([Moving goodcryptoX](moving.md)).
+
+### Can I use goodcryptoX on my phone?
+
+Yes: add your phone from Settings › Devices › **Add a device** ([Phone access](../phone.md)).
+
+### Do I still need your server?
+
+No: at home your devices open goodcryptoX directly. Away from home, our server is the way in ([Phone access](../phone.md)).

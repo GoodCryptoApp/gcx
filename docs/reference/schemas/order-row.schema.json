@@ -9,6 +9,8 @@
   "properties": {
       "closedBy": {"type": "array", "uniqueItems": true, "items": {"type": "string"}, "description": "A4: paired filled order ids, all partners; never inferred by a page read."},
       "closed": {"type": "array", "uniqueItems": true, "items": {"type": "string"}, "description": "A4: paired filled order ids, all partners; never inferred by a page read."},
+    "contract": { "$ref": "contract.schema.json" },
+    "unknownFields": {"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1},"description":"Fields whose legacy placeholders are not measurements, such as an inverse contract size before its catalogue facts arrive"},
     "id": { "type": "string" },
     "seq": { "type": "integer", "minimum": 0, "description": "The ledger event id of the row's last change. A row applies only if its seq is newer than the one held." },
     "requestId": { "type": "string", "description": "The form's command id, until the row replaces the form's pending state." },
@@ -27,6 +29,7 @@
     "parentId": { "type": "string" },
     "unarmed": { "const": true, "description": "Added 2026-10-18 (MH 728 (a), 729 (b)): a take-profit or stop-loss leg whose parent order has not filled in full: a plan, nothing of it on the exchange. The lists leave it out (Open orders and History); its parent's details show it. Absent once the parent has filled, and from older runtimes (an older panel lists the leg as before)." },
     "plannedExits": { "type": "object", "required": ["tp", "sl"], "additionalProperties": false, "properties": { "tp": { "type": "integer", "minimum": 0 }, "sl": { "type": "integer", "minimum": 0 } }, "description": "Added 2026-10-18 (MH 729 (r) (a)): on a parent order that ended (cancelled) before it filled in full, how many take-profits and stop-losses it had planned; their legs are `unarmed` and no list rows, so History's +TP/+SL tags read this. Absent on every other row, and from older runtimes." },
+    "leftBracket": { "const": true, "description": "Added 2026-11-09 (ORDER-PILLS-1109): a take-profit or stop-loss leg that left its order's bracket unfilled: it was cancelled, or an Edit TP/SL replaced or removed it. It is no longer one of the parent's exits, so the parent's +TP/+SL do not count it. A leg that filled anything is never marked. Absent on every other row and from older runtimes." },
     "restOf": { "type": "string", "description": "Added 2026-10-05 (0026 d5): a send of an order's rest, shown as its own row with the id `<order id>:rest<k>` (k = 1, 2, …): the order's id, which an action on the row acts on. Its size, fills, average and fee are that send's; the order's first row (its id) is its sends before the first rest. A person's take-profit or stop-loss keeps its role; a bot's rest is role and type `exit`. Absent on every other row, and from older runtimes." },
     "role": { "enum": ["entry", "avg", "tp", "sl", "exit", "liquidation", "adl"], "description": "liquidation and adl (added 2026-10-05, decision 0016 Amendment 3 d4): in a bot's activity, its share of an order the exchange filled, with `whole`." },
     "level": { "type": "integer", "minimum": 1, "description": "The averaging level when role is avg." },
@@ -52,6 +55,7 @@
     "triggerPrice": { "$ref": "#/$defs/decimal", "description": "Absent until a trailing order with an activation price is active." },
     "initialTriggerPrice": { "$ref": "#/$defs/decimal" },
     "waitingTriggerPrice": { "$ref": "#/$defs/decimal", "description": "Current admitted stop seed while waiting for trailing activation, including waiting distance edits. The immutable initialTriggerPrice keeps its creation meaning. Absent after activation and on older runtimes; not an active path sample." },
+    "cancelling": { "const": true, "description": "A cancel asked for (the person's, Cancel all, an agent's) that the exchange has not answered yet, the order in no repair: the row says Cancel requested until the order closes, or until it needs the person's decision (repair; its why then). Added 2026-11-08 (ORDER-ENDS O2); absent on every other row." },
     "held": { "enum": ["stopped", "disk", "maintenance"], "description": "A send gcx holds for the person (0013 ruling 1; status sending): why, only for an order that opens or adds to a position. stopped: gcx stopped before sending it (the next start sends it); disk: the disk is full; maintenance: Hyperliquid was in maintenance when it was due (it goes by itself when the maintenance ends). POST /api/v1/orders/{id}/send-now sends it, cancel ends it. Added 2026-10-04; absent on older rows and on every send not held." },
     "waiting": { "enum": ["rate-address", "upgrade-gate"], "description": "Added 2026-10-05 (0003 Amendment 2 d2, d8): rate-address, Hyperliquid's request allowance for this order's account is used up, and the order (or its cancel) waits its turn: the account sends one action every 10 seconds, in the order they were made. Nothing is refused; Cancel removes a waiting order at once. Added 2026-10-05 (0003 Amendment 3 d5): upgrade-gate, Hyperliquid takes only post-only orders for a few minutes after its upgrade; the order waits and is sent again every 10 seconds until taken (no `ahead`). Absent otherwise and from older runtimes." },
     "ahead": { "type": "integer", "minimum": 0, "description": "With `waiting`: how many of the account's actions go before this one." },
@@ -74,7 +78,8 @@
     "filled": { "$ref": "#/$defs/decimal" },
     "remaining": { "$ref": "#/$defs/decimal" },
     "averagePrice": { "$ref": "#/$defs/decimal" },
-    "fee": { "$ref": "#/$defs/decimal" },
+    "equity": { "$ref": "#/$defs/equityChoices", "description": "Explicit persisted stock facts; absent on old rows, no inferred defaults." },
+    "fee": { "$ref": "#/$defs/decimal", "description": "Authoritative order-fee total in feeAsset when one has been read, replacing fill fees; otherwise the existing sum of fill fees. Revisions may increase or decrease after completion. Never an execution or an allocated duplicate." },
     "builderFee": { "$ref": "#/$defs/decimal", "description": "Added 2026-10-17 (0004 amendment note): the part of `fee` that is gcx's platform fee (the fills' builder fee, valued as `fee` is), so the exchange's own part is `fee` − `builderFee`. Absent when none of the row's fills names one (a fill recorded before it was kept, or one the venue charged none on, such as a spot buy); `fee` is then the whole fee." },
     "feeAsset": { "type": "string" },
     "realizedPnl": { "$ref": "#/$defs/signed" },
@@ -92,10 +97,12 @@
     }
   },
   "$defs": {
+    "equityChoices": {"type": "object", "additionalProperties": false, "description": "Explicit stock facts (0037 amendment 2); no defaults. Absent: existing non-stock behavior, no stock choices inferred. This predecessor retains facts only; R1-R3 trading policy awaits MH.", "properties": {"tokenize": {"type": "boolean"}, "tradingSession": {"enum": ["RTH", "EXTENDED", "24H"]}, "timeInForce": {"enum": ["DAY", "GTC"]}, "wallet": {"enum": ["CARD", "MAIN"]}, "quoteSpend": {"$ref": "#/$defs/decimal", "description": "Reviewed native market-buy quote budget, never a promised share quantity. Absent: existing sizing contract; conversion/completion awaits R3."}}},
     "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." },
     "signed": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "A plain decimal string, negative allowed. Never a JSON number." },
     "createdBy": {
       "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "description": "Additive (0037 amendment 5): the small order goodcryptoX placed by itself to keep a Binance API key alive.", "properties": { "kind": { "const": "keep-alive" } } },
         {
           "type": "object",
           "additionalProperties": false,

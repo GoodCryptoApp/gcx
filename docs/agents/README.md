@@ -1,25 +1,34 @@
 # AI agents
 
-Connect Claude Desktop, Claude Code, Codex, Cursor or any other MCP app to goodcryptoX; a program uses the [API](api.md). Your goodcryptoX is a private installation on your computer, NAS or server. Its API and MCP tools connect to that installation; we run no public trading API or MCP server for you to connect to.
+goodcryptoX has a built-in MCP server and API: Claude Desktop, Claude Code, Codex, Cursor or any MCP app can read your positions, propose orders and trade on the exchanges you connect within limits you set, on your own installation, with no account at goodcryptoX. A program uses the [API](api.md). Your goodcryptoX is a private installation on your computer, NAS or server, and the goodcryptoX MCP server and the API connect to that installation; we run no public trading API or MCP server for you to connect to.
 
-Our relay is the default way to reach your installation from another device. It cannot read your access key, requests or replies. A computer can instead use an [SSH tunnel](#use-an-ssh-tunnel-instead), bypassing the relay; a [phone](../phone.md) connects through the relay.
+Our relay is the default way to reach your installation from another device. It cannot read your access key, requests or replies. A computer can instead use an [SSH tunnel](#use-an-ssh-tunnel-instead), bypassing the relay; a [phone](../phone.md) can also connect through the relay.
 
 ## What an agent can do
 
-These actions are available through both MCP and the API. See the [tool reference](../reference/runtime/api.md#mcp-tools) for details. The key sets what goodcryptoX allows; the AI agent's own rules may allow less.
+These actions are available through both MCP and the API. The key sets what goodcryptoX allows; the AI agent's own rules may allow less. A payment from your wallet, such as buying credits, stays yours: the agent can tell you how to make it.
 
 With any key, it can:
 
-- **Accounts and holdings**: read your accounts, balances, positions, open orders and bots, plus account and goodcryptoX status.
-- **Orders and history**: read order details and finished orders.
+- **Accounts and holdings**: read your accounts, balances, positions, open orders and bots, plus account and goodcryptoX status. The `portfolio` tool identifies known coins across accounts and unmatched exchange assets, with each holding's own price and any missing prices ([API](api.md#portfolio-identities)).
+- **Trading volume**: read how much you traded since you connected each account, your filled trades, fees and closed P&L, by account and who placed the order, all time or by UTC day. The answer tells you where history or prices are missing ([API](api.md#trading-volume)).
+- **Orders and history**: read order details and finished orders, and ask the exchange about one order now, as the order card's Refresh does (nothing changes at the exchange).
 - **Bot details**: read plans, orders, results and funding payments.
 - **Markets**: read available markets, their trading rules, and candle prices and volumes.
+- **Base currency**: read the currency you chose for goodcryptoX and its rate to the dollar.
+- **Credits**: read your credits, the starter CEX volume left (`remaining`; add what `balance` buys at `rate` for the panel’s total CEX volume left), the fee, which of your exchanges pay with credits, whether they run low or new orders and bots are paused, and how to add more. On Solana, credits can also be paid in $GOOD, held or bought from any coin in the same payment, at the $GOOD discount; a program can quote a payment with `POST /api/v1/credits/pay` (`input`, the coin amount, or `amount`, with `build: false`); the payment itself stays yours, from your wallet. The same `credits` tool returns `totals`: lifetime paid USD, payment credits, grants, CEX volume and fees; average daily and 30-day monthly volume and fees; the date window, whether cash is estimated, and the balance difference. Per-day reads with `before` remain available.
+- **Referral code**: read the code you joined with and your fee, your own three codes, what they earned, how many friends joined and how many of them traded, and your payout.
+- **Its own key**: read its scope, accounts, markets and limits, and how much of the 24 hours it has used.
+- **Exchange API keys**: check a Binance account's API key again after you changed its permissions on Binance, and read what it can do now.
 - **Previews and reports**: preview orders and bots without trading, and investigate what happened.
 
 With a **Trade** key, it can also:
 
 - **Orders**: place orders with take-profit and stop-loss, change its own orders and cancel non-bot orders on permitted accounts.
 - **Leverage**: set leverage and margin mode.
+- **Keep the API key alive**: it sees whether Keep my API key alive is on for a Binance account; only you can turn it on or off.
+- **Pay fees in BNB**: it sees whether a Binance account pays its fees in BNB; only you can turn it on or off.
+- **Isolated margin**: add or remove margin on an isolated position.
 - **Bots**: create and launch bots; change, stop or close bots it created.
 - **Bulk actions**: cancel non-bot orders, stop its own bots or close positions matching a filter, including yours. Bot holdings stay unless it also stops its own bots with their positions closed.
 
@@ -27,9 +36,9 @@ Trading follows your [accounts, markets and limits](#keys-and-limits); cancellat
 
 A **Propose** or **Trade** key can prepare orders and bots for you to review and launch in goodcryptoX. [Proposals](#proposals) do not trade until you launch them. It can take back a proposal of its own while it waits.
 
-No key can withdraw or transfer funds, add or remove isolated margin, change your settings or create another key. A Trade key modifies only its own orders and bots, but can cancel any non-bot order on permitted accounts. It cannot cancel bot orders directly, even after the bot stops.
+No key can withdraw or transfer funds, change your settings or create another key. A Trade key modifies only its own orders and bots, but can cancel any non-bot order on permitted accounts. It cannot cancel bot orders directly, even after the bot stops.
 
-A key's **Order proposal** and **Bot proposal**, and the moment it is **at its limit**, reach you in Telegram, named after the key. **Order accepted**, **Cancel accepted** and **Bot created** come too unless you turn off **Notify me in Telegram** in the key's details; it starts on. What you do yourself in the panel sends none. The key's details in **Settings › MCP & API** keep its activity under **What it did**.
+A key's **Order proposal** and **Bot proposal**, and the moment it is **at its limit**, reach you in Telegram, named after the key. **Order accepted**, **Cancel accepted** and **Bot created** come too unless you turn off **Notify me in Telegram** in the key's details; it starts on. What you do yourself in the panel sends none. The key's details in **Settings › MCP & API** keep its activity under **What it did**: the orders it placed and canceled, the leverage it set and the margin it added or took out.
 
 ## Connect any MCP app or program
 
@@ -43,7 +52,7 @@ Press **Create key** again, then **Copy** and **Done**. To see the key again lat
 
 <!-- Picture placeholder: ../pictures/agents/01-mcp-api.webp — the keys, then the connect block: AI agents | API with the key at the right, the four app rows. -->
 
-Under the keys, the connect block has two sides, **AI agents** and **API**, and at its top right the key it fills in: the key you made last is already chosen; pick another from the list. Each app has one row that says where its setup goes: copy it and paste it there. Your key, your installation's address and the way to reach it from another computer are already inside, so there is nothing to fill in. The same line works on the computer running goodcryptoX and on any other ([From another computer](#from-another-computer)). The lines are for the system of the browser you copy them in: copy them on the computer where the app runs.
+Under the keys, the connect block has two sides, **AI agents** and **API**, and at its top right the key it fills in: the key you made last is already chosen; pick another from the list. Each app has one row that says where its setup goes: copy it and paste it there. Your key, your installation's address and the way to reach it from another computer are already inside, so there is nothing to fill in. Copied through our relay, the same line works on the computer running goodcryptoX and on any other ([From another computer](#from-another-computer)). The lines are for the system of the browser you copy them in: copy them on the computer where the app runs.
 
 Claude Code, Codex and Cursor start the connector with Node.js 18 or newer on the computer where they run; Claude Desktop brings its own. If your app says it cannot find `npx`, install Node.js for your system from [nodejs.org](https://nodejs.org/) and start the app again. The first start fetches the connector, which can take a few seconds.
 
@@ -98,7 +107,7 @@ Any other app that runs MCP servers over standard input and output takes the sam
 
 ## From another computer
 
-The same line works from any computer. When goodcryptoX does not run on the computer where your app runs, the connector reaches your installation through our relay, which cannot read your access key, requests or replies. Open goodcryptoX from that computer (through our relay or any way you reach it), copy your app's line and paste it as above.
+The line copied through our relay works from any computer. When goodcryptoX does not run on the computer where your app runs, the connector reaches your installation through our relay, which cannot read your access key, requests or replies. Open goodcryptoX from that computer through our relay, copy your app's line and paste it as above.
 
 The first time an app starts the connector, it pairs that computer with your installation, with a one-use code the line carries. The code works until it is used, for a day at most, whether or not goodcryptoX's page stays open; restarting goodcryptoX also ends it. From then on every app on that computer connects by itself. The computer appears in **Settings › Devices** as **Programs on …**, with **Remove**.
 
@@ -107,6 +116,8 @@ If your app says **This connector has expired. Download it again from goodcrypto
 Keep the copied lines private: they hold your key and, for a day, the code that pairs a computer. Claude Desktop's file holds the code but not the key: Claude Desktop asks for it. The code alone reads and trades nothing; an access key is still needed.
 
 A running connector reconnects after sleep or a network interruption; your installation keeps trading while it runs and is connected to the exchange. To connect without our relay, use [an SSH tunnel](#use-an-ssh-tunnel-instead).
+
+From a [home address](../install/mac.md#your-home-network), the line you copy connects your AI app or program directly to the installation that made it, with your chosen key, and never through our relay. Use it on a network you trust, or through your own trusted HTTPS address: over HTTP, someone who can read the traffic can copy the key.
 
 ## Use an SSH tunnel instead
 
@@ -137,6 +148,14 @@ Programs use that same local address and their own key. Closing the SSH command 
 
 **Remove** ends that computer's program connections, not its access keys. Pair it again to reconnect. Other computers remain connected. Orders already sent may finish; removal does not cancel orders, stop bots or close positions. Revoke a key separately to take away its access everywhere it is used.
 
+## Key statistics
+
+Each key shows its own activity in Settings and on the Dashboard. **Active** counts its open orders and running bots. **Volume** is the value traded by its orders and bots, not its account balance.
+
+**Real PnL** is the realized profit or loss from that key's trades and its bots' funding, after fees. It excludes the changing unrealized PnL of positions still open. For example, 20 of closed trading profit, less 2 in fees and 1 in funding paid, contributes 17. Funding received adds to the result instead.
+
+The figures show a total and the last 24 hours. When a key trades in several currencies, their results stay separate; a profit in one currency is not silently added to a profit in another.
+
 ## Keys and limits
 
 Each key's row in **Settings › MCP & API** shows its open orders and bots, trading volume and PnL; open the row to see its limits and press **Edit** to change what it may do or its limits. Its proposals wait in the Trade page's **Proposals** tab ([Proposals](#proposals)).
@@ -145,7 +164,9 @@ Each key's row in **Settings › MCP & API** shows its open orders and bots, tra
 
 For a **Trade** key, choose **Accounts** and **Markets** (**All**, **Spot**, **Perps**, or **Custom**: a search and the markets you tick from its matches), then the limits you want. **All**, **Spot** and **Perps** include markets listed later. Accounts and markets restrict what it trades on; reading and proposing are not restricted. With no accounts or markets set, it cannot trade.
 
-Every money limit starts off and reads **No limit**: turn on the ones you want and type their value. Limits are in USD, the app's base currency; a market quoted in a stablecoin counts one to one. A limit bounds the size of what the agent trades, its value, never the margin it uses: at 5x, a 1,000 USD order uses about 200 USD of margin.
+Every money limit starts off and reads **No limit**: turn on the ones you want and type their value. Limits are in your base currency (**Settings › General › Base currency**, US dollar until you choose another): a key keeps the currency its limits were set in. A market quoted in a stablecoin counts one to one with the dollar; a market quoted in a coin such as BTC is valued at that coin's price. A limit bounds the size of what the agent trades, its value, never the margin it uses: at 5x, a 1,000 USD order uses about 200 USD of margin.
+
+Picking another base currency converts each key's limits once, at that day's rate, and they stay amounts in the new currency: a 1,000 USD limit becomes 900 EUR at 0.9, and what is enforced is 900 EUR whatever the rate does afterwards. The 24-hour limits add the key's orders and bots across markets quoted in different currencies, each valued in the limits' currency when the order is checked; nothing in the last 24 hours is rewritten by a switch. A bot sized near its limit can be held by a move of the rate; **Retry** runs it once it fits. Over a limit, the refusal names both amounts in the limits' currency ("Order value 945.00 EUR is over this key's limit of 900.00 EUR"). With BTC or ETH as the base, limits are coin amounts and the dollars they allow move with the coin's price.
 
 | Section | Limit | What you allow |
 |---|---|---|
@@ -160,6 +181,8 @@ Every money limit starts off and reads **No limit**: turn on the ones you want a
 | | **Highest leverage** | Starts at 5x: the most leverage it may set or use. For bots, checked at launch and when the key changes them. Shown, with Margin, when its markets include perpetuals. |
 
 An order that makes a position smaller is always allowed, whatever the position limits say. The same key shares its limits across all apps and devices using it.
+
+A key trades every exchange you connect the same way. On Binance it places orders and runs bots within the same accounts, markets and limits, and sets a futures market's leverage and margin type within **Highest leverage** and **Margin**. Its trades there pay goodcryptoX's fee from your [credits](../credits.md), and its new orders and bots need credits as yours do.
 
 For the agent in this guide, Max 24h volume for orders is 10,000 USD and 9,800 USD is already used. Another 400 would take it to 10,200, so goodcryptoX refuses that order. Choose limits for the trading you intend, then copy the key and [connect your agent or program](#connect-any-mcp-app-or-program).
 
@@ -189,7 +212,7 @@ A bot is bounded by its own limits, never by the order limits: its entry, averag
 
 The bots' **Max 24h volume** counts each DCA cycle's money when the cycle starts, and a Grid bot's investment when it is launched and whenever it grows. If this agent launches three DCA bots with an entry of 500 USD and four averaging orders of 300 USD each, every cycle is 1,700 USD. Under a 5,000 USD limit the first two start; the third is created and waits, and you receive a Telegram message. It starts by itself once the first start is 24 hours old. Existing take-profits and stop-losses keep working meanwhile.
 
-The key can change only bots it created directly. Use a strategy sheet (the example at the end of this page) to prepare and review a complete plan before allowing it to launch.
+The key can change only bots it created directly. Use a strategy sheet (the example at the end of [Proposals](#proposals)) to prepare and review a complete plan before allowing it to launch.
 
 A key made before these limits keeps its old rule until you save its limits again: each bot order must fit its largest order, and each cycle counts up front against the one 24-hour allowance it shares with its orders.
 
@@ -236,8 +259,8 @@ Here is one ETH DCA profile. Its entry and four averaging orders are each 359.35
 | Long, following the signal | **Entry mode: Direct** |
 | Market entry | **Entry type: Market** |
 | 359.35 USDC per order | **Entry size: 359.35**, in USDC |
-| Four equal averaging orders | **Averaging orders: 4**, **1st averaging order: Manual**, **1st avg size: 359.35**, **Avg size multiplier: 1** |
-| First gap 0.96%; subsequent gap 1.1712%, multiplied by 1.22 | **1st avg step: 0.96%**, **Averaging price step: 1.1712%**, **Averaging step multiplier: 1.22** |
+| Four equal averaging orders | **Averaging orders: 4**, **1st avg order: Manual**, **1st avg size: 359.35**, **Avg size multiplier: 1** |
+| First gap 0.96%; subsequent gap 1.1712%, multiplied by 1.22 | **1st avg step: 0.96%**, **Avg price step: 1.1712%**, **Avg step multiplier: 1.22** |
 | Activate each averaging order when price reaches the preceding planned level. | **On exchange: One at a time**, **Post only** off |
 | Take Profit 1.61% from average entry | **Take Profit** on at 1.61%, **TP type: Limit**, **Fix TP as % from entry order price** off |
 | Stop 2.197609% below the last planned averaging order | **Stop Loss** on at 2.197609%; **Stop Loss as: From last avg. order, %**. |
@@ -245,12 +268,38 @@ Here is one ETH DCA profile. Its entry and four averaging orders are each 359.35
 
 A sheet's decimal comma means the same number: 0,96% becomes 0.96%. Compare the preview's prices and amounts with the sheet. With these settings, the averaging orders are about 0.960%, 2.120%, 3.519% and 5.200% below the entry. Choose leverage and margin deliberately before launch.
 
-![The DCA form filled with the sheet's entry and averaging settings, the arrow at Investment](../pictures/agents/strategy-sheet-form-entry.webp)
+<figure><img src="../pictures/agents/strategy-sheet-form-entry.webp" alt="The DCA form filled with the sheet's entry and averaging settings, the arrow at Investment" width="300"><figcaption></figcaption></figure>
 
-![The same form's exits and Orders list, the arrow at the Total](../pictures/agents/strategy-sheet-form-exits.webp)
+<figure><img src="../pictures/agents/strategy-sheet-form-exits.webp" alt="The same form's exits and Orders list, the arrow at the Total" width="300"><figcaption></figcaption></figure>
 
 Ask the agent to flag unsupported rules. Another platform's indicator settings, a modelled loss bound, a breakeven stop move or a time limit from the first fill may have no matching setting. It should explain the difference before you trade.
 
 [Permissions](#keys-and-limits) decide whether the agent reads, proposes or trades; it cannot withdraw funds or raise its own allowance. For a direct **Trade** launch, the key's [bot limits](#its-bots) cover the bot's whole money: this profile's 1,796.75 USDC cycle is over a 1,000 USD **Max per bot**, so the bot is not created; revise the profile or the limit yourself. A proposal can still be prepared for you to review and launch.
 
 </details>
+
+## Questions
+
+### Can Claude place trades for me?
+
+Yes, with a **Trade** key: it reads, places and cancels orders and runs its own bots within your accounts, markets and limits. With a **Propose** key, nothing trades without you.
+
+### Does goodcryptoX have an MCP server?
+
+Yes: the goodcryptoX MCP server connects Claude Desktop, Claude Code, Codex, Cursor and other MCP apps to your own installation, with a key from **Settings › MCP & API**. We run no public MCP server for you to connect to.
+
+### Does my key or my trading go through goodcryptoX's servers?
+
+Only from another device, through our relay, which cannot read your access key, requests or replies. An [SSH tunnel](#use-an-ssh-tunnel-instead) bypasses the relay.
+
+### Can the agent withdraw funds?
+
+No: no key can withdraw or transfer funds, change your settings or create another key.
+
+### Which apps work: Claude, Codex, Cursor, others?
+
+Claude Desktop, Claude Code, Codex and Cursor each have their own row in **Settings › MCP & API**, with nothing to fill in. Any other app that runs MCP servers over standard input and output takes the same entry.
+
+### Is there an API?
+
+Yes: your own program reads and trades through goodcryptoX's API, with the same keys, permissions and limits as an AI agent ([API](api.md)).

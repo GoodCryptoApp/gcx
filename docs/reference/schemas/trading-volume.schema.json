@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.app/schemas/trading-volume.schema.json",
+  "title": "Retained trading volume (0055)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "at",
+    "accounts",
+    "totals",
+    "days",
+    "next",
+    "recovery"
+  ],
+  "properties": {
+    "at": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "accounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "venue",
+          "since",
+          "state",
+          "cursor",
+          "count"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "string"
+          },
+          "venue": {
+            "type": "string"
+          },
+          "since": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "ready",
+              "incomplete"
+            ]
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string"
+          },
+          "simulated": {
+            "const": true
+          }
+        }
+      }
+    },
+    "totals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/row"
+      }
+    },
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "day",
+          "rows"
+        ],
+        "properties": {
+          "day": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/row"
+            }
+          }
+        }
+      }
+    },
+    "next": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "legacyThrough",
+        "legacyEnd",
+        "liveThrough",
+        "liveEnd"
+      ],
+      "properties": {
+        "legacyThrough": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "legacyEnd": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "liveThrough": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmatchedFees": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "liveEnd": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceId",
+        "venue",
+        "market",
+        "origin",
+        "volume",
+        "fills",
+        "exchangeFee",
+        "gcxFee",
+        "closedPnl",
+        "missing",
+        "estimated",
+        "unknownFees",
+        "unknownPnl"
+      ],
+      "properties": {
+        "sourceId": {
+          "type": "string"
+        },
+        "venue": {
+          "type": "string"
+        },
+        "market": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "keyId": {
+          "type": "string"
+        },
+        "volume": {
+          "type": "string",
+          "pattern": "^-?\\d+(\\.\\d+)?$"
+        },
+        "exchangeFee": {
+          "type": "string",
+          "pattern": "^-?\\d+(\\.\\d+)?$"
+        },
+        "gcxFee": {
+          "type": "string",
+          "pattern": "^-?\\d+(\\.\\d+)?$"
+        },
+        "closedPnl": {
+          "type": "string",
+          "pattern": "^-?\\d+(\\.\\d+)?$"
+        },
+        "fills": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknownFees": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknownPnl": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "simulated": {
+          "const": true
+        }
+      }
+    }
+  }
+}

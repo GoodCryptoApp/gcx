@@ -2,8 +2,49 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/accounts-api.schema.json",
   "title": "Accounts API",
-  "description": "Connecting a Hyperliquid main account (decisions 0007 d17 to d20, 0013 slice C; roadmap A8, the runtime half) and the accounts list with each account's readiness (roadmap A8 item 4). The panel connects the main wallet, reads the wallet check, asks the runtime for an API wallet (`POST /api/v1/accounts`; the key is made by gcx's key store and never leaves it), has the main wallet sign `approveAgent` and, only when the approved builder fee is below 0.03 %, `approveBuilderFee`, and hands each signed action to `POST /api/v1/accounts/{sourceId}/signed`, which relays it to Hyperliquid, field for field, when the allow-list admits it. A person's routes only: an access key is refused. Times are Unix milliseconds. See docs/venues/hyperliquid.md and docs/reference/runtime/api.md.",
+  "description": "Connecting a Hyperliquid main account (decisions 0007 d17 to d20, 0013 slice C; roadmap A8, the runtime half) and the accounts list with each account's readiness (roadmap A8 item 4). The panel connects the main wallet, reads the wallet check, asks the runtime for an API wallet (`POST /api/v1/accounts`; the key is made by gcx's key store and never leaves it), has the main wallet sign `approveAgent` and, only when the approved builder fee is below 0.03%, `approveBuilderFee`, and hands each signed action to `POST /api/v1/accounts/{sourceId}/signed`, which relays it to Hyperliquid, field for field, when the allow-list admits it. A person's routes only: an access key is refused. Times are Unix milliseconds. See docs/venues/hyperliquid.md and docs/reference/runtime/api.md.",
   "$defs": {
+    "agreementReceipts": {
+      "description": "Local positive acceptance receipts per account and product, never venue status. Absent product (including older data): no acceptance through goodcryptoX. New sidecar files are ignored by previous builds. At most two slots; no history scan.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stocks": {
+          "$ref": "#/$defs/agreementReceipt"
+        },
+        "tradfi": {
+          "$ref": "#/$defs/agreementReceipt"
+        }
+      }
+    },
+    "agreementReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "acceptedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Immutable account sourceId:product identity"
+        },
+        "acceptedAt": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Confirmation time as Unix milliseconds, a boundary string"
+        }
+      }
+    },
+    "stocksAgreement": {
+      "description": "An explicit person-only agreement press for the account in the path. Selection only offers the action; only a positive venue reply writes a local product receipt. No default acceptance.",
+      "type": "object", "additionalProperties": false
+    },
+    "stocksAgreementAnswer": {
+      "description": "Only literal venue success true confirms this press. False includes refusal and lost reply, so means not confirmed. No automatic order retry. Additive route; older clients and stored data are unchanged.",
+      "type": "object", "additionalProperties": false, "required": ["success"],
+      "properties": { "success": { "type": "boolean" } }
+    },
     "inPortfolio": {
       "description": "Only the pressed Dashboard membership switch; merged per account, person only (0007 Amendment 6)",
       "type": "object", "additionalProperties": false, "minProperties": 1,
@@ -31,7 +72,7 @@
       }
     },
     "feeState": {
-      "description": "The builder-fee approval for gcx's 0.03 % (decision 0007 d20): `approved` when Hyperliquid's `maxBuilderFee` for our builder is at least 30 (tenths of a basis point; an old approval of 1 % reads 1000 and stands), `not approved` below it, `unknown` when it could not be read (the accounts list reads every approval not read as approved before it answers, so there `unknown` means the read failed). Every order carries the fee, exits, closes and stop-losses included (ruling 5). `not approved` refuses a new order or bot (422 `builder-fee`), for a person and a key alike, after one fresh read of the approval that still says so (MH 196; a read that fails is `unknown` and nothing is refused); a Close, an order that only reduces, a cancel, an exit and a Stop are not refused, and a running bot goes on. Hyperliquid refuses an order that carries the fee when the approval is gone.",
+      "description": "The builder-fee approval for gcx's 0.03% (decision 0007 d20): `approved` when Hyperliquid's `maxBuilderFee` for our builder is at least 30 (tenths of a basis point; an old approval of 1% reads 1000 and stands), `not approved` below it, `unknown` when it could not be read (the accounts list reads every approval not read as approved before it answers, so there `unknown` means the read failed). Every order carries the fee, exits, closes and stop-losses included (ruling 5). `not approved` refuses a new order or bot (422 `builder-fee`), for a person and a key alike, after one fresh read of the approval that still says so (MH 196; a read that fails is `unknown` and nothing is refused); a Close, an order that only reduces, a cancel, an exit and a Stop are not refused, and a running bot goes on. Hyperliquid refuses an order that carries the fee when the approval is gone.",
       "enum": ["approved", "not approved", "unknown"]
     },
     "wallet": {
@@ -133,13 +174,15 @@
       }
     },
     "row": {
-      "description": "One element of GET /api/v1/accounts. The first five fields are the account selector's (0007); the rest are added by roadmap A8 for the connect screens and the Settings rows: `enabled` is true once Hyperliquid listed the API wallet (the account trades from then on; until then it waits for approval). `agent.approval`: `waiting` until Hyperliquid lists the API wallet, then `active`. `agent.validUntil`: Hyperliquid's expiry from gcx's last read (null: none; absent: not read since gcx started). `builderFee.stale`: the last read failed and `state` is the one before it. `referral`: `pending` until gcx's API wallet has sent Hyperliquid's referral code once, then `sent`, or `declined` (unchecked, already referred, or refused by Hyperliquid).",
+      "description": "One element of GET /api/v1/accounts. The first five fields are the account selector's (0007); the rest are added by roadmap A8 for the connect screens and the Settings rows: `enabled` is true once Hyperliquid listed the API wallet (the account trades from then on; until then it waits for approval). `agent.approval`: `waiting` until Hyperliquid lists the API wallet, then `active`. `agent.validUntil`: the last Hyperliquid expiry date, retained across restarts; null means no expiry date at the venue or no date verified yet; absent means neither a persisted fact nor a read is available. `credentialId` and `keyExpiryAt` are the additive shared fact for 0049; no panel inference from readiness. `builderFee.stale`: the last read failed and `state` is the one before it. `referral`: `pending` until gcx's API wallet has sent Hyperliquid's referral code once, then `sent`, or `declined` (unchecked, already referred, or refused by Hyperliquid).",
       "type": "object",
       "additionalProperties": false,
       "required": ["sourceId", "venue", "label", "enabled", "empty"],
       "properties": {
         "inPortfolio": { "$ref": "#/$defs/membership" },
         "sourceId": { "type": "string" },
+        "credentialId": { "type": "string", "description": "0049 additive: stable shared credential/replacement id. Main, sub-account and vault sharing one key have the same id; unrelated credentials remain independent." },
+        "keyExpiryAt": { "type": "integer", "description": "0049 additive: last verified key deadline, UTC epoch milliseconds. Retained across restart/failed reads and an unlisted expired wallet; absent when no deadline is verified or a successful listed read supplies no date. No freshness timestamp or never-expiring promise. Venue reader participation distinguishes unknown (date-bearing venues) from no expiry facility (Binance). Do not infer it from wallet readiness. Settings keeps the date beyond 30 days, warning inclusively at 30 days; Dashboard groups by credentialId and shows one red row at 30 days or less, through expiry. Failed/stale reads retain the fact without a freshness label; no prior fact yields no expiry line." },
         "venue": { "type": "string" },
         "label": { "type": "string" },
         "enabled": { "type": "boolean" },
@@ -147,7 +190,7 @@
         "kind": { "enum": ["master", "subAccount", "vault"] },
         "master": { "type": "string", "description": "A sub-account's or vault's main account (its sourceId) while the main account is in gcx, else its API wallet's id (0003b amendment 2 v2); absent on a main account." },
         "state": { "type": "string", "description": "goodcryptoX's account status code (ok, AuthenticationError, …); absent reads ok." },
-        "address": { "$ref": "#/$defs/address" },
+        "address": { "anyOf": [{ "$ref": "#/$defs/address" }, { "type": "string", "pattern": "^[1-9][0-9]{0,19}$" }], "description": "The account's identity at its venue: a Hyperliquid address; additive (0037 §10 d2, 2026-10-22), a Binance account's user id in digits." },
         "agent": {
           "type": "object",
           "description": "The API wallet that signs for this account: its main account's, one per main account. Since 0003b amendment 2 v2 (2026-10-05, additive) on every account under that main, the main's own included, where it was on a main account's row only.",
@@ -159,7 +202,7 @@
             "name": { "type": "string" },
             "address": { "$ref": "#/$defs/address" },
             "approval": { "enum": ["waiting", "active"] },
-            "validUntil": { "type": ["integer", "null"] },
+            "validUntil": { "type": ["integer", "null"], "description": "Last Hyperliquid expiry in epoch milliseconds, retained across restarts. Null: no expiry date at the venue or no date verified yet. Absent: neither a persisted fact nor a read is available." },
             "moved": { "type": "boolean", "description": "Deprecated, never sent since 0024 amendment 3 (an import keeps the API wallets with no hold); builds before it sent true for an account brought from another machine whose API wallet waited for a replacement. Absent: not moved." }
           }
         },
@@ -196,9 +239,16 @@
           }
         },
         "refused": { "type": "string", "deprecated": true, "description": "Deprecated (0003 Amendment 2 d7, 2026-10-05): never sent any more. It said a sub-account or a vault took no new order or bot after Hyperliquid refused gcx's builder fee there; now each order carries the fee and Hyperliquid answers each one. Kept in the schema for one release, as the no-breaking-changes rule asks." },
-        "wallet": { "enum": ["expired", "removed"], "description": "Additive (MH 2026-10-05, audit line 13): the main account's API wallet, which signs for this account, has expired or is no longer listed at Hyperliquid, as the runtime's last read found it; a new order or bot on it is refused 422 `api-wallet` with the sentence, and the panel shows the sentence in place of Buy, Sell and Launch. Nothing is held: a running bot's next order goes to the exchange, which refuses it. Absent: neither, or no runtime is open." },
+        "wallet": { "enum": ["expired", "removed"], "description": "Additive wallet information, retained by 0049. Expired is an adjacent panel notice and does not disable Buy, Sell or Launch or produce local 422 api-wallet; sends reach the venue. Genuine removal retains the fresh-read refusal and disabled actions. An elapsed verified deadline remains expiry even if the wallet is pruned from the venue list. Already-held DCA renewal semantics stay. Absent: neither, or no runtime is open." },
+        "held": { "const": true, "description": "Additive (0037 §10 d2): trading is held and commands answer 422 `held`. With readable absent, this version also cannot read the venue (for example after a put-back). With readable true, B4 account reads continue while Binance awaits B3's send path." },
+        "bnbFees": { "$ref": "#/$defs/bnbFeesState", "description": "Additive (BN-ACCOUNT-CAPS): Pay fees in BNB on a Binance account, as Binance said it on the last read (at connect, after a key or mode change, and after every change). Absent before the first read" },
+        "positionModes": { "type": "object", "additionalProperties": false, "properties": { "usdm": { "type": "boolean" }, "coinm": { "type": "boolean" } }, "description": "Additive (0037 B5): last confirmed position mode per account/futures family; true is hedge mode. Missing is unknown. A failed read preserves the last fact" },
+        "keepAlive": { "type": "object", "additionalProperties": false, "required": ["on", "applies", "state", "deadline"], "description": "Additive (0037 amendment 5): Keep my API key alive on a Binance account whose key has no IP addresses and can do more than read. Absent where it does not apply, before this run's permission read, or with the feature off. Times in ms; `need` is what to add to Spot when funds are short.", "properties": { "on": { "type": "boolean" }, "applies": { "const": true }, "state": { "enum": ["on", "off", "cannot", "lost"] }, "due": { "type": "integer" }, "deadline": { "type": "integer" }, "lastAt": { "type": "integer" }, "reason": { "enum": ["funds", "refused", "other"] }, "need": { "type": "object", "additionalProperties": false, "required": ["amount", "asset"], "properties": { "amount": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" }, "asset": { "type": "string" } } } } },
+        "readable": { "const": true, "description": "Additive (0037 B4): this connected account can supply balances, positions and account updates even while its trading is held. Absent: no separate read capability is declared." },
+        "keyRefused": { "enum": ["key", "location"], "description": "0052: `keyRefused` is the spot private stream's refusal (`key`) or any private stream's restricted-location refusal (`location`), each cleared when that stream is live again; a futures family a key cannot open is not the key's refusal (a spot-only key); a send's coded `AUTH` makes the streams re-prove the key and sets nothing itself." },
+        "lines": { "type": "array", "items": { "$ref": "#/$defs/keyLine" }, "description": "Additive (0037 §3 d4, slice B2): a Binance account's key, one fact per line, from its last successful check, kept across restarts and refused checks; replaced only on a successful check. Absent on every other account, and until read." },
         "simulated": { "type": "boolean", "description": "true on a demo account (docs/panel/demo-accounts.md; always listed, after the connected accounts): made up, it never trades and nothing of it reaches a venue; its lists are the socket's `demo/` topics. Absent on a connected account." },
-        "live": { "type": "boolean", "description": "Additive (0013 amendment 2 d5): true while the account gets live updates; false while it is polled, because Hyperliquid allows only so many live accounts per internet address (gcx follows what Hyperliquid accepts) and accounts with a bot or an order of gcx come first. Absent: the runtime does not say (no account open yet, a demo account)." },
+        "live": { "type": "boolean", "description": "Additive (0013 amendment 2 d5): true while the account gets live updates; false while it is polled, because Hyperliquid allows only so many live accounts per IP address (gcx follows what Hyperliquid accepts) and accounts with a bot or an order of gcx come first. Absent: the runtime does not say (no account open yet, a demo account)." },
         "everyMs": { "type": "integer", "minimum": 60000, "description": "Additive (0013 amendment 2 d5): while `live` is false, how often the account is read (ms): at least a minute, longer when many accounts are polled. Absent while live." },
         "open": {
           "type": "object", "additionalProperties": false, "required": ["bots", "orders"],
@@ -223,11 +273,11 @@
       }
     },
     "add": {
-      "description": "POST /api/v1/accounts/add: add a sub-account or a vault that `found` offers, or (additive, 0003b amendment 2 v2) a main account whose API wallet stands in gcx: its own account, added, or brought back with its history. A fresh read must list it; it then trades at once, its orders signed by its main account's API wallet with its address as `vaultAddress`, with gcx's builder fee as the main account's. Answers 200 `{sourceId}` (the same requestId or the same address again answers the same), with `warning` (additive, 0013 amendment 2 d5) when gcx already trades as many accounts as Hyperliquid last accepted live, so this one will be polled: \"Hyperliquid allows a limited number of live accounts per connection point; this one updates every minute over the slower path, which can also delay its orders.\"; 422 `{rejected, text}`: `not-found` (Hyperliquid does not list it), `most` (gcx trades up to 100 accounts at once, 0013 d13), `not-available`; 409: the requestId was used for another account; 503: Hyperliquid could not be read.",
+      "description": "POST /api/v1/accounts/add: add a sub-account or a vault that `found` offers, or (additive, 0003b amendment 2 v2) a main account whose API wallet stands in gcx: its own account, added, or brought back with its history. A fresh read must list it; it then trades at once, its orders signed by its main account's API wallet with its address as `vaultAddress`, with gcx's builder fee as the main account's. Answers 200 `{sourceId}` (the same requestId again answers the same), with `already` (additive, MH 2026-11-08: `{sourceId, label}`, the record of this account goodcryptoX had, when this add made a second one) and `warning` (additive, 0013 amendment 2 d5) when gcx already trades as many accounts as Hyperliquid last accepted live, so this one will be polled: \"Hyperliquid allows a limited number of live accounts per connection point; this one updates every minute over the slower path, which can also delay its orders.\"; 422 `{rejected, text}`: `duplicate` (additive, MH 2026-11-08: the account is already in goodcryptoX, `already` names that record; nothing is added; the same body with `anyway: true` adds it again, a record of its own, which shows and counts the same account twice while both are included), `not-found` (Hyperliquid does not list it), `most` (gcx trades up to 100 accounts at once, 0013 d13), `not-available`; 409: the requestId was used for another account; 503: Hyperliquid could not be read.",
       "type": "object",
       "additionalProperties": false,
       "required": ["requestId", "address"],
-      "properties": { "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }, "address": { "$ref": "#/$defs/address" } }
+      "properties": { "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }, "address": { "$ref": "#/$defs/address" }, "anyway": { "type": "boolean", "description": "Additive (MH 2026-11-08): the person saw that this account is already in goodcryptoX (422 `duplicate`) and adds it again, as a record of its own. Absent: false." } }
     },
     "renew": {
       "description": "POST /api/v1/accounts/{sourceId}/renew (0003b d12 replace / reissue; goodcryptoX's Update API wallet automatically): no fields. A main account that trades gets a new API wallet key, kept on disk before the answer (`connected`: the same name, the new address; the same key again while it waits). Its own wallet then approves it through `signed` (approveAgent under the same name, which replaces the old API wallet on Hyperliquid); the old key signs until a fresh read of Hyperliquid lists the new one. 404 not a main account in gcx; 422 `not-available` while its first API wallet waits for approval (Try again) or while it is being removed; 503 when the key could not be kept. Added 2026-10-04.",
@@ -254,6 +304,80 @@
         { "type": "object", "additionalProperties": false, "required": ["state", "waiting", "revoke"], "properties": { "state": { "const": "removing" }, "waiting": { "type": "integer", "minimum": 0 }, "revoke": { "type": "boolean" } } },
         { "type": "object", "additionalProperties": false, "required": ["state"], "properties": { "state": { "const": "removed" }, "warning": { "type": "string" } } }
       ]
+    },
+    "keyLine": { "enum": ["trade-both", "trade-spot", "trade-futures", "read-only", "withdrawals", "ip-list", "binance-made"], "description": "One fact of a Binance key (0037 §3 d4): what it can trade (spot and futures, one of them, or reading only), withdrawals allowed, an address list set, a key Binance made without one (Binance gives its own keys no trading without a list)." },
+    "binanceKeyAsk": { "description": "POST /api/v1/accounts/binance/public-key (0037 §3 d1; slice B2): no fields. A POST because it makes the key when none waits.", "type": "object", "additionalProperties": false, "properties": {} },
+    "binanceKey": {
+      "description": "The answer to POST /api/v1/accounts/binance/public-key (0037 §3 d1, d5; slice B2): the key goodcryptoX made for the form: its id in the key store and its public half, SPKI PEM, which the person pastes into Binance as a self-generated key; made now when none waits, else the one made earlier and not yet under an account (the person may have pasted it). `address`: the IPv4 exchanges see from this installation, read through its exchange route; `via` is direct or proxy. Both absent when the single three-second read deadline expires or the read fails. The private key never leaves the key store. 503: the key store is locked or could not be made.",
+      "type": "object", "additionalProperties": false, "required": ["keyId", "publicKey"],
+      "properties": {
+        "keyId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "publicKey": { "type": "string", "pattern": "^-----BEGIN PUBLIC KEY-----\\n[A-Za-z0-9+/=\\n]+-----END PUBLIC KEY-----\\n$" },
+        "address": { "type": "string", "pattern": "^\\d{1,3}(\\.\\d{1,3}){3}$" },
+        "via": { "enum": ["direct", "proxy"], "description": "Address route; absent with no address" },
+        "hosting": { "const": true, "description": "Present only when our server judges the address to belong to a hosting company (a VPS or cloud) and not a home provider: a hint that only orders the connect page, never a fact" }
+      }
+    },
+    "binance": {
+      "description": "POST /api/v1/accounts/binance (0037 §3 d1, d4, d6; slice B2): add a Binance account, or with `replace` (the account's id) replace its key. `apiKey`: the API key Binance showed. With `keyId` (the form's, from POST …/binance/public-key): the key goodcryptoX made; with `secret`: a key Binance made, its secret kept encrypted in the key store. The check reads the key's permissions and the account's user id with two signed reads before anything is journaled. 200 `binanceAdded`; 422 `{rejected, text, detail?}`, `rejected` one of key-refused, not-a-key, signature, secret, clock, location, unreachable (Binance's answer in our words, its own text in `detail`), duplicate (additive, MH 2026-11-08, in place of `connected`, which is no longer sent: that Binance account is already in goodcryptoX, `already` names its record; nothing is kept or journaled; `anyway: true` adds it again with this key, a record of its own), another (a Replace with another account's key), used (the form's key is already under an account); 404: no such account to replace; 503: the key could not be kept. The same requestId again answers the account it added.",
+      "type": "object", "additionalProperties": false, "required": ["requestId", "apiKey", "label"],
+      "oneOf": [{ "required": ["keyId"], "not": { "required": ["secret"] } }, { "required": ["secret"], "not": { "required": ["keyId"] } }],
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "apiKey": { "type": "string", "pattern": "^[A-Za-z0-9]{1,128}$" },
+        "keyId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "secret": { "type": "string", "pattern": "^[A-Za-z0-9]{1,128}$" },
+        "label": { "type": "string", "maxLength": 50 },
+        "replace": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "keepAlive": { "type": "boolean", "description": "Additive (0037 amendment 5): the form's box Keep my API key alive; absent means on. False journals source.keep-alive off right after the add." },
+        "anyway": { "type": "boolean", "description": "Additive (MH 2026-11-08): the person saw that this account is already in goodcryptoX (422 `duplicate`) and adds it again, as a record of its own. Absent: false." }
+      }
+    },
+    "bnbFeesState": {
+      "type": "object", "additionalProperties": false, "required": ["on", "spot"],
+      "description": "Pay fees in BNB: `on` only while every setting the account has is on (a mixed state on Binance is off); `spot` is spotBNBBurn, `usdm` is USD-M's feeBurn (absent where the account has no futures). COIN-M has no such setting.",
+      "properties": { "on": { "type": "boolean" }, "spot": { "type": "boolean" }, "usdm": { "type": "boolean" } }
+    },
+    "bnbFees": {
+      "description": "POST /api/v1/accounts/:id/bnb-fees (BN-ACCOUNT-CAPS): turn Pay fees in BNB on or off; every setting the account has is written, then read again.",
+      "type": "object", "additionalProperties": false, "required": ["on"], "properties": { "on": { "type": "boolean" } }
+    },
+    "keepAlive": {
+      "description": "POST /api/v1/accounts/{id}/keep-alive (0037 amendment 5): the box Keep my API key alive of a Binance account, a person's or a trading key's. 200 `keepAliveAnswer`; 404 for an account that is not an active Binance account. A row is journaled only for a change.",
+      "type": "object", "additionalProperties": false, "required": ["on"],
+      "properties": { "on": { "type": "boolean" } }
+    },
+    "check": {
+      "description": "POST /api/v1/accounts/{id}/check (BINANCE-ACCOUNT-CARD-22081): Check again on a Binance account's card; no fields. The key's permissions read now (goodcryptoX reads them by itself once when it starts). 200 `checked`; 404 for an account that is not an active Binance account; 503 `{error: \"unread\", text}` when Binance did not answer, the last lines kept. Nothing is journaled. Added 2026-11-05.",
+      "type": "object", "additionalProperties": false, "properties": {}
+    },
+    "checked": {
+      "type": "object", "additionalProperties": false, "required": ["sourceId", "lines"],
+      "properties": { "sourceId": { "type": "string" }, "lines": { "type": "array", "items": { "$ref": "#/$defs/keyLine" } } }
+    },
+    "keepAliveAnswer": {
+      "type": "object", "additionalProperties": false, "required": ["sourceId", "on"],
+      "properties": { "sourceId": { "type": "string" }, "on": { "type": "boolean" } }
+    },
+    "binanceOAuthStart": {
+      "description": "B9 POST /api/v1/accounts/binance/oauth/start. The runtime binds requestId, label and optional replacement and the addresses the key may trade from to a one-time consent; `addresses` is one text, IPv4 addresses separated by spaces, commas, semicolons or new lines (duplicates dropped, 30 at most, the runtime reads it and sends Binance its own comma-separated format); 422 `{rejected: \"addresses\", text, detail?}` names the first piece that is not an address, `addresses-many` more than 30; 422 `{rejected: \"signin-address\", text}` at an address Binance cannot send the browser back to (only this computer's `http://localhost:<port>` and a literal private address on the home network can; a name, a tailnet or the phone page cannot), before anything is sent. Answer is {url,state} only; the state names this computer's port or the home-network address the request came to, and the app's language. OAuth client configuration lives on the relay.",
+      "type": "object", "additionalProperties": false, "required": ["requestId", "label"],
+      "properties": { "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }, "label": { "type": "string", "maxLength": 50 }, "replace": { "type": "string", "minLength": 1, "maxLength": 100 }, "addresses": { "type": "string", "maxLength": 2000 } }
+    },
+    "binanceOAuthExchange": {
+      "description": "B9 POST /api/v1/accounts/binance/oauth/exchange. Person-only write. Returns binanceAdded or the B2 refusal; never credentials. A consent is consumed once; failures require a fresh start. `state`: the one Binance gave back, as the start answered it (43 characters from a build before 0052 amendment 2; since, the same with the app's language and the way back, 92 at most). 422 `{rejected: \"expired\", text}` when no sign-in of this goodcryptoX is waiting under that state (another's, a used one, past ten minutes, after a restart); nothing is sent to the relay then. Additive (SIGNIN-DIAG): 422 `{rejected, text, detail}` when a step with Binance failed: `binance-token`, `binance-status`, `binance-key`, `binance-decrypt`, or `unreachable` for no answer in time (`detail` the step, then Binance's HTTP status and its code: one of Binance's numeric codes or an RFC 6749 error name, never Binance's text or a credential; `unreachable` carries `detail: timeout`); a relay that does not name its step answers `unreachable` with no `detail`, as before.",
+      "type": "object", "additionalProperties": false, "required": ["state", "code"],
+      "properties": { "state": { "type": "string", "maxLength": 92, "pattern": "^[A-Za-z0-9_-]{43}(?:_[A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?_(?:l[1-9][0-9]{0,4}|4[1-9][0-9]{0,4}\\.[0-9a-f]{8}|6[1-9][0-9]{0,4}\\.f[cd][0-9a-f]{30}))?$" }, "code": { "type": "string", "minLength": 1, "maxLength": 4096 } }
+    },
+    "already": {
+      "description": "Additive (MH 2026-11-08): an account goodcryptoX already has, named by its record's id and name, in a 422 `duplicate` and in the answer of an add that made a second record of it.",
+      "type": "object", "additionalProperties": false, "required": ["sourceId", "label"],
+      "properties": { "sourceId": { "type": "string", "minLength": 1 }, "label": { "type": "string" } }
+    },
+    "binanceAdded": {
+      "description": "The answer to POST /api/v1/accounts/binance: the account's id and its key's lines. The key and the API key are on disk before this answer. `already` (additive, MH 2026-11-08): the record of this account goodcryptoX had, when this add (`anyway`, or a Sign in with Binance) made a second one.",
+      "type": "object", "additionalProperties": false, "required": ["sourceId", "lines"],
+      "properties": { "sourceId": { "type": "string", "minLength": 1 }, "lines": { "type": "array", "items": { "$ref": "#/$defs/keyLine" } }, "already": { "$ref": "#/$defs/already" } }
     },
     "rows": { "description": "GET /api/v1/accounts. With no account connected: `[]` (200, never 404), and the rest of what the panel reads answers empty too: the settings their defaults, the history an empty page (`{rows: []}`), the `orders`, `positions` and `bots` topics an empty snapshot, and `account-state`, `balances` and `leverage/…` are accepted and send nothing until an account exists; market data is served as always.", "type": "array", "items": { "$ref": "#/$defs/row" } }
   }

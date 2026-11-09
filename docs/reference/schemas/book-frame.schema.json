@@ -22,6 +22,11 @@
     "venueTime": { "type": "integer", "description": "The venue's timestamp of the snapshot, milliseconds since the epoch." },
     "bids": { "$ref": "#/$defs/side", "description": "Best (highest) first." },
     "asks": { "$ref": "#/$defs/side", "description": "Best (lowest) first." },
+    "coverage": {
+      "type": "object", "additionalProperties": false, "required": ["bid", "ask"],
+      "description": "Additive (0037 B4): the outer prices of the REST snapshot's proven range. Diffs beyond these edges do not extend that range; coarse buckets crossing an edge are omitted. Absent: no declared snapshot edge.",
+      "properties": { "bid": { "$ref": "#/$defs/decimal" }, "ask": { "$ref": "#/$defs/decimal" } }
+    },
     "spread": { "$ref": "#/$defs/decimal", "description": "The venue's own spread, sent with aggregated books." },
     "fast": { "const": true, "description": "The fast book: 5 levels about every 0.5 s (default: 20 levels about every 5 s)." }
   },

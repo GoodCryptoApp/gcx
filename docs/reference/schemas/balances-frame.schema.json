@@ -7,14 +7,38 @@
   "additionalProperties": false,
   "required": ["source", "mode", "modeReadAt", "state", "receivedAt", "collateral", "dexes", "spot"],
   "properties": {
+    "balanceState": { "enum": ["loading", "unread", "live", "stale"], "description": "Public Binance read summary. Raw internal wallet groups are not published; older frames may retain groups." },
     "accountValue": { "type": "string", "description": "0040 A2 d61: held runtime yardstick for bot sizing, including unrealized PnL. Optional for older peers; absence is unknown, never Available." },
+    "walletValues": { "type": "array", "items": { "$ref": "#/$defs/walletValue" }, "description": "Quote-only venue valuations counted instead of asset detail, never holdings or available collateral. Binance PM/Pro uses the selected pool actualEquity in USD; components remain non-additive details and P/R/O retain incomplete. USD is already dollar value. Absent on older frames defaults to no value-only owners; existing spot/collateral/extra rows still count." },
+    "binanceModes": {
+      "type": "object", "additionalProperties": false,
+      "description": "Confirmed signed mode reads. Missing means unknown. Account mode selects private routes; a failed read retains its last route stale and never sends a setting.",
+      "properties": {
+        "account": { "type":"object", "additionalProperties":false, "required":["value","at","stale"], "properties": {"value":{"enum":["classic","multi-assets","portfolio","portfolio-pro"]},"at":{"type":"integer"},"stale":{"type":"boolean"}} },
+        "portfolio": { "type":"object", "additionalProperties":false, "required":["value","at","stale"], "properties": {"value":{"enum":["portfolio","portfolio-pro"]},"at":{"type":"integer"},"stale":{"type":"boolean"}} },
+        "multiAssets": { "type":"object", "additionalProperties":false, "required":["value","at","stale"], "properties": {"value":{"type":"boolean"},"at":{"type":"integer"},"stale":{"type":"boolean"}} }
+      }
+    },
     "source": { "type": "string" },
+    "venue": { "type": "string", "description": "Additive (0037 B4): the venue namespace. Absent retains Hyperliquid's existing mode and token-index semantics. Binance has no Hyperliquid token index and reports independently read wallet totals even though its shared mode is unknown." },
+    "groups": {
+      "type": "object", "description": "Additive (0037 B4): named wallet reads using the venue-neutral Group union from src/domain/balances/groups.ts. Absent on older frames. Empty wallets are hidden; a stale wallet retains its last holdings and time; loading/unread counts zero.",
+      "additionalProperties": { "$ref": "#/$defs/group" }
+    },
+    "extra": {
+      "type": "array", "description": "Additive (0037 B4): amounts in additional wallets, separate from spot and collateral; stale amounts still count. Absent means no additional-wallet amounts.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["coin", "total", "state", "asOf"],
+        "properties": { "coin": { "type": "string" }, "total": { "$ref": "#/$defs/money" }, "state": { "enum": ["live", "stale"] }, "asOf": { "type": "integer" } }
+      }
+    },
     "sourceId": { "type": "string", "description": "The same as `source`, as the panel reads it (roadmap P3; added, optional)." },
     "assets": {
       "type": "object",
       "description": "The panel's free balance per spot token: its total less what is held, as the spot read gave them (roadmap P3; added, optional). Absent while the spot state was never read, so the panel waits rather than show 0.",
       "additionalProperties": { "$ref": "#/$defs/figure" }
     },
+    "assetsUnread": { "const": true, "description": "The spot wallet's first read failed, so `assets` is absent and the panel says the figure was not read yet rather than wait (added, optional). Absent on older frames." },
     "own": {
       "type": "object",
       "description": "A vault's only (added, optional): its main account's own equity in it, USDC, from Hyperliquid's `userVaultEquities` (RULINGS 99 (a): a vault you lead counts your own share, never the followers' money). The Dashboard counts this figure for the vault; the vault's other figures are the whole vault's, for trading on it. `total` null with `state` unavailable until a read answered; stale when the read after the last good one failed.",
@@ -33,10 +57,10 @@
         "additionalProperties": false,
         "required": ["token", "coin", "total", "withdrawable", "lockedMargin", "lockedOrders", "state", "asOf", "basis"],
         "properties": {
-          "token": { "type": "integer", "minimum": 0, "description": "Spot token index of the collateral." },
+          "token": { "type": ["integer", "null"], "minimum": 0, "description": "Hyperliquid spot token index of the collateral; null for Binance, whose asset has no such index." },
           "coin": { "type": "string" },
           "total": { "$ref": "#/$defs/figure" },
-          "unrealizedPnl": { "type": "string", "description": "Added by C71/MH170: sum of open positions’ unrealised PnL on this collateral’s dexes, from the same snapshot, in collateral units. The Portfolio total subtracts it; trading still uses total as venue equity. Absent on older wire means zero. Unified/portfolio margin uses spot only and omits this field." },
+          "unrealizedPnl": { "type": "string", "description": "Added by C71/MH170: sum of open positions’ unrealised PnL on this collateral’s dexes, from the same snapshot, in collateral units. The Portfolio total includes it in owned equity; this component is detail, never added a second time. Absent on older wire means zero. Unified/portfolio margin uses spot only and omits this field." },
           "withdrawable": { "$ref": "#/$defs/figure" },
           "lockedMargin": { "$ref": "#/$defs/figure" },
           "lockedOrders": { "$ref": "#/$defs/figure" },
@@ -92,11 +116,15 @@
   },
   "allOf": [
     {
+      "if": { "type": "object", "properties": { "venue": { "not": { "const": "binance" } } } },
+      "then": { "type": "object", "properties": { "collateral": { "type": "array", "items": { "type": "object", "properties": { "token": { "type": "integer" } } } } } }
+    },
+    {
       "if": { "type": "object", "properties": { "mode": { "enum": ["unified", "portfolio"] } } },
       "then": { "type": "object", "properties": { "dexes": { "type": "array", "items": { "type": "object", "properties": { "accountValue": { "type": "null" }, "withdrawable": { "type": "null" }, "marginUsed": { "type": "null" } } } } } }
     },
     {
-      "if": { "type": "object", "properties": { "mode": { "const": "unknown" } } },
+      "if": { "type": "object", "properties": { "mode": { "const": "unknown" }, "venue": { "not": { "const": "binance" } } } },
       "then": {
         "type": "object",
         "properties": {
@@ -107,6 +135,32 @@
     }
   ],
   "$defs": {
+    "valuation": {
+      "type": "object", "additionalProperties": false, "required": ["quoteAsset", "value"],
+      "properties": { "quoteAsset": { "type": "string" }, "value": { "$ref": "#/$defs/money" } }
+    },
+    "walletValue": {
+      "type": "object", "additionalProperties": false, "required": ["wallet", "quoteAsset", "value", "state", "asOf"],
+      "properties": { "wallet": { "type": "string" }, "quoteAsset": { "type": "string" }, "value": { "$ref": "#/$defs/money" }, "state": { "enum": ["live", "stale"] }, "asOf": { "type": "integer" } }
+    },
+    "money": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$", "description": "A plain decimal string; no JSON numbers, exponents or nonnumeric text." },
+    "group": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["state"], "properties": { "state": { "enum": ["loading", "unread"] } } },
+        { "type": "object", "additionalProperties": false, "required": ["state", "at"], "properties": { "state": { "const": "empty" }, "at": { "type": "integer" } } },
+        {
+          "type": "object", "additionalProperties": false, "required": ["state", "holdings", "at"],
+          "properties": {
+            "valuation": { "$ref": "#/$defs/valuation" },
+            "incomplete": { "type": "boolean" },
+            "details": { "type": "array", "items": { "type": "object", "additionalProperties": { "type": "string" } } },
+            "children": { "type": "object", "additionalProperties": { "$ref": "#/$defs/group" } },
+            "state": { "enum": ["held", "stale"] }, "at": { "type": "integer" },
+            "holdings": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["asset", "amount"], "properties": { "asset": { "type": "string" }, "amount": { "$ref": "#/$defs/money" } } } }
+          }
+        }
+      ]
+    },
     "state": { "enum": ["live", "stale", "unavailable"] },
     "figure": { "oneOf": [{ "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$" }, { "type": "null" }], "description": "A canonical decimal string, or null when the venue does not state it in this mode." }
   }

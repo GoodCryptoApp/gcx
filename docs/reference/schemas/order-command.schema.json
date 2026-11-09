@@ -16,6 +16,7 @@
     { "$ref": "#/$defs/close" }
   ],
   "$defs": {
+    "equityChoices": {"type": "object", "additionalProperties": false, "description": "Explicit stock facts (0037 amendment 2); no defaults. Absent: existing non-stock behavior, no stock choices inferred. This predecessor retains facts only; R1-R3 trading policy awaits MH.", "properties": {"tokenize": {"type": "boolean"}, "tradingSession": {"enum": ["RTH", "EXTENDED", "24H"]}, "timeInForce": {"enum": ["DAY", "GTC"]}, "wallet": {"enum": ["CARD", "MAIN"]}, "quoteSpend": {"$ref": "#/$defs/decimal", "description": "Reviewed native market-buy quote budget, never a promised share quantity. Absent: existing sizing contract; conversion/completion awaits R3."}}},
     "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string." },
     "millis": { "type": "string", "pattern": "^\\d+$", "description": "A duration in milliseconds, as a string." },
     "timeInForce": { "$ref": "#/$defs/millis", "not": { "type": "string", "pattern": "^0+$" }, "description": "Resting orders: cancel if still open this long after placement; above zero (zero is refused, HTTP 400). Absent with no cancelAt: one year (31536000000 ms), the API/MCP product default, independent of panel Settings (MH481)." },
@@ -49,6 +50,7 @@
               "trade.bracket.msgInvalidMtpsSizeBiggerThanMinAmount",
               "trade.bracket.msgInvalidMtpsValue",
               "trade.bracket.msgSlMinNotional",
+              "trade.msgKeyExpiry",
               "trade.msgMarketSlippage",
               "trade.msgNoPrice",
               "trade.msgLimitBand",
@@ -63,10 +65,11 @@
       "allOf": [{ "$ref": "#/$defs/base" }, { "$ref": "#/$defs/oneTime" }],
       "required": ["side", "size", "sizeUnit"],
       "properties": {
+        "equity": { "$ref": "#/$defs/equityChoices" },
         "side": { "enum": ["buy", "sell"] },
         "size": { "$ref": "#/$defs/decimal", "description": "Amount in sizeUnit." },
-        "sizeUnit": { "enum": ["base", "quote"], "description": "base: the base asset; quote: the quote asset (on perps the notional, never the margin). A quote size is converted to base by the engine and floored to the size step; on spot a market buy's at the ask plus the 1 % entry cap, its limit at the exchange, so it never costs more than the amount." },
-        "reduceOnly": { "type": "boolean", "description": "Only reduce the position. On a perpetual an order whose side and size close the position exactly, as gcx reads it when the order arrives, is sent reduce-only without it too, and gets no minimum-order-value warning (since 2026-10-05). On spot, which has no position, it is dropped and the order sent without it (since 2026-10-05; refused before)." },
+        "sizeUnit": { "enum": ["base", "quote", "coin"], "description": "base: the base asset; quote: the quote asset (on perps the notional, never the margin). A quote size is converted to base by the engine and floored to the size step; on spot a market buy's at the ask plus the 1% entry cap, its limit at the exchange, so it never costs more than the amount." },
+        "reduceOnly": { "type": "boolean", "description": "Only reduce the position. On a perpetual an order whose side and size close the position exactly, as gcx reads it when the order arrives, is sent reduce-only without it too, and gets no minimum-order-value warning (since 2026-10-05). On spot, which has no position, it is dropped and the order sent without it (since 2026-10-05; refused before). On a hedge side instrument (`…:long`, `…:short`) the side decides: a Sell on the long or a Buy on the short is reduce-only with or without it, and true on the other side is refused 422 `reduce-only-opens` (since 2026-11-05)." },
         "delay": { "$ref": "#/$defs/millis", "description": "Timed placement: send after this long." },
         "sendAt": { "$ref": "#/$defs/instant", "description": "Added in E16 (0011 d14): send at this moment; not with delay. The runtime journals it as the delay from its receipt; a moment not ahead of the runtime's clock is refused. Absent (and no delay): sent now." },
         "bracket": { "$ref": "#/$defs/bracket" },
@@ -185,6 +188,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "equity": { "$ref": "#/$defs/equityChoices" },
         "reduceOnly": { "type": "boolean", "default": true, "description": "The take-profit and stop-loss only reduce the position (perpetuals). Default true: absent, the take-profit and stop-loss are reduce-only, whatever Settings › Trading says (MH 520); a received value is honoured. Spot has no reduce-only." },
         "tp": { "oneOf": [{ "$ref": "#/$defs/tpMarket" }, { "$ref": "#/$defs/tpLimit" }, { "$ref": "#/$defs/tpTrailing" }] },
         "sl": { "$ref": "#/$defs/sl" },

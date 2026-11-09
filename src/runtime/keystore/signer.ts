@@ -7,13 +7,29 @@
 
 export type Address = `0x${string}`;
 
-/** One Hyperliquid L1 action to sign, built by `src/venues/hyperliquid/actions.ts`, with the nonce and deadline journaled with it. */
-export interface SignIntent {
+/** One Hyperliquid L1 action to sign, built by its wire (src/venues/hyperliquid), with the nonce and deadline journaled with it. */
+export interface HlSignIntent {
+  venue?: "hyperliquid";
   action: { type: string };
   nonce: number;
   expiresAfter: number;
   isTestnet: boolean;
 }
+/**
+ * A key venue's request to sign (0037 §3 d2, §10 d1): its query bytes, signed with the account's own key of its kind (HMAC,
+ * RSA or Ed25519; the key store's second file, keystore.cex.enc). Declared by the seam; the build that adds the venue signs it.
+ */
+export interface KeySignIntent {
+  venue: "binance";
+  /** The key's id in the key store's second file. */
+  keyId: string;
+  /** The request's query, exactly as it is sent. */
+  query: string;
+  /** Routing and account binding carried beside the query; never part of the signature or a secret. */
+  request?: { endpoint: string; account: string };
+}
+/** What the signer signs: a union by venue behind the one boundary (0008 §7.4). */
+export type SignIntent = HlSignIntent | KeySignIntent;
 
 /** One source's agent. `sign` returns the `/exchange` request body as UTF-8 JSON bytes, journaled and re-sent as is. */
 export interface Signer {

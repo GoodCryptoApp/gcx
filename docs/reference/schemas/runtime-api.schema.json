@@ -4,6 +4,44 @@
   "title": "Runtime API request bodies",
   "description": "The request bodies of the local API (decision 0008 §4.6) that no other schema defines. The order command is order-command.schema.json; the cancel body and the bot command are in lists-api.schema.json. Every number is a decimal or integer string, never a JSON number. See docs/reference/runtime/api.md.",
   "$defs": {
+    "orderFeeEvent": {"type": "object", "additionalProperties": false, "required": ["orderId", "sourceId", "family", "venueOrderId", "currency", "type", "total", "revision", "at"], "properties": {"orderId": {"type": "string", "minLength": 1}, "sourceId": {"type": "string", "minLength": 1}, "family": {"type": "string", "minLength": 1}, "venueOrderId": {"type": "string", "minLength": 1}, "currency": {"type": "string", "minLength": 1}, "type": {"const": "order-fee"}, "total": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"}, "revision": {"type": "string", "pattern": "^\\d+$"}, "at": {"type": "integer"}}, "description": "Journal reader contract only, no API writer. One authoritative total per account/family/UUID and durable serialized read generation. Repeats and older generations do nothing; late revisions replace totals. Absence retains fill-fee accounting. Production writers wait one release after this reader."},
+    "futuresMode": {
+      "type": "object", "additionalProperties": false, "required": ["dual", "disabled"],
+      "properties": { "dual": { "type": "boolean" }, "disabled": { "type": "boolean" } }
+    },
+    "futuresModes": {
+      "description": "Confirmed position modes per account and futures family. An absent family has not been read. disabled is always false; the venue decides whether a mode change is allowed.",
+      "type": "object", "additionalProperties": false,
+      "properties": { "usdm": { "$ref": "#/$defs/futuresMode" }, "coinm": { "$ref": "#/$defs/futuresMode" } }
+    },
+    "positionMode": {
+      "type": "object", "additionalProperties": false, "required": ["family", "dual"],
+      "properties": { "family": { "enum": ["usdm", "coinm"] }, "dual": { "type": "boolean" } }
+    },
+    "currency": { "enum": ["USD", "EUR", "GBP", "BTC", "ETH", "AED", "ALL", "AUD", "BGN", "BRL", "CAD", "CHF", "CLP", "CNY", "COP", "CZK", "DKK", "EGP", "HKD", "HUF", "IDR", "ILS", "INR", "JPY", "KRW", "MXN", "MYR", "NGN", "NOK", "NZD", "PHP", "PKR", "PLN", "RON", "RUB", "SAR", "SEK", "SGD", "THB", "TRY", "TWD", "UAH", "VND", "ZAR"], "description": "Added with 0050 (base currency): one of the 44 base currencies, goodcryptoX's 43 in its order and EGP; BTC and ETH are coins, valued at a venue's price, the rest fiat at a published rate per USD." },
+    "rates": {
+      "description": "GET /api/v1/rates (0050 \u00a75): the base currency's rate held now, units of it per 1 USD. `date` is the source's day for a fiat, `at` when the rate was fetched (a fiat) or read (BTC, ETH), `source` where from (`frankfurter`, `currency-api`, or the venue that priced the coin). With base USD, and with no rate held, it answers only `{currency: \"USD\", rate: \"1\"}` and fetches nothing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "rate"],
+      "properties": {
+        "currency": { "$ref": "#/$defs/currency" },
+        "rate": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+        "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "at": { "type": "integer" },
+        "source": { "type": "string" }
+      }
+    },
+    "botCreated": {
+      "description": "DCA or Grid create answer. warning is additive: absent on older runtimes or when no warning applies. The bot was created; this changes no journal row or trading effect. A retry retains the durable {id} answer, as before.",
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "warning": { "type": "string", "description": "The existing warning sentence. Both kinds name every other active bot on this account and pair when Only this bot trades was requested and turned off. Grid defaults that switch to on when absent." }
+      },
+      "additionalProperties": true
+    },
     "botCreate": {
       "oneOf": [
         {
@@ -128,6 +166,11 @@
             "notify": {
               "$ref": "grid-bot-create.schema.json#/properties/notify",
               "description": "Grid notification switches, journaled from creation: activation, finish, PnL and range on by default; orders off (0040 d21)."
+            },
+            "overrides": {
+              "type": "array", "uniqueItems": true,
+              "items": { "enum": ["trade.msgKeyExpiry"] },
+              "description": "0049 R-b: a last-day create answers 422 trade.msgKeyExpiry; repeat with this key to launch anyway. A trading key's create proceeds without the refusal; automatic openings still wait. Absent: no warning acknowledged."
             },
             "anyway": {
               "const": true,
@@ -259,7 +302,30 @@
       "properties": { "key": { "type": "string", "minLength": 1 }, "text": { "type": "string", "minLength": 1 } }
     },
     "botPreviewAnswer": {
-      "description": "The answer of POST /api/v1/bots/preview: the price it was made at and one receipt per side the bot can enter on (a manual bot its side; a signal bot both). Every amount is a decimal string, exact (the form rounds for display).",
+      "description": "The answer of POST /api/v1/bots/preview: a DCA bot's receipts, or a Grid bot's row (`kind: grid` in the body).",
+      "oneOf": [{ "$ref": "#/$defs/dcaPreviewAnswer" }, { "$ref": "#/$defs/gridPreviewAnswer" }]
+    },
+    "gridPreviewAnswer": {
+      "description": "A Grid bot's preview: its row as the `bots` topic would carry it once created (bot-row.schema.json, `type: grid`), the account's fee rates the form's figures use, and the warnings of its levels.",
+      "allOf": [
+        { "$ref": "bot-row.schema.json" },
+        {
+          "type": "object", "required": ["type", "warnings"],
+          "properties": {
+            "type": { "const": "grid" },
+            "feeRates": { "$ref": "#/$defs/feeRates", "description": "The last read of the account's rates, else the exchange's published base rates (`at` null). Absent on a runtime that reads no rates." },
+            "warnings": { "type": "array", "items": { "enum": ["step-under-tick", "duplicate-levels"] }, "description": "The levels' warnings: a step under the price tick, levels that round to the same price." }
+          }
+        }
+      ]
+    },
+    "feeRates": {
+      "description": "An account's maker and taker rates for one market, fractions (0.0002 is 0.02%). GET /api/v1/accounts/{id}/fee-rates answers them once the account's read has answered; the exchange's published base rates (`at` null) when it failed.",
+      "type": "object", "additionalProperties": false, "required": ["maker", "taker", "at"],
+      "properties": { "maker": { "$ref": "#/$defs/decimal" }, "taker": { "$ref": "#/$defs/decimal" }, "at": { "oneOf": [{ "type": "integer" }, { "type": "null" }], "description": "When the account's rates were read (ms since the epoch); null: the published base rates." } }
+    },
+    "dcaPreviewAnswer": {
+      "description": "A DCA bot's preview: the price it was made at and one receipt per side the bot can enter on (a manual bot its side; a signal bot both). Every amount is a decimal string, exact (the form rounds for display).",
       "type": "object", "additionalProperties": false, "required": ["price", "receipts"],
       "properties": {
         "price": { "$ref": "#/$defs/decimal", "description": "The instrument's price the receipt was made at, as if the entry were made now." },
@@ -323,7 +389,7 @@
                 "type": "array",
                 "items": {
                   "type": "object", "additionalProperties": false, "required": ["level", "price", "next", "first"],
-                  "properties": { "level": { "type": "integer", "minimum": 0 }, "price": { "$ref": "#/$defs/decimal" }, "next": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] }, "first": { "type": "boolean" } }
+                  "properties": { "level": { "type": "integer", "minimum": 0 }, "price": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }], "description": "Null when no positive liquidation price exists" }, "next": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] }, "first": { "type": "boolean" } }
                 }
               },
               "firstUnsafe": { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }] }
@@ -334,7 +400,7 @@
     },
     "decimal": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
     "restoreEstimate": {
-      "description": "GET /api/v1/bots/{id}/restore (decision 0016 Amendment 2 d6): \"The bot is right\"'s market order for the difference between the bots' records on the coin and the exchange's position, estimated from one book read (ruling 141). price: its average on the book; worst: the price its bound allows (the larger of 10 % and 1.5 x the book's reach, no ceiling for a person); cost and fee in the quote; warn: the bound passes 25 % or the book shows less than the size, so the choice needs `anyway`; reduceOnly: it only reduces the exchange's position (perpetuals).",
+      "description": "GET /api/v1/bots/{id}/restore (decision 0016 Amendment 2 d6): \"The bot is right\"'s market order for the difference between the bots' records on the coin and the exchange's position, estimated from one book read (ruling 141). price: its average on the book; worst: the price its bound allows (the larger of 10% and 1.5 x the book's reach, no ceiling for a person); cost and fee in the quote; warn: the bound passes 25% or the book shows less than the size, so the choice needs `anyway`; reduceOnly: it only reduces the exchange's position (perpetuals).",
       "type": "object", "additionalProperties": false, "required": ["side", "size", "price", "worst", "cost", "fee", "warn", "reduceOnly"],
       "properties": { "side": { "enum": ["buy", "sell"] }, "size": { "$ref": "#/$defs/decimal" }, "price": { "$ref": "#/$defs/decimal" }, "worst": { "$ref": "#/$defs/decimal" }, "cost": { "$ref": "#/$defs/decimal" }, "fee": { "$ref": "#/$defs/decimal" }, "warn": { "type": "boolean" }, "reduceOnly": { "type": "boolean" } }
     },
@@ -412,13 +478,15 @@
       }
     },
     "margin": {
-      "description": "POST /api/v1/margin (decision 0013 S10; 0003 §2.14): isolated margin added to (positive) or removed from (negative) the account's position on one perpetual, in USDC on the exchange's 0.000001 grid. Sent once, never again without an answer. The answer is 200 {accepted: true} or 422 {rejected, text}.",
-      "type": "object", "additionalProperties": false, "required": ["requestId", "sourceId", "instrumentId", "usdc"],
+      "description": "POST /api/v1/margin (decision 0013 S10; 0003 §2.14; BN-ACCOUNT-CAPS): isolated margin added to (positive) or removed from (negative) the account's position on one perpetual, in the position's margin coin (USDC on Hyperliquid, on its 0.000001 grid). `amount` names it on every venue; `usdc`, its first name, is still taken; one of the two. Sent once, never again without an answer. The answer is 200 {accepted: true} or 422 {rejected, text}.",
+      "type": "object", "additionalProperties": false, "required": ["requestId", "sourceId", "instrumentId"],
+      "oneOf": [{ "required": ["amount"] }, { "required": ["usdc"] }],
       "properties": {
         "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
         "sourceId": { "type": "string", "minLength": 1 },
         "instrumentId": { "type": "string", "minLength": 1 },
-        "usdc": { "type": "string", "pattern": "^-?\\d+(\\.\\d{1,6})?$", "description": "USDC added (positive) or removed (negative); a decimal string, never a JSON number." }
+        "amount": { "type": "string", "pattern": "^-?\\d+(\\.\\d{1,6})?$", "description": "Added (positive) or removed (negative), in the position's margin coin; a decimal string, never a JSON number." },
+        "usdc": { "type": "string", "pattern": "^-?\\d+(\\.\\d{1,6})?$", "description": "The first name of `amount` (Hyperliquid's USDC), still taken; a decimal string, never a JSON number." }
       }
     },
     "loginItem": {
@@ -441,7 +509,7 @@
         "checkedAt": { "type": ["integer", "null"], "description": "When the last check ended, in milliseconds since the epoch." },
         "canUpdate": { "type": "boolean", "description": "A press installs at once (POST /api/v1/updates/apply, the panel's Try again): a newer release, a helper that swaps the app (gcx.app) or, on a server, the updater beside gcx in the compose file, and not a development build, which reports a release but is never updated by gcx. Also true for a build the helper could not install or put back (refused: never installed again by itself)." },
         "reason": { "type": "string", "description": "With failed: why the check failed. With available: why the last update did not install (the download, the checksum, the app's version or signature, the helper's swap, or a put-back of the previous version)." },
-        "staged": { "type": "string", "description": "Added by 0008 amendment 2 V4: the stamp of the build downloaded and checked (on a server, the image its updater pulled: ruling 28 of 2026-10-18), which installs in the quiet time: no panel page on screen for 5 minutes and no open order within 1 % of its price; absent when none waits." },
+        "staged": { "type": "string", "description": "Added by 0008 amendment 2 V4: the stamp of the build downloaded and checked (on a server, the image its updater pulled: ruling 28 of 2026-10-18), which installs in the quiet time: no panel page on screen for 5 minutes and no open order within 1% of its price; absent when none waits." },
         "withdrawn": { "const": true, "description": "Added by 0024 L10 (d7.7): this build is withdrawn, its own GitHub release marked pre-release after it was found broken. Learned at the usual check, only when latest answers a lower build than this published one (the release list is then read once); kept in check.json and shown at the next start; cleared when a check finds the mark gone or a build not lower. The panel shows \"Build N has a problem: go back to the previous build\" with one button (POST /api/v1/updates/rollback) on a Mac, the compose line in Docker. Absent: not withdrawn (every older runtime)." },
         "previous": { "type": "string", "description": "Added by 0024 L10, only with withdrawn: the stamp of the build the button goes back to (the newest published build below this one, as the release list named it at that check); absent when the list named none." },
         "shell": { "enum": ["mac", "windows", "docker", "node"], "description": "Added by 0024 L10: where gcx runs, the daily record's own value (0024 d15.1): mac under the Mac app's helper, windows under the Windows app's helper (added with it), docker in the image, node otherwise. The panel shows the withdrawn banner's button on a Mac and, in Docker, the compose line in its place and beside an available version. Absent (an older runtime): neither." },
@@ -458,10 +526,10 @@
       }
     },
     "updateTierAnswer": {
-      "description": "The 200 answer of POST /api/v1/updates/tier: where a helper swaps the app, the build gcx goes to and the warning to show before it restarts; in Docker, where the image is the program (0030 amendment 1 §4.3), the image line for compose.yaml: the tier's package with its floating tag, or the build's variant.",
+      "description": "The 200 answer of POST /api/v1/updates/tier: where a helper swaps the app, the build gcx goes to and the warning to show before it restarts; in Docker, where the image is the program (0030 amendment 1 §4.3), the image line for compose.yaml: the checked release's pinned image, with applicable reader-only warnings.",
       "anyOf": [
         { "$ref": "#/$defs/updateRollbackAnswer" },
-        { "type": "object", "additionalProperties": false, "required": ["image"], "properties": { "image": { "type": "string", "description": "The compose file's image, such as ghcr.io/goodcryptoapp/gcx:beta." } } }
+        { "type": "object", "additionalProperties": false, "required": ["image"], "properties": { "image": { "type": "string", "description": "The checked release image, such as ghcr.io/goodcryptoapp/gcx:3.1.0-20-beta." }, "warning": { "type": "array", "items": { "type": "string" }, "description": "Warnings for live accounts the checked release can read but cannot trade; absent when none." } } }
       ]
     },
     "updateBuilds": {
@@ -473,13 +541,15 @@
         "builds": { "type": "array", "deprecated": true, "description": "The running tier's published builds, newest first. Deprecated (114 (c)).", "items": { "type": "object", "additionalProperties": false, "required": ["build", "version"], "properties": {
           "build": { "type": "integer", "minimum": 1 },
           "version": { "type": "string", "description": "Its version, such as 3.0.0." },
-          "published": { "type": "string", "description": "When GitHub published it (ISO 8601); absent when GitHub says nothing." }
+          "published": { "type": "string", "description": "When GitHub published it (ISO 8601); absent when GitHub says nothing." },
+          "cannotTrade": { "type": "array", "items": { "type": "string" }, "description": "Additive (0037 §10 d5, 2026-10-22): the venues this installation holds accounts of that this build cannot trade; the panel asks with a warning before installing it. Absent: none. A build that cannot open this data folder at all is not listed." }
         } } },
         "tiers": { "type": "array", "description": "One row per readable tier a switch can take, highest first.", "items": { "type": "object", "additionalProperties": false, "required": ["tier", "build", "version"], "properties": {
           "tier": { "enum": ["internal", "beta", "everyone"] },
           "build": { "type": "integer", "minimum": 1, "description": "The tier's newest published build; Beta's is the higher of Beta's and Everyone's, as a switch to Beta installs it." },
           "version": { "type": "string", "description": "Its version, such as 3.0.0." },
-          "published": { "type": "string", "description": "When GitHub published it (ISO 8601, date and time); absent when GitHub says nothing." }
+          "published": { "type": "string", "description": "When GitHub published it (ISO 8601, date and time); absent when GitHub says nothing." },
+          "cannotTrade": { "type": "array", "items": { "type": "string" } }
         } } },
         "unread": { "type": "array", "description": "The tiers whose list could not be read, each with the reason (the runtime's own words, for a tooltip, never a line).", "items": { "type": "object", "additionalProperties": false, "required": ["tier", "error"], "properties": {
           "tier": { "enum": ["internal", "beta", "everyone"] },
@@ -490,6 +560,14 @@
     "updateRollback": {
       "description": "POST /api/v1/updates/rollback (0024 L10, d7.7): the withdrawn banner's button, no fields; gcx rollback with no build named (d7.1), a person's only. The runtime downloads and checks the previous published build (never a withdrawn one), writes this build as refused, answers {target, warning}, then drains, writes the helper's marker and exits 75; the helper swaps the previous build in. 409 {error} when it cannot (a development build, no helper, no published build below, an update under way, a download or check that failed: nothing changed); 503 {error} while gcx is stopping; 404 where the runtime has no updater.",
       "type": "object", "additionalProperties": false, "properties": {}
+    },
+    "updateRefusal": {
+      "description": "A 409 answer of POST /api/v1/updates/rollback or POST /api/v1/updates/tier. Optional reason is additive: referral means the stored referral needs a newer build; absent means another refusal. Existing error remains the CLI sentence.",
+      "type": "object", "additionalProperties": false, "required": ["error"],
+      "properties": {
+        "error": { "type": "string" },
+        "reason": { "const": "referral", "description": "The selected older build lacks the referral contract. The panel shows its translated sentence at the selected build or tier." }
+      }
     },
     "updateRollbackAnswer": {
       "description": "The 200 answer of POST /api/v1/updates/rollback and POST /api/v1/updates/tier: the build gcx goes to and the warning to show before it restarts.",
@@ -516,6 +594,7 @@
         "notifyManual": { "$ref": "notify-settings.schema.json#/properties/notifyManual" },
         "notifyOutside": { "$ref": "notify-settings.schema.json#/properties/notifyOutside" },
         "notifyBotDefaults": { "$ref": "notify-settings.schema.json#/properties/notifyBotDefaults" },
+        "setupClosed": { "type": "array", "items": { "enum": ["block", "bring", "agent", "move", "freeVolume"] }, "uniqueItems": true, "default": [], "description": "Dismissed Dashboard setup cards on this installation, shared by every device. Absent reads as an empty list." },
         "newsCard": { "enum": ["open", "closed"], "description": "The Dashboard's optional e-mail card (Get news about gcx by e-mail); open until the person closes it. Settings › About keeps the field either way. Absent reads as open." },
         "reports": {
           "type": "object", "additionalProperties": false, "required": ["auto"],
@@ -531,8 +610,10 @@
         "liquidationAlert": { "type": "boolean", "description": "Settings › Trading: close-to-liquidation push alerts for active DCA and Grid perpetual position holders. Absent reads as true. Read at the next price check; off suppresses new approaches, while outside prices still rearm the existing latch." },
         "liquidationAlertPct": { "type": "string", "pattern": "^(?!0+(?:\\.0+)?$)(?:0|[1-9]\\d*)(?:\\.\\d+)?$", "description": "Distance from the liquidation price, in percent, above 0 (0 would be a second way to say off), inclusive on either side. Absent reads as 10. Read at the next check; a known price outside this distance rearms the existing latch. Previous builds ignore both settings." },
         "bracketReduceOnly": { "type": "boolean", "description": "Settings › Trading: reduce-only on manual and bot TP/SL and on the Telegram TP/SL buttons, recommended on (MH482, 520). The panel snapshots it at manual send or bot launch, the Telegram buttons at the press; the API never reads it: an API order's or attach's TP/SL without their own `reduceOnly` are reduce-only, and a received value is honoured. Resting orders and running bots retain their choice. Absent reads as true." },
+        "baseCurrency": { "$ref": "#/$defs/currency", "description": "Added with 0050: the currency every figure the panel shows in dollars is shown in, at the latest rate, and the currency a key's money limits are stamped in at a write. Absent reads as USD, never from the language. A change converts every unrevoked key's money limits once, in one transaction, at the rate held for under 12 hours (fetched only without one), rounded half-up to five significant digits; with no rate it answers 503 `{rejected: \"rates\", text}` and writes nothing. A code off the list answers 422 `{rejected: \"baseCurrency\", text}`." },
         "language": { "enum": [null, "en", "ru", "uk", "es", "ko", "de", "fr", "id", "it", "pt", "tr", "vi", "zh", "zh-Hant", "ar", "he", "pl", "ro", "ja", "th"], "description": "Added with 0022 (localisation): the language of the panel, one of the twenty codes (zh-Hant is Traditional Chinese). null, the default, means not chosen yet: the panel's first visit takes the first of the browser's languages whose language part is one of the twenty (English when none), and saves it. Absent reads as null." },
         "keepAwake": { "type": "boolean", "description": "Added in R3 (0008 §1.11): with keepAwake on, keep the Mac awake throughout the runtime on mains power (ruling 412 b); on battery or unknown power, while any bot or managed order is not done. Absent reads as true; the runtime topic's `awake` says whether it is held now and why." },
+        "network": { "type": "object", "additionalProperties": false, "required": ["on", "addresses"], "description": "Added with 0044 (Connect directly at home): the switch and Your own address as requested; GET answers it, POST /api/v1/settings sets the whole object. on true listens on every address of this machine; each address is an http or https origin (a strict IPv4, a bracketed IPv6 without a zone, or a DNS name, an optional port), one scheme per host, never loopback, unspecified or a localhost name; anything else is 400 with the field's sentence and nothing is stored. What is applied (listening or not, and why not) is the runtime information's `network`. Absent reads as Off with no addresses; an older runtime ignores the field.", "properties": { "on": { "type": "boolean" }, "addresses": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 300 } } } },
         "localPasskey": { "type": "boolean", "description": "Added with the local passkey (decision 0023): the protection switch in Settings › General (Ask for Touch ID, a passkey or a passphrase to open the dashboard). GET answers it; POST /api/v1/settings refuses it with 400, since it is turned with POST /api/v1/passkey/switch after a check. Absent reads as true." },
         "proxy": { "description": "P1: all exchange REST and WebSocket connections. Null (the additive default) uses GCX_PROXY if present, otherwise Off. An explicit on/off choice wins over GCX_PROXY. With on true the address must be a SOCKS5 or HTTP proxy address, otherwise 400; Off keeps whatever was typed. Applied at the next connection; streams reconnect immediately. Previous builds ignore this field.", "anyOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["on", "address"], "properties": { "on": { "type": "boolean" }, "address": { "type": "string" } } }] },
         "logsMaxMb": { "type": "integer", "minimum": 50, "description": "Added by decision 0020 amendment 1: Settings › Storage › Logs › at most … MB. The most the logs (`logs/`, a quarter) and the exchange traffic log (`wire/`, three quarters) take together, in MB (a million bytes); the oldest whole file goes first; applied at once and at each sweep. At least 50. Absent reads as 200." }
@@ -560,9 +641,10 @@
       ]
     },
     "portfolio": {
-      "description": "Holdings (0007 Amendment 5): for each connected main account and sub-account (not a vault, whose figure is your own share, nor a demo account), `vaults` is its total USDC equity in all vaults, `staked` its delegated + undelegated + pending-withdrawal HYPE; each read independently, reused for 5 minutes, null on failure. GET /api/v1/portfolio (added with P8, 0007 d13; since 757 (d) no venue history is read: the account rows lost `readAt`, `start`, `end` and `error` before the first public release, and every change is computed from `snapshots`). Values are decimal strings; null is not known. `pnl` (added with the PnL block, 0007 Amendment 1 d2; since 0007 Amendment 8, rulings 435 b, 437 and 438 a, the realised P&L): in USD, the closed trades after their fees and the funding of each counted account (Include in P&L on, not being removed, not a vault), computed by the runtime from the record it keeps of their fills and funding, never from Hyperliquid's P&L series; over the last 24 hours, 7 x 24, 30 x 24 and all time, each summed in decimal over the accounts whose record is ready (0 when it holds no entry), null while none is. `since`: strictly after the moment (`?since=<ms>`, else the runtime's \"since you were last here\": the last moment a panel page was on screen before an absence of 30 minutes or more, on any device, rulings 298 and 304 a), `at` the moment itself; null while there is no moment, and for a `?since=` earlier than the 30 days the runtime holds. `partial`: `ok` the accounts whose figure is current, `reading` those still reading their past trades, of the `of` counted. `percent`: the realised P&L's time-weighted return over the same windows, from the runtime's own quarter-hour samples of each account's stablecoin balance, chained between deposits and withdrawals; absent while it is rebuilt; null per window when no return is measurable.",
+      "description": "Holdings (0007 Amendment 5): for each connected main account and sub-account (not a vault, whose figure is your own share, nor a demo account), `vaults` is its total USDC equity in all vaults, `staked` its delegated + undelegated + pending-withdrawal HYPE; each read independently, reused for 5 minutes, null on failure. GET /api/v1/portfolio (added with P8, 0007 d13; since 757 (d) no venue history is read: the account rows lost `readAt`, `start`, `end` and `error` before the first public release, and every change is computed from `snapshots`). Values are decimal strings; null is not known. `pnl` (added with the PnL block, 0007 Amendment 1 d2; since 0007 Amendment 8, rulings 435 b, 437 and 438 a, the realised P&L; since 0007 Amendment 11, what the accounts made since they were connected to goodcryptoX, from its own record, every exchange alike): in USD, the closed futures trades after their fees and the funding of each counted account from its connection (`accounts[].connected`) (Include in P&L on, not being removed, not a vault), computed by the runtime from the record it keeps of their fills and funding, never from Hyperliquid's P&L series; over the last 24 hours, 7 x 24, 30 x 24 and all time, each summed in decimal over the accounts whose record is ready (0 when it holds no entry), null while none is. `since`: strictly after the moment (`?since=<ms>`, else the runtime's \"since you were last here\": the last moment a panel page was on screen before an absence of 30 minutes or more, on any device, rulings 298 and 304 a), `at` the moment itself; null while there is no moment, and for a `?since=` earlier than the 30 days the runtime holds. `partial`: `ok` the accounts whose figure is current, of the `of` counted; `reading` always 0. `percent`: the realised P&L's time-weighted return over the same windows, from the runtime's own quarter-hour samples of each account's stablecoin balance, chained between deposits and withdrawals; absent while it is rebuilt; null per window when no return is measurable.",
       "type": "object", "additionalProperties": false, "required": ["accounts", "pnl"],
       "properties": {
+        "assets": {"description": "0056: registry identities or venue-scoped exchange assets; values sum each holding at its own venue price. Missing prices retain amounts and contribute zero. Absent on older runtimes.", "type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["assetId", "assetKind", "symbol", "name", "amount", "value", "unpriced", "holdings"], "properties": {"assetId": {"type": "string"}, "assetKind": {"enum": ["bundled", "exchange"]}, "symbol": {"type": "string"}, "name": {"type": "string"}, "amount": {"type": ["string", "null"]}, "value": {"type": "string"}, "unpriced": {"type": "boolean"}, "holdings": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["account", "venue", "code", "amount", "price", "value", "unpriced"], "properties": {"account": {"type": "string"}, "venue": {"type": "string"}, "code": {"type": "string"}, "amount": {"type": ["string", "null"]}, "price": {"type": "string"}, "value": {"type": "string"}, "unpriced": {"type": "boolean"}}}}}}},
         "out": {
           "description": "Live account ids excluded from balances or PnL; absent on older answers means none excluded",
           "type": "object", "additionalProperties": false, "required": ["balances", "pnl"],
@@ -574,15 +656,15 @@
             "percent": { "type": "object", "additionalProperties": false, "required": ["day", "week", "month", "allTime"], "properties": { "day": { "$ref": "#/$defs/startValue" }, "week": { "$ref": "#/$defs/startValue" }, "month": { "$ref": "#/$defs/startValue" }, "allTime": { "$ref": "#/$defs/startValue" } } },
             "day": { "$ref": "#/$defs/startValue" }, "week": { "$ref": "#/$defs/startValue" }, "month": { "$ref": "#/$defs/startValue" }, "allTime": { "$ref": "#/$defs/startValue" },
             "since": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["at", "value"], "properties": { "at": { "type": "integer" }, "value": { "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$" } } }, { "type": "null" }] },
-            "partial": { "type": "object", "additionalProperties": false, "required": ["ok", "of"], "properties": { "ok": { "type": "integer", "minimum": 0 }, "of": { "type": "integer", "minimum": 0 }, "reading": { "description": "Added with 0007 Amendment 8: the counted accounts still reading their past trades (none summed while all are). Absent on older answers.", "type": "integer", "minimum": 0 } } },
-            "from": { "description": "Added with 0007 Amendment 8: the latest start of a counted account's record after Hyperliquid's 10,000 fills (ms); a window starting before it counts since it. Null when every record is whole; absent on older answers.", "oneOf": [{ "type": "integer" }, { "type": "null" }] },
+            "partial": { "type": "object", "additionalProperties": false, "required": ["ok", "of"], "properties": { "ok": { "type": "integer", "minimum": 0 }, "of": { "type": "integer", "minimum": 0 }, "reading": { "description": "Added with 0007 Amendment 8: the counted accounts still reading their past trades. Always 0 from 0007 Amendment 11: nothing before an account's connection is read. Absent on older answers.", "type": "integer", "minimum": 0 } } },
+            "from": { "description": "Added with 0007 Amendment 8: the latest start of a hole the exchange could no longer serve (ms; Hyperliquid's 10,000 fills); a window starting before it counts since it. Null when every record is whole; absent on older answers.", "oneOf": [{ "type": "integer" }, { "type": "null" }] },
             "percentSince": { "description": "Added with 0007 Amendment 8: a window whose first sample is more than 15 minutes after its start, that sample's time (ms); its percentage counts since it.", "type": "object", "additionalProperties": false, "properties": { "day": { "type": "integer" }, "week": { "type": "integer" }, "month": { "type": "integer" } } },
-            "percentOut": { "description": "Added with 0007 Amendment 8: the counted accounts in portfolio margin, out of the percentage; their amounts are counted.", "type": "array", "items": { "type": "string" } }
+            "percentOut": { "description": "Added with 0007 Amendment 8: the counted accounts not in the percentage (in portfolio margin, or with no samples of their own; 0007 Amendment 11); their amounts are counted.", "type": "array", "items": { "type": "string" } }
           }
         },
         "accounts": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": false, "required": ["sourceId"], "properties": { "vaults": { "$ref": "#/$defs/startValue" }, "led": { "description": "Added with 757 (b): of vaults, the USDC equity in vaults the account leads, which are never part of its balances; null on its own read failure; absent on older answers.", "$ref": "#/$defs/startValue" }, "staked": { "$ref": "#/$defs/startValue" }, "sourceId": { "type": "string" } } }
+          "items": { "type": "object", "additionalProperties": false, "required": ["sourceId"], "properties": { "connected": { "description": "Added with 0007 Amendment 11: the moment the account's PnL counts from, its first connection to goodcryptoX (ms). Absent on older answers.", "type": "integer" }, "vaults": { "$ref": "#/$defs/startValue" }, "led": { "description": "Added with 757 (b): of vaults, the USDC equity in vaults the account leads, which are never part of its balances; null on its own read failure; absent on older answers.", "$ref": "#/$defs/startValue" }, "staked": { "$ref": "#/$defs/startValue" }, "sourceId": { "type": "string" } } }
         },
         "snapshots": {
           "description": "Added with 757 (d): by account id, each period's base from the runtime's daily snapshots (one a day of each account: each coin's amount and value in USD, at the day's first Dashboard view in which the account's value is wholly known). The base is the snapshot nearest the period's start (24 hours, 7 days and 30 days back; all time: the first snapshot); `whole` when it lies within half a day of that start, an hour for 24 hours (all time: never), else the change counts since `at`. Null: the account has no snapshot yet. Absent on older answers.",
@@ -605,7 +687,7 @@
         "passphrase": { "type": "boolean", "description": "A passphrase is set." },
         "here": { "enum": ["name", "ip"], "description": "The address this request came to: name, http://localhost:<port>, where a passkey works; ip, any other (127.0.0.1), where only the passphrase does." },
         "again": { "type": "boolean", "description": "Every stored passkey was made at the panel's earlier address (http://gcx.localhost:<port>, before ruling 115), where a browser does not offer it here: the lock makes one anew, after the passphrase where one is set and otherwise with no check first, and it replaces them. Absent: false." },
-        "reset": { "type": ["string", "null"], "description": "On a NAS or a VPS, the line that removes the passkey and the passphrase and signs every browser out: in Docker (GCX_SHELL=docker) `docker exec gcx gcx passkey reset`, typed on the machine (0024 d5.5); elsewhere, pasted into a shell over SSH, this runtime's own Node and script, each quoted, then passkey reset (and --data with the data folder when it is not the system's). Null on a Mac: there the gcx menu in the menu bar has Reset passkey…, which asks for the Mac's password first (RULINGS 162 (b))." },
+        "reset": { "type": ["string", "null"], "description": "On a NAS or a VPS, the line that removes the passkey and the passphrase and signs every browser out: in Docker (GCX_SHELL=docker) `sudo docker exec gcx gcx passkey reset`, typed on the machine (0024 d5.5); elsewhere, pasted into a shell over SSH, this runtime's own Node and script, each quoted, then passkey reset (and --data with the data folder when it is not the system's). Null on a Mac: there the gcx menu in the menu bar has Reset passkey…, which asks for the Mac's password first (RULINGS 162 (b))." },
         "passkeys": {
           "type": "array", "description": "Only to a verified session: each stored passkey.",
           "items": { "$ref": "#/$defs/passkey" }
@@ -666,7 +748,10 @@
         "tier": { "enum": ["internal", "beta", "everyone"] },
         "installedAt": { "type": "integer", "minimum": 0, "description": "Actual installed build transition time in milliseconds; absent on older installs" },
         "dataFolder": { "type": "string" }, "keyStore": { "enum": ["unlocked", "locked"] },
+        "exportLine": { "type": "string", "description": "Added (MH 2026-11-05): where goodcryptoX runs with no screen of its own (Docker, a plain Node server), the line that runs `gcx export` in this machine's own terminal (`sudo docker exec -it gcx gcx export` in Docker; else this program's path, PowerShell's form on Windows). Settings › Move shows it in place of Export on every page there, the one reached through an SSH tunnel included. Absent on a desktop (the Mac and Windows apps, the Linux desktop), where a paired device is told to press Export on that computer, and from older runtimes. POST /api/v1/export answers a device 403." },
         "apiUrl": { "type": "string", "description": "The runtime's loopback API origin, including its port, for MCP clients and API programs. Present in Docker too; absent from older runtimes." },
+        "network": { "type": "object", "additionalProperties": false, "required": ["requested", "applied", "failure", "addresses"], "description": "Added with 0044: Connect directly at home as requested (the settings' `network`) and as applied (listening on every address or not, and why not: the port taken, another bind failure, the addresses unread), and the addresses the home link can carry, the first the default. `relay` (0044 amendment 2): our server is on; absent from older runtimes means true. Absent from runtimes before 0044.", "properties": { "requested": { "type": "object", "additionalProperties": false, "required": ["on", "addresses"], "properties": { "on": { "type": "boolean" }, "addresses": { "type": "array", "items": { "type": "string" } } } }, "applied": { "type": "boolean" }, "failure": { "enum": ["port", "bind", "refresh", null] }, "addresses": { "type": "array", "items": { "type": "string" } }, "relay": { "type": "boolean" } } },
+        "laptop": { "type": "boolean", "description": "Added with 0044 amendment 2: this installation runs on a laptop (macOS: an internal battery; Windows: a portable chassis or a battery; Linux: a portable chassis or a system battery; never in Docker), read once at the start, false until it answers or when the read fails. The Home network card's warning line. Absent from older runtimes means false." },
         "programRelay": { "$ref": "program-device.schema.json#/$defs/target", "description": "0042 remote program capability; absent when unsupported or relay access is disabled." },
         "connector": { "type": "object", "additionalProperties": false, "required": ["url", "run"], "description": "What Settings › MCP & API shows any MCP client: the runtime's loopback address and the program that starts the connector (`gcx mcp`) on this computer, this Node and the connector file; absent in Docker (its paths are the container's), where the file is missing, and from older runtimes.", "properties": { "url": { "type": "string" }, "run": { "type": "array", "items": { "type": "string" }, "minItems": 2 } } },
         "watching": {

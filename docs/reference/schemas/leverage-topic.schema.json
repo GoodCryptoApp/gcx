@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/leverage-topic.schema.json",
   "title": "Leverage topic",
-  "description": "The `leverage/<sourceId>/<instrumentId>` topic (decision 0007 part 3 decision 8; roadmap P3): the account's leverage, margin mode and margin available on one perpetual, from Hyperliquid's `activeAssetData` (leverage-frame.schema.json) with the catalogue's maximum leverage and whether only isolated margin is offered. Served by src/runtime/account/topics.ts; mirrors src/panel/model/form.ts (LeverageState). `availableToTrade` is the venue's pair as sent: the panel reads the first as buy and the second as sell, which pin P6 of decision 0003a still has to confirm. Never a JSON number.",
+  "description": "The `leverage/<sourceId>/<instrumentId>` topic (decision 0007 part 3 decision 8; roadmap P3): the account's leverage, margin mode and margin available on one perpetual, from Hyperliquid's `activeAssetData` (leverage-frame.schema.json) with the catalogue's maximum leverage and whether only isolated margin is offered. Served by src/runtime/account/topics.ts; mirrors src/panel/model/form.ts (LeverageState). `availableToTrade` is the venue's pair as sent: the panel reads the first as buy and the second as sell, which pin P6 of decision 0003a still has to confirm. Never a JSON number. A read that fails before any figure came is told instead as a frame of `venue`, `sourceId`, `instrumentId` and `unread: true`, outside this shape.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,6 +16,36 @@
     "availableToTrade"
   ],
   "properties": {
+    "availableUnit": {
+      "type": "string",
+      "description": "Available's currency; absent means the instrument's native margin asset."
+    },
+    "availableScope": {
+      "enum": [
+        "asset",
+        "usdm",
+        "portfolio"
+      ],
+      "description": "Absent means the older native asset scope. usdm is the USD Multi-Assets pool."
+    },
+    "availabilityStale": {
+      "const": true,
+      "description": "Retains the last complete amount and unit while replacement settings are unreadable or pending; absent means no additional availability staleness."
+    },
+    "readAt": {
+      "type": "integer",
+      "description": "When this figure was read (milliseconds since the epoch): the time a stale figure says \"Since\". Absent on older frames."
+    },
+    "readFailed": {
+      "const": true,
+      "description": "The last read failed: the figure is the last one known, stale (availabilityStale). Absent on older frames."
+    },
+    "availabilityKnown": {
+      "const": false
+    },
+    "sharedCollateral": {
+      "const": true
+    },
     "venue": {
       "type": "string"
     },
@@ -45,6 +75,122 @@
     },
     "availableToTrade": {
       "$ref": "leverage-frame.schema.json#/$defs/pair"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional receipt applicability. Absent flags preserve classic initial margin, Available and liquidation. False means not applicable, never measured zero. Pooled accounts set liquidation false.",
+      "properties": {
+        "initialMargin": {
+          "const": false
+        },
+        "available": {
+          "const": false
+        },
+        "liquidation": {
+          "const": false
+        }
+      }
+    },
+    "availableRate": {
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)?$",
+      "description": "Matching venue conversion: native settlement needs times this rate equals Available units. Absent means 1 only for the same unit; across currencies the comparison is unknown, never an assumed USD peg. Publish atomically with amount/unit/settings; retain the prior complete frame stale while replacing it."
+    },
+    "maintenanceRate": {
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)?$",
+      "description": "Actual venue maintenance fraction for this exposure when known. Absent keeps the classic estimate; not a pooled-account risk simulation."
+    },
+    "maintenanceDeduction": {
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)?$",
+      "description": "Venue maintenance deduction: linear settlement currency; inverse quote currency (contract cum times face). Inverse MM = (contracts * rate * face - deduction) / price; never add this deduction to coin backing. Absent means zero."
+    },
+    "maintenanceBrackets": {
+      "type": "array",
+      "description": "Applicable venue tiers. Linear bounds are quote notional at the liquidation price; inverse bounds are native contracts. Linear deductions are settlement currency; inverse deductions are quote currency (venue cum times face). Absent retains maintenanceRate or 1/(2*maxLeverage). Additive receipt facts, never persisted as trading instructions.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "floor",
+          "cap",
+          "rate",
+          "deduction"
+        ],
+        "properties": {
+          "floor": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "cap": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "rate": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          },
+          "deduction": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$"
+          }
+        }
+      }
+    },
+    "isolatedPositions": {
+      "type": "object",
+      "description": "Current isolated exposure by economic side: native size, settlement entry cost and actual wallet backing including added margin, held fixed when preview leverage changes. Absent means no existing side, preserving old frames. Previous readers ignore these optional fields; no stored rows change.",
+      "additionalProperties": false,
+      "properties": {
+        "buy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size",
+            "cost",
+            "margin"
+          ],
+          "properties": {
+            "size": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$"
+            },
+            "cost": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$"
+            },
+            "margin": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$"
+            }
+          }
+        },
+        "sell": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size",
+            "cost",
+            "margin"
+          ],
+          "properties": {
+            "size": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$"
+            },
+            "cost": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$"
+            },
+            "margin": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$"
+            }
+          }
+        }
+      }
     }
   }
 }

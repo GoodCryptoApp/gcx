@@ -30,6 +30,10 @@
       "type": "string",
       "pattern": "^[0-9]+(\\.[0-9]+)?$",
       "description": "Added 2026-10-03 (B13, release plan B10a): the venue's limit-distance rule, in percent: a limit order priced further than this from the venue's reference price is refused when placed (Hyperliquid perpetuals: 80, the figure of the venue's own refusal text; spot: none known). Absent: no bound, the default for a venue or kind without a known figure. gcx refuses a manual limit beyond it before signing, and a DCA bot holds a level beyond it until the price brings it inside."
-    }
+    },
+    "stamp": { "enum": ["nonce", "window"], "description": "Added 2026-10-22 (0037 §10 d1): how a write is stamped: a nonce with its expiry (Hyperliquid), or a timestamp in a receive window (Binance). A journal's send keeps either in its nonce and expiresAfter fields. Absent reads as nonce." },
+    "sameIdGuard": { "enum": ["nonce", "none"], "description": "Added 2026-10-22 (0037 §10 d1): what stops a second send of one order from executing twice: the nonce, under which at most one executes, so the same order may go again under it (0013 Amendment 1 d7 (a), Hyperliquid); none where the venue's own id guard ends with the first order. Absent reads as nonce." },
+    "builderFee": { "type": "boolean", "description": "Added 2026-10-22 (0037 §10 d1): gcx's fee rides each order as the venue's builder fee (Hyperliquid: true); false where the venue has none. Absent reads as true." },
+    "marketOrder": { "enum": ["native", "bounded"], "description": "Added 2026-10-22 (0037 §10 d1, ruling 141 (a)): bounded, a limit priced through the touch within ruling 141's bound, with the order form's Est and Max line (Hyperliquid); native, the venue's own market order. Absent reads as bounded." }
   }
 }

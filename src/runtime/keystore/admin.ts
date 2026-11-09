@@ -13,16 +13,17 @@ import type { UnlockSource } from "./sources.js";
 
 export type KeyStoreAdmin = Pick<
   KeyStore,
-  "locked" | "moved" | "addressesStale" | "unlock" | "signer" | "addAgent" | "rotate" | "pending" | "confirmRotation" | "removeAgent" | "exportSealed" | "markMoved"
+  "locked" | "moved" | "addressesStale" | "cexUnreadable" | "unlock" | "signer" | "addAgent" | "rotate" | "pending" | "confirmRotation" | "removeAgent" | "exportSealed" | "exportCex" | "markMoved"
   | "keepAccess" | "access" | "hasAccess" | "dropAccess"
+  | "signKey" | "newRsaKey" | "putHmacKey" | "putWalletKey" | "publicKey" | "cexKeys" | "apiKey" | "setApiKey" | "removeKey"
 >;
 export type { ImportedAgent } from "./store.js";
 export type { Address } from "./signer.js";
 
 export const createStore = (dir: string, source: UnlockSource): Promise<KeyStoreAdmin> => KeyStore.create(dir, source);
 export const openStore = (dir: string): Promise<KeyStoreAdmin> => KeyStore.open(dir);
-export const importStore = async (dir: string, sealed: Buffer, exportPassphrase: Buffer, source: UnlockSource) => {
-  const { store, agents } = await KeyStore.importFrom(dir, sealed, exportPassphrase, source);
+export const importStore = async (dir: string, sealed: Buffer, exportPassphrase: Buffer, source: UnlockSource, cex?: Buffer) => {
+  const { store, agents } = await KeyStore.importFrom(dir, sealed, exportPassphrase, source, cex);
   const admin: KeyStoreAdmin = store;
   return { store: admin, agents };
 };
@@ -32,5 +33,5 @@ export const sealWith = async (secret: Buffer, plaintext: Buffer): Promise<Buffe
 /** Its opening: `bad-secret` for a wrong passphrase or a changed file, `damaged` for a file that is not one. */
 export const unsealWith = async (file: Buffer, secret: Buffer): Promise<Buffer> => (await unseal(file, secret)).plaintext;
 
-export { KEYSTORE_FILE, MOVED_FILE, KeystoreError, removeKeyFiles, type KeystoreErrorCode } from "./format.js";
+export { CEX_FILE, CEX_KEYS_FILE, KEYSTORE_FILE, MOVED_FILE, KeystoreError, removeKeyFiles, type KeystoreErrorCode } from "./format.js";
 export { CREDENTIAL, DPAPI_OWNER, PATIENT_TOOL_MS, credentialFile, dpapi, environment, macosKeychain, passphrase, provision, secretService, systemdCredential, type StoringSource, type UnlockSource } from "./sources.js";

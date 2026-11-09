@@ -4,6 +4,8 @@
 
 - [What is goodcryptoX 3.0](first-release.md)
 - [Set up on your Mac](install/mac.md)
+- [Set up on Windows](install/windows.md)
+- [Set up on Linux](install/linux.md)
 - [Set up on a NAS](install/nas.md)
 - [Set up on a server](install/server.md)
 - [Phone access](phone.md)
@@ -11,12 +13,24 @@
 - [Moving goodcryptoX](install/moving.md)
 - [Roadmap](https://goodcrypto.app/roadmap?utm_source=docs&utm_medium=sidebar&utm_campaign=roadmap-3-0)
 
+- [Supported exchanges](exchanges.md)
+  - [Connect Hyperliquid](venues/hyperliquid.md)
+  - [Connect Binance](venues/binance.md)
+  - [Trading credits](credits.md)
+- [Referral program](referral-program.md)
+
+- [Manual trading](trading/manual-trading.md)
+  - [Market and Limit orders](trading/market-and-limit.md)
+  - [Stop Market and Stop Limit](trading/stop-orders.md)
+  - [Trailing stops](trading/trailing-stops.md)
+  - [Take-profit and stop-loss](trading/take-profit-stop-loss.md)
+
 - [DCA bot](bots/dca.md)
-- [Features & setup](bots/dca-setup.md)
-- [Running the bot](bots/dca-running.md)
+  - [Features & setup](bots/dca-setup.md)
+  - [Running the bot](bots/dca-running.md)
 - [Grid bot](bots/grid.md)
-- [Grid setup](bots/grid-setup.md)
-- [Running a Grid](bots/grid-running.md)
+  - [Grid setup](bots/grid-setup.md)
+  - [Running a Grid](bots/grid-running.md)
 
 - [AI agents](agents/README.md)
 - [API](agents/api.md)

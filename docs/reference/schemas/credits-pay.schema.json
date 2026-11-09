@@ -1,0 +1,565 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/credits-pay.schema.json",
+  "title": "Unsigned credits payment",
+  "description": "POST /api/v1/credits/pay; the request is exactly one of amount (USD credits wanted), spend (USD to spend on the $GOOD paths) and input (the coin amount to pay, in the coin's own units, 0038 amendment 7), strings for money. Extra request fields are ignored, including any recipient or fingerprint. Only the wallet signs. build false returns no transaction. Approve precedes the swap when present. Receipt success is not ledger credit.",
+  "type": "object",
+  "$defs": {
+    "request": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "chain",
+        "token",
+        "payer",
+        "build"
+      ],
+      "properties": {
+        "chain": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "string",
+          "description": "USD credits wanted, any amount above zero (the 10 USD minimum of 0038 d6.9 is gone, MH 2026-11-07; reason below-minimum is deprecated and never answered).",
+          "pattern": "^[0-9]+(\\.[0-9]+)?$"
+        },
+        "payer": {
+          "type": "string"
+        },
+        "build": {
+          "type": "boolean"
+        },
+        "spend": {
+          "type": "string",
+          "description": "USD to spend: with burn true on Solana USDC (the USDC paid, which buys $GOOD that is burned), or alone with GOOD (the $GOOD that buys). Exactly one of amount, spend and input.",
+          "pattern": "^[0-9]+(\\.[0-9]+)?$"
+        },
+        "burn": {
+          "const": true,
+          "description": "Buy $GOOD in the same payment and burn it, for the GOOD discount (Solana only): with input any Solana coin but $GOOD, with spend USDC only."
+        },
+        "input": {
+          "type": "string",
+          "description": "The coin amount to pay, in the coin's own units (0038 amendment 7): a positive decimal with at most the coin's decimals, its atoms below 2^64 on Solana and Tron, 2^256 on EVM. One route call, exact input: the payment spends exactly this. Exactly one of amount, spend and input.",
+          "pattern": "^[0-9]+(\\.[0-9]+)?$"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "amount"
+          ]
+        },
+        {
+          "required": [
+            "spend"
+          ]
+        },
+        {
+          "required": [
+            "input"
+          ]
+        }
+      ]
+    },
+    "tokenAmount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "token",
+        "atoms",
+        "decimals"
+      ],
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "atoms": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    },
+    "quote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "input",
+        "output",
+        "credits",
+        "priceImpactPct",
+        "warnings"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "transfer",
+            "exact-input",
+            "exact-output",
+            "burn",
+            "buy-burn"
+          ],
+          "description": "buy-burn: input.atoms is the coin paid, exact (built through Jupiter, exact input; it was the most taken); output.atoms the $GOOD burned"
+        },
+        "input": {
+          "$ref": "#/$defs/tokenAmount"
+        },
+        "output": {
+          "$ref": "#/$defs/tokenAmount"
+        },
+        "credits": {
+          "type": "string"
+        },
+        "priceImpactPct": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "networkFeeUsd": {
+          "type": "string",
+          "pattern": "^\\d+(?:\\.\\d+)?$",
+          "description": "The estimated network fee of this payment in USD (EVM networks and Solana); absent when it could not be estimated"
+        },
+        "feeSharePct": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "The estimated network fee as a share of the amount paid, in whole percent; present with networkFeeUsd"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "price-impact",
+              "network-fee"
+            ]
+          },
+          "description": "price-impact: the swap's price impact is over 10%; network-fee: the estimated network fee is over 10% of the amount. Neither refuses the payment"
+        },
+        "goodMore": {
+          "type": "string",
+          "pattern": "^\\d+(?:\\.\\d+)?$",
+          "description": "On the two $GOOD paths (burn, buy-burn): the credits beyond what the same coin buys without $GOOD, in USD (0038 amendment 7 d4.5)"
+        }
+      }
+    },
+    "evmTransaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "chain",
+        "chainId",
+        "to",
+        "data",
+        "value"
+      ],
+      "properties": {
+        "family": {
+          "const": "evm"
+        },
+        "chain": {
+          "type": "string"
+        },
+        "chainId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "data": {
+          "type": "string",
+          "pattern": "^0x([0-9a-fA-F]{2})*$"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        }
+      }
+    },
+    "transaction": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/evmTransaction"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "family",
+            "transaction"
+          ],
+          "properties": {
+            "family": {
+              "const": "solana"
+            },
+            "transaction": {
+              "type": "string"
+            },
+            "simulation": {
+              "type": "object",
+              "required": [
+                "bytes",
+                "units"
+              ],
+              "properties": {
+                "bytes": {
+                  "type": "integer"
+                },
+                "units": {
+                  "type": "integer"
+                }
+              },
+              "additionalProperties": false
+            },
+            "lastValidBlockHeight": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "The blockhash's last valid block height: past it, a payment that never landed never will (0038 amendment 7 d8). Pass it to the receipt read."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "family",
+            "transaction"
+          ],
+          "properties": {
+            "family": {
+              "const": "tron"
+            },
+            "transaction": {
+              "type": "object"
+            }
+          }
+        }
+      ]
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "reason",
+            "at"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "reason": {
+              "description": "insufficient-funds: Not enough {coin} (Amount); insufficient-fee: Not enough SOL for the network fee (summary); price-moved: Couldn't get a price. Try again (summary); unsafe-build: the build could not be handed to the wallet as this payment (it does not bind to it, or does not fit one transaction); Try again. The panel localizes these sentences.",
+              "enum": [
+                "invalid-request",
+                "below-minimum",
+                "unsupported-chain",
+                "not-configured",
+                "no-route",
+                "unavailable",
+                "unsafe-build",
+                "insufficient-funds",
+                "insufficient-fee",
+                "price-moved"
+              ]
+            },
+            "at": {
+              "description": "Where the form shows the refusal: insufficient-funds at the Amount, no-route at the coin, any other at the summary (below-minimum, deprecated, was at the Amount).",
+              "enum": [
+                "amount",
+                "coin",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "kind",
+            "quote"
+          ],
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "kind": {
+              "enum": [
+                "transfer",
+                "swap",
+                "burn",
+                "buy-burn"
+              ]
+            },
+            "quote": {
+              "$ref": "#/$defs/quote"
+            },
+            "tx": {
+              "$ref": "#/$defs/transaction"
+            },
+            "approve": {
+              "$ref": "#/$defs/transaction"
+            }
+          }
+        }
+      ]
+    },
+    "broadcast": {
+      "type": "object",
+      "required": [
+        "transaction",
+        "amount",
+        "payer"
+      ],
+      "properties": {
+        "transaction": {
+          "type": "object"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "payer": {
+          "type": "string"
+        }
+      }
+    },
+    "receiptRequest": {
+      "type": "object",
+      "required": [
+        "chain",
+        "id"
+      ],
+      "properties": {
+        "chain": {
+          "enum": [
+            "solana",
+            "tron",
+            "ethereum",
+            "base",
+            "polygon",
+            "arbitrum",
+            "optimism",
+            "bsc",
+            "avalanche"
+          ],
+          "description": "The payment's network. The EVM networks since 0038 amendment 8: the runtime reads the receipt itself; while a payment waits, its first confirmation is told to goodcryptoX's server, which credits it at once and takes it back if the network drops it"
+        },
+        "id": {
+          "type": "string"
+        },
+        "transaction": {
+          "type": "object"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "payer": {
+          "type": "string"
+        },
+        "expiration": {
+          "type": "integer"
+        },
+        "lastValidBlockHeight": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Solana: the payment's lastValidBlockHeight; with it the receipt can answer reverted for a payment that never landed (finalized height past it, two empty status reads 20 s apart, and no transaction)"
+        }
+      }
+    },
+    "operationState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "pending",
+            "unknown",
+            "reverted",
+            "succeeded"
+          ]
+        }
+      }
+    },
+    "balanceRequest": {
+      "type": "object",
+      "required": [
+        "chain",
+        "payer",
+        "token",
+        "decimals"
+      ],
+      "properties": {
+        "chain": {
+          "enum": [
+            "solana",
+            "tron"
+          ]
+        },
+        "payer": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    },
+    "balanceAnswer": {
+      "type": "object",
+      "required": [
+        "balance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "balance": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "holdingsRequest": {
+      "type": "object",
+      "description": "0038 amendment 6: a wallet and the networks of its kind to read; an EVM address with EVM networks, a Solana or Tron address with that one network",
+      "required": [
+        "payer",
+        "chains"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "payer": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "chains": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 9,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "ethereum",
+              "base",
+              "polygon",
+              "arbitrum",
+              "optimism",
+              "bsc",
+              "avalanche",
+              "solana",
+              "tron"
+            ]
+          }
+        },
+        "direct": {
+          "type": "boolean",
+          "description": "EVM networks: true reads only the network's own coin and the dollar tokens paid as they are, a quick first answer while the whole read runs; absent or false, every coin of the swap service's list"
+        }
+      }
+    },
+    "holdingsAnswer": {
+      "type": "object",
+      "required": [
+        "holdings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "holdings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "chain",
+              "token",
+              "balance"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "chain": {
+                "enum": [
+                  "ethereum",
+                  "base",
+                  "polygon",
+                  "arbitrum",
+                  "optimism",
+                  "bsc",
+                  "avalanche",
+                  "solana",
+                  "tron"
+                ]
+              },
+              "token": {
+                "type": "string",
+                "description": "The coin as Add credits names it: a token address, or native"
+              },
+              "balance": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Decimal units; null when this read failed (unknown, not zero)"
+              },
+              "symbol": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "decimals": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 36
+              },
+              "priceUsd": {
+                "type": "string",
+                "pattern": "^\\d+(?:\\.\\d+)?$",
+                "description": "The coin's USD price where it was read (Solana; EVM coins with a balance on the whole read; TRX on Tron); absent when unknown, never zero"
+              },
+              "cmcRank": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "payable": {
+                "type": "boolean"
+              },
+              "isStable": {
+                "type": "boolean"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

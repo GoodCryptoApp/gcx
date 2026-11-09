@@ -1,5 +1,7 @@
 # Set up goodcryptoX on Linux
 
+goodcryptoX for Linux is an app for your Linux desktop that you install from a terminal and use in your browser. It updates itself, starts when you log in and trades while the computer is on and online.
+
 A Linux desktop, x64 or arm64, with systemd.
 
 {% hint style="warning" %}
@@ -39,10 +41,12 @@ The secret that unlocks your API wallet keys is kept in your desktop's keyring (
 
 Your phone and your other computers connect from Settings › Devices › **Add a device** ([Phone access](../phone.md)).
 
+At home, turn on **Connect directly at home** in **Settings › Devices**, then open its link on your other devices; it starts **Off**. If your firewall asks whether goodcryptoX may accept connections, allow it. On a machine without a screen, run `gcx network on` in its terminal. [Your home network](#your-home-network) walks you through it.
+
 ## Stop, update, remove
 
 - **Quit goodcryptoX** in Settings › General › Installation, or `gcx stop` in a terminal, stops goodcryptoX properly: it finishes what it is doing first. It stays stopped until you open goodcryptoX again from the applications menu or log in again.
-- goodcryptoX updates itself at a quiet moment ([Updates](../updates.md)). To install a download by hand, unpack it and run `./gcx install` in its folder: it stops the running goodcryptoX first. Your data stays.
+- goodcryptoX updates itself at a quiet moment. To install a download by hand, unpack it and run `./gcx install` in its folder: it stops the running goodcryptoX first. Your data stays.
 - **Start goodcryptoX when I log in** in Settings › General › Installation turns the start at login on or off. It is the same as `systemctl --user enable gcx` and `systemctl --user disable gcx` in a terminal, and turning it off does not stop goodcryptoX while it runs.
 - `gcx uninstall` removes the program, the start at login and the applications-menu entry. Your data folder stays: delete `~/.local/share/gcx` yourself to delete your data too. Your orders on the exchange are not affected either way.
 
@@ -55,7 +59,7 @@ With the keep-awake switch on (Settings › General › Installation), goodcrypt
 <!-- proxy:start -->
 A proxy sends every exchange connection through an address you choose, on a computer, a NAS or a server.
 
-Open **Settings › General › Installation › Proxy**, turn **Proxy On**, enter `socks5://host:port` or `http://host:port`, and press **Save**. With no saved address, Save turns it on. With an address saved, the switch saves at once; Off keeps the address for next time. The saved address masks its password; **Edit** opens it with **Save** and **Cancel**, and **Remove** clears it and turns Proxy off. An empty field shows no warning; an address that is not a SOCKS5 or HTTP address warns at the field after Save and is not saved. If the proxy needs a login, use `socks5://user:password@host:port` or `http://user:password@host:port`; encode special characters in the login (for example, `@` as `%40`). Use a proxy you trust. Existing exchange streams reconnect through it without restarting goodcryptoX. If the proxy fails, goodcryptoX alerts you; check the address and login, or turn Proxy Off to connect directly.
+Open **Settings › General › Privacy & security › Proxy**, turn **Proxy On**, enter `socks5://host:port` or `http://host:port`, and press **Save**. With no saved address, Save turns it on. With an address saved, the switch saves at once; Off keeps the address for next time. The saved address masks its password; **Edit** opens it with **Save** and **Cancel**, and **Remove** clears it and turns Proxy off. An empty field shows no warning; an address that is not a SOCKS5 or HTTP address warns at the field after Save and is not saved. If the proxy needs a login, use `socks5://user:password@host:port` or `http://user:password@host:port`; encode special characters in the login (for example, `@` as `%40`). Use a proxy you trust. Existing exchange streams reconnect through it without restarting goodcryptoX. If the proxy fails, goodcryptoX alerts you; check the address and login, or turn Proxy Off to connect directly.
 
 For a terminal or Docker installation, set `GCX_PROXY=socks5://host:port` (or the HTTP address) in its environment before starting goodcryptoX. Once you save Proxy in Settings, that choice wins over the environment, including Off. The proxy covers exchanges; goodcryptoX's relay, reports, updates and other services connect directly.
 
@@ -76,3 +80,27 @@ On a server or NAS, you can run a VPN through a Gluetun sidecar: add the service
     restart: unless-stopped
 ```
 <!-- proxy:end -->
+
+{% include "../../.gitbook/includes/home-network.md" %}
+
+## Questions
+
+### Does goodcryptoX trade while my computer sleeps?
+
+No: it trades only while the computer is on and online. With the keep-awake switch on, it keeps the computer from sleeping while there is something to trade on, though closing a laptop's lid still puts it to sleep.
+
+### Which Linux computers does goodcryptoX run on?
+
+A Linux desktop with systemd, x64 or arm64: one download runs on both.
+
+### Where is my data?
+
+In `~/.local/share/gcx`, with the program in `~/.local/opt/gcx`. `gcx uninstall` leaves your data: delete that folder yourself to delete it too.
+
+### Can I move goodcryptoX to another machine later?
+
+Yes: move it to a NAS or a server in one file, accounts and bots included ([Moving goodcryptoX](moving.md)).
+
+### Do I still need your server?
+
+No: at home your devices open goodcryptoX directly. Away from home, our server is the way in ([Phone access](../phone.md)).

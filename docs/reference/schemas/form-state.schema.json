@@ -20,7 +20,7 @@
           "additionalProperties": false,
           "required": ["venue", "instrumentId", "quote", "szDecimals"],
           "description": "The instrument the absolute values belong to.",
-          "properties": { "venue": { "type": "string" }, "instrumentId": { "type": "string" }, "quote": { "type": "string" }, "szDecimals": { "type": "integer", "minimum": 0 } }
+          "properties": { "contract": { "$ref": "contract.schema.json" }, "venue": { "type": "string" }, "instrumentId": { "type": "string" }, "quote": { "type": "string" }, "szDecimals": { "type": "integer", "minimum": 0 } }
         }
       ]
     },
@@ -36,7 +36,7 @@
       "properties": {
         "type": { "$ref": "#/$defs/type" },
         "extra": { "$ref": "#/$defs/type" },
-        "unit": { "enum": ["base", "quote"] },
+        "unit": { "enum": ["base", "quote", "coin"] },
         "size": {
           "type": "object",
           "additionalProperties": false,
@@ -107,7 +107,7 @@
       "required": ["v", "t"],
       "properties": {
         "v": { "type": "string", "description": "As typed; validated when a command is built." },
-        "t": { "enum": ["relative", "price", "base", "quote"] },
+        "t": { "enum": ["relative", "price", "base", "quote", "coin"] },
         "source": { "enum": ["typed", "filled"], "description": "Stepping provenance; absent on older drafts means typed." },
         "q": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A base size waiting for the new instrument's first price: the quote value it had." }
       }

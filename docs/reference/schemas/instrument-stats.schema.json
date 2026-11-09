@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/instrument-stats.schema.json",
+  "title": "Instrument statistics",
+  "description": "instrument-stats/<venue>: a snapshot on subscribe, then changed rows where the venue streams them. Volume is quote notional and change is percent. Match hedge instrument ids after removing :long or :short. For volume and change, null means no figure has been received; retain a previous figure if known. Optional invalidate names figures to clear explicitly, including after a stream or subscription gap; absent keeps the legacy null-retains-previous behavior.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "volume24h", "change24h"],
+    "properties": {
+      "id": { "type": "string", "minLength": 1 },
+      "volume24h": { "type": ["string", "null"], "pattern": "^[0-9]+(?:\\.[0-9]+)?$" },
+      "change24h": { "type": ["string", "null"], "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$" },
+      "lastPrice": { "type": ["string", "null"], "pattern": "^[0-9]+(?:\\.[0-9]+)?$", "description": "Last traded price in quote, where the exchange sends it. Absent retains the previous price for compatibility; explicit null clears it." },
+      "invalidate": { "type": "array", "uniqueItems": true, "items": { "enum": ["volume24h", "change24h"] }, "description": "Clear only these figures; omitted retains previous figures for null values as before." }
+    }
+  }
+}

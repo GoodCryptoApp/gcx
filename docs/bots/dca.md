@@ -2,13 +2,19 @@
 
 <!-- Base: https://docs.goodcrypto.app/dex-trading-spot/bots/dca-bot and the 2026-10-21 rewrite; facts checked against integrated 3.1 (D2b/D2c and DOCS-AUDIT-3.1). -->
 
-![A DCA bot set up on the Trade page: the form on the right, and on the chart its take-profit, its entry, ten averaging orders and its stop-loss](../pictures/dca/setup-10-chart-ladder.webp)
+<figure><img src="../pictures/dca/setup-10-chart-ladder.webp" alt="A DCA bot set up on the Trade page: the form on the right, and on the chart its take-profit, its entry, ten averaging orders and its stop-loss" width="563"><figcaption></figcaption></figure>
 
-DCA stands for dollar-cost averaging. A DCA bot opens a position, then adds to it at set prices if the market moves against you. Buying lower reduces your average entry price; on a short, selling higher raises it.
+DCA stands for dollar-cost averaging. A DCA bot in goodcryptoX opens a position on your chosen exchange, then adds to it at set prices if the market moves against you. Buying lower reduces your average entry price; on a short, selling higher raises it.
+
+## Trading bots
+
+A trading bot places orders automatically according to the rules and parameters you choose. Choose the account, pair and strategy in the Bots form, review the planned orders, then launch. You can follow its orders and result in the Bots list.
+
+## How DCA works
 
 For example, buying equal amounts of a coin at 100 and 90 gives you an average entry of 95. A 3% take-profit target is then 97.85, before fees. You need a smaller rebound to reach that target than you would after buying only at 100.
 
-You choose the entry, the averaging orders and the exits. After Take Profit or Stop Loss, the bot can stop or repeat with the same settings. This gives you several ways to use it:
+You choose the entry, the averaging orders and the exits. The entry can start manually or wait for your technical signals. As averaging orders fill, the bot adjusts the size of its Take Profit and Stop Loss to the position; Take Profit normally follows the new average entry, while Stop Loss stays at its planned distance from the last averaging level. After Take Profit or Stop Loss, the bot can stop or repeat with the same settings. This gives you several ways to use it:
 
 1. **SAFETY NET**\
    Enter positions knowing that should the market move against you, you'll buy more at a lower price and your enabled TP target will follow the new average unless fixed to entry or moved to break even. All without you lifting a finger.
@@ -40,3 +46,17 @@ You can change settings and monitor your position in [Running the bot](dca-runni
 **Approx. margin** shows the funds needed to back your plan. Orders worth 1,000 at 5x need 200 in order margin, before fees and losses. Leverage also brings liquidation risk: the position can be liquidated before your averaging orders or stop help.
 
 Check **Approx. liquidation** before launching. Use the lower leverage offered by the warning, or move your stop before liquidation. Cross is another choice where supported. The bot never adds margin by itself. These figures are estimates; fees, funding, gaps and other positions can change the outcome.
+
+## Questions
+
+### What happens if the price keeps falling?
+
+The bot buys at each averaging order down to the last, then a Stop Loss, if you set one, closes the position; with leverage, liquidation can come first. A rebound may never reach your target, and a continued move can cause a large loss.
+
+### Can a DCA bot run on a short?
+
+Yes: on perpetuals it can open longs or shorts. On a short, it adds by selling higher, which raises your average entry price.
+
+### Does the DCA bot work on spot?
+
+Yes: on spot you buy the coin itself, with no leverage or liquidation. A Sell order needs coins you already hold.

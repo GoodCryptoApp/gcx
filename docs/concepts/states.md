@@ -6,15 +6,15 @@ Every word goodcryptoX shows about an order, a bot, a position or goodcryptoX it
 
 ## Errors, three levels
 
-An error reads the same everywhere (as goodcryptoX 2.0): first the word **Error** (something went wrong; a red badge in the lists, as goodcryptoX 2.0 drew it); under it, a sentence of ours saying what it was; and, behind a small control named **Raw message**, the exchange's or goodcryptoX's own words, unchanged. goodcryptoX 2.0 put them behind an (i) icon that nobody understood: here the control says what it opens. An order the exchange refused, an order goodcryptoX never placed and an order that filled nothing are errors in the lists, in the order's details and in a bot's orders list (which no longer hides them as cancelled); a bot that stopped on an error shows the same three levels in its status. A take-profit, stop-loss or fired stop that the exchange refused waits for you to Retry it and says the same: its sentence in the line, the exchange's words behind **Raw message** in the details.
+An error reads the same everywhere (as goodcryptoX 2.0): first the word **Error** (something went wrong; a red badge in the lists, as goodcryptoX 2.0 drew it); under it, a sentence of ours saying what it was (in a list, the word's hover; in the order's details, a line under it); and, behind a small control named **Raw message**, the exchange's or goodcryptoX's own words, unchanged. goodcryptoX 2.0 put them behind an (i) icon that nobody understood: here the control says what it opens. An order the exchange refused, an order goodcryptoX never placed and an order that filled nothing are errors in the lists, in the order's details and in a bot's orders list (which no longer hides them as cancelled); a bot that stopped on an error shows the same three levels in its status. A take-profit, stop-loss or fired stop that the exchange refused waits for you to Retry it and says the same: its sentence in the line, the exchange's words behind **Raw message** in the details.
 
 ## Orders
 
-The Status column of **Open orders** and **History** on the Trade page, an order's details, and the order's line on the chart.
+The Status column of **Open orders** and **History** on the Trade page, an order's details, and the order's line on the chart. In the lists the column shows the first word only (Checking, Unknown, Waiting, Held, Left, Error); hover it, or open the order, for the whole line below.
 
 | You see | It means | What to press |
 |---|---|---|
-| **Waiting** | A stop or trailing order that has not fired, whether goodcryptoX watches it (marked *Internal*; it works only while goodcryptoX runs, [why](../trading/order-types.md#resting-on-the-exchange-or-watched-by-goodcryptox)) or the exchange holds it; and, in a bot's orders list, a level the bot has not sent yet. A **Delayed** order of yours reads **Open** while it waits for its delay; nothing is on the exchange until then. | Nothing. |
+| **Waiting** | A stop or trailing order that has not fired, whether goodcryptoX watches it (marked *Internal*; it works only while goodcryptoX runs, [why](../trading/manual-trading.md#resting-on-the-exchange-or-watched-by-goodcryptox)) or the exchange holds it; a send waiting its turn (hover it for why); and, in a bot's orders list, a level the bot has not sent yet. A **Delayed** order of yours reads **Open** while it waits for its delay; nothing is on the exchange until then. | Nothing. |
 | **Sending** | Sent to the exchange; its answer is on the way. | Nothing: the row changes when the answer arrives. |
 | **Waiting: post-only after the exchange's upgrade** | Hyperliquid refused it in the minutes after its upgrade when it takes only post-only orders; nothing was placed. goodcryptoX sends it again every 10 seconds until Hyperliquid takes it; the other orders that are not post-only wait behind it, in the order they came. | Nothing, or **Cancel**: a waiting order ends at once, nothing rests on Hyperliquid. ([The minutes after an upgrade](../reference/hyperliquid.md#maintenance)) |
 | **Held: maintenance**, **Held: goodcryptoX stopped**, **Held: disk full** | goodcryptoX decided this order, which opens or adds to a position, but holds it unsent ("Not sent", below); the details' Reason says why. | **Send now** (asked first) or **Cancel**. A bot's order shows **Bot**: answer it in the bot. |
@@ -38,14 +38,14 @@ The same sentence is the order's details, its chart line and the message goodcry
 | "The order's state on the exchange is unknown" | Still no answer from the exchange two minutes after the send. goodcryptoX keeps checking; if the answer comes, the order carries on from it by itself. |
 | "The outcome of the cancel is unknown" | Your cancel got no answer, or the exchange said there was nothing to cancel and a lookup found the order neither cancelled nor filled. |
 | "The stop fired but its order could not be filled" | A stop goodcryptoX watched fired and the exchange refused the order it sent. |
-| "The exit could not be completed within the price limits." | A protective exit (stop-loss, take-profit, Close) filled nothing even 10 % through the best price. |
+| "The exit could not be completed within the price limits." | A protective exit (stop-loss, take-profit, Close) filled nothing even 10% through the best price. |
 | "The exchange stop is missing on the exchange" | A stop-loss resting on the exchange as its own trigger order had not filled 30 seconds after the last trade crossed its price. |
 | "The exchange canceled the order" | The exchange removed it without a fill (margin, liquidation, or another reason, which the details show). |
 | "The exchange rejected the order" | The exchange refused a protective order, or a stop-loss of its own. |
 | "The exchange refused the reduce-only order." | The exchange answered "Reduce only order would increase position" while the position was not flat. |
 | "The exchange refused the new size" | goodcryptoX re-sized a take-profit or stop-loss after a fill, twice, and the exchange refused it. |
 | "The change and the restore were refused: nothing of this order rests" | A change to the order failed both ways: the change was refused, and putting the old order back was refused too, so nothing of this order rests on the exchange. |
-| "A fill was reported but its details have not arrived" | The exchange said the order executed, usually a market entry, and the fills did not arrive within 3 minutes. The order waits: a later fill closes it, and **Retry** sends only the rest. |
+| "A fill was reported but its details have not arrived" | The exchange said the order executed, usually a market order, and its fills did not arrive within 3 minutes, though goodcryptoX asked the exchange for them three times. The order waits: a later fill closes it, **Refresh** on its details asks the exchange again now, and **Retry** sends only the rest. |
 | "Sent 4 times, never placed: Retry or cancel" | goodcryptoX sent this order four times; each answer was lost and each send was proven never placed, so none reached the exchange. |
 | "The exchange has this order: check it and your position" | goodcryptoX had concluded this order was never placed, but it turned up after all; goodcryptoX treats the one found as the order. |
 | "The exchange returned an unrecognized error" | An answer goodcryptoX has no rule for. |
@@ -69,7 +69,7 @@ Only an order that opens or adds to a position is ever held; exits and cancels g
 - "Not sent: the disk is full." Free space: it goes by itself once there is room, or cancel it. While the disk is full goodcryptoX sends nothing at all (a line on the page says so); everything that waited goes by itself once there is room.
 - "Not sent: Hyperliquid was in maintenance when it was due." It goes by itself when the maintenance ends, however long it waited.
 
-The messages end "Send now or cancel". The order's row reads **Held:** and the reason in short (above), with **Send now** and **Cancel**. **Send now** sends it once, as it was written down, and is refused while goodcryptoX may not send new orders yet (the maintenance, the disk, a stop). **Cancel** ends it where it is: nothing is sent to Hyperliquid. For a bot's held order, use its **Stop** or **Close pos.**. In the API: `POST /api/v1/orders/{id}/send-now`.
+The messages end "Send now or cancel". The order's row reads **Held**, with the reason in short on hover (above), with **Send now** and **Cancel**. **Send now** sends it once, as it was written down, and is refused while goodcryptoX may not send new orders yet (the maintenance, the disk, a stop). **Cancel** ends it where it is: nothing is sent to Hyperliquid. For a bot's held order, use its **Stop** or **Close pos.**. In the API: `POST /api/v1/orders/{id}/send-now`.
 
 ## Bots
 

@@ -1,5 +1,7 @@
 # Set up goodcryptoX on Windows
 
+goodcryptoX for Windows is an app by the clock that you install from one Setup, with no administrator password, and use in your browser. It updates itself, starts when you log in and trades while your PC is on and online.
+
 Windows 10 (version 1903 or later) or Windows 11, 64-bit, including Windows 11 on Arm. One download for every Windows PC.
 
 {% hint style="warning" %}
@@ -21,9 +23,11 @@ goodcryptoX for Windows is not signed yet. Windows will say it protected your PC
 
 Windows may tuck the goodcryptoX icon under the arrow by the clock: drag it next to the clock to keep it in sight. Its menu has **Open the dashboard**, **Copy sign-in link**, the version and **Quit goodcryptoX**.
 
-goodcryptoX updates itself, as on a Mac ([Updates](../updates.md)).
+goodcryptoX updates itself, as on a Mac.
 
 goodcryptoX starts when you log in and keeps running with the browser closed. To turn that off: Settings › General › **Start goodcryptoX when I log in**, or Windows Settings › Apps › Startup. **Quit goodcryptoX** stops it properly: it finishes what it is doing first.
+
+At home, turn on **Connect directly at home** in **Settings › Devices**, then open its link on your other devices; it starts **Off**. If Windows Firewall asks whether goodcryptoX may accept connections, allow it on your home network. [Your home network](#your-home-network) walks you through it.
 
 ## Your data
 
@@ -40,7 +44,7 @@ Windows Settings › Apps, then goodcryptoX › **Uninstall**. goodcryptoX stops
 <!-- proxy:start -->
 A proxy sends every exchange connection through an address you choose, on a computer, a NAS or a server.
 
-Open **Settings › General › Installation › Proxy**, turn **Proxy On**, enter `socks5://host:port` or `http://host:port`, and press **Save**. With no saved address, Save turns it on. With an address saved, the switch saves at once; Off keeps the address for next time. The saved address masks its password; **Edit** opens it with **Save** and **Cancel**, and **Remove** clears it and turns Proxy off. An empty field shows no warning; an address that is not a SOCKS5 or HTTP address warns at the field after Save and is not saved. If the proxy needs a login, use `socks5://user:password@host:port` or `http://user:password@host:port`; encode special characters in the login (for example, `@` as `%40`). Use a proxy you trust. Existing exchange streams reconnect through it without restarting goodcryptoX. If the proxy fails, goodcryptoX alerts you; check the address and login, or turn Proxy Off to connect directly.
+Open **Settings › General › Privacy & security › Proxy**, turn **Proxy On**, enter `socks5://host:port` or `http://host:port`, and press **Save**. With no saved address, Save turns it on. With an address saved, the switch saves at once; Off keeps the address for next time. The saved address masks its password; **Edit** opens it with **Save** and **Cancel**, and **Remove** clears it and turns Proxy off. An empty field shows no warning; an address that is not a SOCKS5 or HTTP address warns at the field after Save and is not saved. If the proxy needs a login, use `socks5://user:password@host:port` or `http://user:password@host:port`; encode special characters in the login (for example, `@` as `%40`). Use a proxy you trust. Existing exchange streams reconnect through it without restarting goodcryptoX. If the proxy fails, goodcryptoX alerts you; check the address and login, or turn Proxy Off to connect directly.
 
 For a terminal or Docker installation, set `GCX_PROXY=socks5://host:port` (or the HTTP address) in its environment before starting goodcryptoX. Once you save Proxy in Settings, that choice wins over the environment, including Off. The proxy covers exchanges; goodcryptoX's relay, reports, updates and other services connect directly.
 
@@ -61,3 +65,31 @@ On a server or NAS, you can run a VPN through a Gluetun sidecar: add the service
     restart: unless-stopped
 ```
 <!-- proxy:end -->
+
+{% include "../../.gitbook/includes/home-network.md" %}
+
+## Questions
+
+### Does goodcryptoX trade while my PC sleeps?
+
+No: it trades only while this PC is on and online, though orders resting on the exchange still fill. After a short break it catches up when it is back.
+
+### Which Windows PCs does goodcryptoX run on?
+
+Windows 10 (version 1903 or later) or Windows 11, 64-bit, Windows 11 on Arm included. One download works on every Windows PC.
+
+### Why does Windows say it protected my PC?
+
+goodcryptoX for Windows is not signed yet: choose **More info**, then **Run anyway**.
+
+### Where is my data?
+
+In `%LOCALAPPDATA%\GCX`, with the program in `%LOCALAPPDATA%\Programs\GCX`. Uninstalling leaves your data there: delete that folder yourself to delete it too.
+
+### Can I move goodcryptoX to another machine later?
+
+Yes: move it in one file, accounts and bots included ([Moving goodcryptoX](moving.md)); a copied data folder cannot sign under another Windows user or on another PC.
+
+### Do I still need your server?
+
+No: at home your devices open goodcryptoX directly. Away from home, our server is the way in ([Phone access](../phone.md)).

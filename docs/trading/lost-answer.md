@@ -6,7 +6,7 @@ filled. goodcryptoX cannot tell which until the exchange says so, so it checks, 
 
 ## What you see
 
-- **"Checking with Hyperliquid"** is what the order's row says (Trade page, orders list) while goodcryptoX is finding out. It
+- **"Checking with …"** names the exchange in the order's row while goodcryptoX is finding out. It
   is not an alarm: goodcryptoX planned this step, so you get no notification.
 - **Usually it is settled within about two minutes**: the exchange shows the order (resting, filled or
   refused) and the row becomes what it really is, or the exchange's records show it never arrived.
@@ -16,15 +16,16 @@ filled. goodcryptoX cannot tell which until the exchange says so, so it checks, 
 
 ## What goodcryptoX does
 
-- **It never sends an order twice.** While the answer is unknown, nothing is sent again, for any order: a stop-loss or
-  a Close is no exception, because two reduce-only sells can both fill when another position shares the coin (two
-  bots, or a bot and your own trade).
-- **It looks the order up by its own id, several ways.** About 11 seconds after the send (once the exchange can no
-  longer accept that request) it asks for the order by id; then it reads your open orders and your recent fills. If
-  the exchange has it, its word counts. If it has not, that proves nothing at first: the exchange can take a moment to
-  show an order it accepted. Only after the request has expired for 90 seconds, with two clean "not found" answers
-  and no fill, does goodcryptoX treat the order as never placed. A read that fails counts for nothing and is asked again
-  after 5 and 15 seconds. This all continues after a restart, from what goodcryptoX wrote down before it sent.
+- **No fresh order while the answer is unknown.** A stop-loss or a Close is no exception: two reduce-only
+  sells can both fill when another position shares the coin (two bots, or a bot and your own trade).
+- **It checks the order, open orders and recent fills.** Finding the order settles it; one "not found" answer does not.
+  Failed checks prove nothing. Checking continues after a restart.
+- **Hyperliquid checks:** start about 11 seconds after the send. Only after the request has expired for 90 seconds,
+  with two clean "not found" answers and no fill, is the order treated as never placed. Failed reads retry after 5, then
+  15 seconds, then at the usual slower pace.
+- **Binance crypto checks:** come at 4, 6 and 9 seconds. If they succeed and show no order or fill, the order is sent again
+  with the same id. If the first is still open, Binance refuses the duplicate and goodcryptoX recovers the original. A fill
+  Binance shows later can still double the order; goodcryptoX warns you that it is over-filled.
 - **Found: it carries on from what the exchange holds.** A resting order is kept; a filled one is counted. For a
   market order that filled in part, the rest of a stop-loss, take-profit or Close is sent from the size the exchange
   says executed, never from the fills goodcryptoX happens to have seen so far.
@@ -32,14 +33,13 @@ filled. goodcryptoX cannot tell which until the exchange says so, so it checks, 
   is not sent, on futures too, and the cancel of the unknown one waits as well. Once the first is settled, the waiting
   exit goes, sized from what is left, however long it waited; the position is unprotected meanwhile, and the unknown
   one's repair (below) is the one message.
-- **A second send of the same order, only in a way Hyperliquid executes once.** Every order is signed with a number
+- **Hyperliquid can receive the same request again safely.** Every Hyperliquid order is signed with a number
   (its nonce) that Hyperliquid accepts only once from the key that signs goodcryptoX's orders. goodcryptoX may send the same order again
-  under the same number within the two minutes, and Hyperliquid then executes at most one of them; every second send
-  of an order uses the same number, never a new one. If it answers "duplicate nonce", goodcryptoX
-  knows one of them arrived and checks at once.
+  under the same number within the two minutes, and Hyperliquid then executes at most one of them. If it answers
+  "duplicate nonce", goodcryptoX knows one of them arrived and checks at once.
 - **Proven not placed: sent again by itself.** Once goodcryptoX proves the first never arrived, however long after it was due,
-  it sends it again by itself: a new order with a new id, sized from what is still needed, at most three times; a
-  fourth stops in repair with the reason "sent 4 times". The proof itself is never shortened: nothing is sent again while the answer is
+  it sends it again by itself, sized from what is still needed: with a new id on Hyperliquid, the same id on Binance crypto,
+  at most three times; a fourth stops in repair with the reason "sent 4 times". The proof itself is never shortened: nothing is sent again while the answer is
   unknown. If the order was already in repair as unknown, the repair clears; no second message.
 
 ## The one case that needs you

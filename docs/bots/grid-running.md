@@ -2,9 +2,11 @@
 
 <!-- Source: the monitoring and FAQ sections of https://docs.goodcrypto.app/perp-dexs/bots/grid-bot, rewritten for the 3.1 details page. No old funding, stop or spot-mode assumptions are carried over. -->
 
+Once goodcryptoX's Grid bot runs, you follow it in the Bots list on the Trade page and in its details, and you can change its range, levels, sizing, Follow, trailing exits and stops while it trades.
+
 On **Trade**, open **Bots**, choose **Grid**, then click your bot. The row shows its mode, position, realized and unrealized PnL, and APR. **Trades** counts completed round trips; the filled-order count below it also includes openings. Click a heading to sort.
 
-![The Bots list on Grid, the arrow at the Trades column](../pictures/grid/running-1-bots-list.webp)
+<figure><img src="../pictures/grid/running-1-bots-list.webp" alt="The Bots list on Grid, the arrow at the Trades column" width="563"><figcaption></figcaption></figure>
 
 The details show your account, pair, bot name, status, position and total PnL. Edit the name or note here to make this grid easier to recognise. Work down through Parameters, Profitability, Position, Progress, Notifications, Open and Activity.
 
@@ -12,13 +14,15 @@ The details show your account, pair, bot name, status, position and total PnL. E
 
 Open **Parameters**, choose a setting and edit it. Confirm with ✓ or Enter; × or Escape cancels. Use [Grid setup](grid-setup.md) for the meaning of each field.
 
-![A Grid's Parameters with Levels being edited, the arrow at the tick](../pictures/grid/running-2-parameters.webp)
+<figure><img src="../pictures/grid/running-2-parameters.webp" alt="A Grid's Parameters with Levels being edited, the arrow at the tick" width="300"><figcaption></figcaption></figure>
 
 You can change the range, levels, sizing, Follow, trailing exits and stops while the grid runs. For example, changing **Grid top** from 110 to 115 changes the upper bound. Check **Grid bottom**, **Levels**, **Between levels** and **PnL per level** together before saving: a new bound changes the trading range and may change the gaps or exposure.
 
 The **+ level** and **− level** controls add or remove a level at that edge. Confirm the proposed change with the tick, or cancel with the cross. Review the new funds requirement before adding levels.
 
 A change to **Grid top**, **Grid bottom**, **Levels** or **Between levels** keeps your **Investment** and changes the **Level size**. The **+ level** and **− level** controls keep the **Level size** and change the **Investment**.
+
+A change that moves other figures asks first. **Grid top**, **Grid bottom**, **Levels**, **Between levels**, **Investment**, **Level size** and the **+ level** and **− level** controls each change the figures that depend on them and move orders. After the tick, a **Save changes?** window shows the figures that change, before and after, how many orders are new, resized or canceled, and the new **Approx. margin** (**Funds needed** on spot) and **PnL per level**. **Save** applies the change; **Cancel** returns the setting to its value. Every other setting saves when you confirm it.
 
 **Entry condition** and **Grid mode** record how the grid started. While waiting, you can edit the entry price or signal conditions. Once it starts, use the live settings to adjust the trading plan.
 
@@ -30,7 +34,7 @@ With Follow on, review **Up to** or **Down to** as well as the range. Without a 
 
 **Total PnL** is **Realized PnL** plus **Unreal. PnL**. If you have +20 realized and −30 unrealized, the total is −10 before closing fees. Open Realized PnL for trading result, exchange fees, platform fees and funding. Profit kept in the coin appears separately.
 
-![Profitability with Realized PnL opened, the arrow at its chevron](../pictures/grid/running-3-profitability.webp)
+<figure><img src="../pictures/grid/running-3-profitability.webp" alt="Profitability with Realized PnL opened, the arrow at its chevron" width="430"><figcaption></figcaption></figure>
 
 **Trailing exits** shows what completed trailing exits earned compared with Limit exits at their levels, after fees. +4 means four more in the quote currency; a negative figure means trailing earned less.
 
@@ -46,21 +50,29 @@ The bot's result covers its trades; your exchange's position figures cover the a
 
 Reinvest or account sizing can change future openings while older orders keep their sizes. The reinvested line shows profit included in current quote-sized openings, including losses; it is absent with % of account.
 
+### Outside round trips
+
+**Outside round trips** is the trading result from sales and purchases that did not belong to a completed Grid round trip. It is separate from the profit on matched opening and closing levels. Read it alongside the other Realized PnL components, fees and funding; completed round trips alone do not describe the grid's whole result.
+
 ## Position and Progress
 
 **Bot position** is this grid's share: it could hold 0.1 ETH within your account's 1 ETH. **Account position** shows the whole size when it differs. **Average** is the account's average entry on perpetuals, the bot's on spot.
 
-![A Grid's Position and Progress](../pictures/grid/running-4-position-progress.webp)
+<figure><img src="../pictures/grid/running-4-position-progress.webp" alt="A Grid's Position and Progress" width="430"><figcaption></figcaption></figure>
 
 Check **Liquidation**, **Leverage** and **Margin** on perpetuals. A leverage change affects the whole position and resizes unfilled account-percent openings; positions and closing orders keep their sizes.
 
 **Progress** shows trades, filled orders, runtime and start or ending time. It also names a price or signal the grid is waiting for.
 
+### Levels before liquidation
+
+**No level between the price and liquidation** means the current price can reach the account position's liquidation price without first reaching another grid level. Check the position, its margin and your stops. A level before liquidation is not a guarantee against it: fills, funding and the rest of the account can change the outcome.
+
 ## The trading chart
 
 Press **Chart** to see the grid on the price chart and fit its range, stops and open orders into view.
 
-![A Grid on the chart, the arrow at Chart](../pictures/grid/running-7-chart.webp)
+<figure><img src="../pictures/grid/running-7-chart.webp" alt="A Grid on the chart, the arrow at Chart" width="563"><figcaption></figcaption></figure>
 
 - Level lines mark the prices in the range.
 - Buy and sell order lines use their side's colours.
@@ -74,11 +86,11 @@ A size label shows a level whose size changed. Use it to see differences after R
 
 **Open** shows active orders and names levels below the exchange minimum. Use **Show all** to see the rest. **Activity** shows filled orders; **Show funding** includes the bot's funding payments and **Show more** opens more history.
 
-![Notifications, Open and Activity of a Grid, the arrow at Show funding](../pictures/grid/running-5-orders.webp)
+<figure><img src="../pictures/grid/running-5-orders.webp" alt="Notifications, Open and Activity of a Grid, the arrow at Show funding" width="300"><figcaption></figcaption></figure>
 
 A row can read **Sell 1 SOL × 101.00 · +0.91 USDC**. Open its order card for fills, fees and times. **Closed** or **Closed by** links the paired orders; open one to inspect the other half of the trade. Liquidation and auto-deleveraging appear as **Liquidation** and **ADL** in red.
 
-![An order's card, the arrow at the link to the order it closed](../pictures/grid/running-6-order-card.webp)
+<figure><img src="../pictures/grid/running-6-order-card.webp" alt="An order's card, the arrow at the link to the order it closed" width="430"><figcaption></figcaption></figure>
 
 Choose your four notification switches here. **Stop** offers the position-close choice. **Copy** fills a new form without launching. A finished grid keeps Copy and Chart; close a remaining position from **Positions**.
 
@@ -92,7 +104,11 @@ A failed level does not stop the whole grid; the other levels keep trading. Read
 
 If the bot needs a decision about its position, its status says so. Existing exits keep working while it takes no new risk. A notice about other resting orders alone leaves it running.
 
-## FAQ
+## Questions
+
+### Can I change a running Grid bot?
+
+Yes: open **Parameters** and edit the range, levels, sizing, Follow, trailing exits or stops; changes take effect immediately.
 
 ### Which Grid mode should I choose?
 
@@ -137,3 +153,8 @@ Yes. PnL per level previews the return after exchange and platform fees; a narro
 ### Do the stops work if goodcryptoX is off?
 
 Keep goodcryptoX running for the grid to react to price, move its range, manage trailing exits and apply its stop rules. Orders already resting on the exchange can still fill while the app is off. Those fills can change the position you hold. If you want to end the strategy before shutting down, use **Stop** and review its position-close choice and result first.
+
+
+On an inverse contract, position quantities are contracts and their equivalent value is USD; profit, fees, funding, Investment and Own funds are in the settlement coin. Average entry is harmonic. A hedge-mode Neutral grid shows its Long and Short positions separately, and its total PnL includes both even when their contract counts cancel.
+
+Launching on the API key’s last day asks for **Launch anyway**. The bot is created, but its new automatic openings wait; existing orders and exits continue. After expiry, Grid releases that wait and the exchange answers its orders; a refused opening stays in repair with **Retry**.
