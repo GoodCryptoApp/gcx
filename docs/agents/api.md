@@ -93,6 +93,8 @@ Credits are paid from the person's own wallet; a program or an agent can only qu
 
 The answer's `quote.credits` is the credits in USD and `quote.goodMore` how many more than the same SOL buys without $GOOD (here about 9.90 and 0.90). With `token` the $GOOD mint itself, the $GOOD held is burned (no `burn`). `amount` (credits wanted) and `spend` (USD to spend on the $GOOD paths) are still accepted.
 
+On Tron, TRX is swapped to USDT in the payment; any other TRC-20 answers `no-route`.
+
 ## Credits History totals
 
 After the person pays, `POST /api/v1/credits/pay/receipt` with the payment's `{chain, id}` reads its status on any of our networks; the credits usually show in `GET /api/v1/credits` seconds after the first confirmation, and a payment the network later drops is taken back by a history row of `reason: "reversed"` (below zero, naming its `chain` and `tx`, and the payment's `token`, `amount` and `seq` under `payment`).

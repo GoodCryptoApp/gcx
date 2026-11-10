@@ -29719,9 +29719,9 @@
       },
       "credits-pay.broadcast": {
         "type": "object",
+        "description": "A wallet-signed Tron payment: our USDT transfer (with its amount) or, since 0038 amendment 9, a TRX swap through SunSwap V3's router that pays our address (its amount is read from the transaction)",
         "required": [
           "transaction",
-          "amount",
           "payer"
         ],
         "properties": {
@@ -29729,7 +29729,8 @@
             "type": "object"
           },
           "amount": {
-            "type": "string"
+            "type": "string",
+            "description": "The USDT transfer's amount; required for the transfer, ignored for a TRX swap"
           },
           "payer": {
             "type": "string"
@@ -29948,7 +29949,7 @@
           "networkFeeUsd": {
             "type": "string",
             "pattern": "^\\d+(?:\\.\\d+)?$",
-            "description": "The estimated network fee of this payment in USD (EVM networks and Solana); absent when it could not be estimated"
+            "description": "The estimated network fee of this payment in USD (EVM networks, Solana and Tron, where it is what a wallet without staked energy burns); absent when it could not be estimated"
           },
           "feeSharePct": {
             "type": "string",
