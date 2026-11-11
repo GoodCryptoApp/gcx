@@ -135,6 +135,11 @@
           "pattern": "^\\d+$",
           "description": "The estimated network fee as a share of the amount paid, in whole percent; present with networkFeeUsd"
         },
+        "feeKept": {
+          "type": "string",
+          "pattern": "^\\d+(?:\\.\\d+)?$",
+          "description": "What this payment leaves of the network's own coin for its fee, in that coin: the network's estimate at normal priority plus a quarter (EVM networks and Tron); absent where no estimate was made"
+        },
         "warnings": {
           "type": "array",
           "items": {
@@ -185,6 +190,21 @@
         "value": {
           "type": "string",
           "pattern": "^[0-9]+$"
+        },
+        "gas": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "The gas limit handed to the wallet: the node's estimate of this very transaction plus an eighth; absent when the node did not estimate it (the wallet then estimates it) or the network's fee per gas could not be read"
+        },
+        "maxFeePerGas": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Wei: the network's price at normal priority (the next block's base fee plus the median tip) plus a ninth; with gas, what the wallet reserves is the quote's feeKept"
+        },
+        "maxPriorityFeePerGas": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Wei: the median tip of the last ten blocks, never raised (on a node without a fee history: its gas price)"
         }
       }
     },
@@ -380,6 +400,11 @@
           "type": "string",
           "pattern": "^[0-9]+$",
           "description": "Solana: the payment's lastValidBlockHeight; with it the receipt can answer reverted for a payment that never landed (finalized height past it, two empty status reads 20 s apart, and no transaction)"
+        },
+        "coin": {
+          "type": "string",
+          "pattern": "^[\\p{L}\\p{N}\\p{Sc}._+-]{1,24}$",
+          "description": "Additive (PAID-COIN-1110): the ticker of the coin the payment was paid with, as the form showed it (TRX, ETH, SOL); the first one named for the payment is kept and named by its row in GET /api/v1/credits (`history[].paidWith`). Absent: nothing is kept and the row names the coin that arrived"
         }
       }
     },
@@ -540,6 +565,11 @@
                 "type": "string",
                 "pattern": "^\\d+(?:\\.\\d+)?$",
                 "description": "The coin's USD price where it was read (Solana; EVM coins with a balance on the whole read; TRX on Tron); absent when unknown, never zero"
+              },
+              "feeKept": {
+                "type": "string",
+                "pattern": "^\\d+(?:\\.\\d+)?$",
+                "description": "On an EVM network's own coin: what a swap of it leaves for its fee before any quote states one (650,000 gas plus an eighth at the network's price now plus a ninth), in the coin; absent when the fee could not be read"
               },
               "cmcRank": {
                 "type": "integer",

@@ -122,7 +122,7 @@
     "/api/v1/credits/pay": {
       "post": {
         "operationId": "post_credits_pay",
-        "summary": "Preview or freshly build an unsigned credits payment. Exactly one of `input` (the coin amount to pay, in the coin's own units: one route call, the payment spends exactly this; Add credits asks this way), `amount` (USD credits wanted) or `spend` (USD to spend on the $GOOD paths). `burn: true` on Solana buys $GOOD in the same payment and burns it: with `input` any coin but $GOOD, with `spend` USDC only; the quote's `goodMore` is the credits beyond what the same coin buys without $GOOD. A Solana build carries `tx.lastValidBlockHeight`, which the receipt read takes. The wallet signs; recipient and installation number come only from the runtime. EVM and Solana quotes carry `networkFeeUsd` (the estimated network fee in USD, absent when unknown), `feeSharePct` (that fee as a share of the amount, whole percent) and the warning `network-fee` when it is over 10% of the amount; nothing is refused for it.",
+        "summary": "Preview or freshly build an unsigned credits payment. Exactly one of `input` (the coin amount to pay, in the coin's own units: one route call, the payment spends exactly this; Add credits asks this way), `amount` (USD credits wanted) or `spend` (USD to spend on the $GOOD paths). `burn: true` on Solana buys $GOOD in the same payment and burns it: with `input` any coin but $GOOD, with `spend` USDC only; the quote's `goodMore` is the credits beyond what the same coin buys without $GOOD. A Solana build carries `tx.lastValidBlockHeight`, which the receipt read takes. The wallet signs; recipient and installation number come only from the runtime. EVM and Solana quotes carry `networkFeeUsd` (the estimated network fee in USD, absent when unknown), `feeSharePct` (that fee as a share of the amount, whole percent) and the warning `network-fee` when it is over 10% of the amount; nothing is refused for it. `feeKept`: what the payment leaves of the network's own coin for its fee, in that coin, the network's estimate at normal priority plus a quarter (EVM and Tron); an EVM transaction carries `maxFeePerGas` (the price plus a ninth), `maxPriorityFeePerGas` (the median tip) and, when the node estimated it, `gas` (the estimate plus an eighth), so what the wallet reserves is that figure.",
         "requestBody": {
           "required": true,
           "content": {
@@ -29661,6 +29661,14 @@
                     "seq": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "A payment: the coin that arrived at goodcryptoX (after a swap, the dollar token it delivered), the one its amount and credit are figured in."
+                    },
+                    "paidWith": {
+                      "type": "string",
+                      "description": "Additive (PAID-COIN-1110): a payment: the coin it was paid with (TRX, ETH, SOL, or the dollar token itself), as this installation's Add credits sent it; the Payments row names it. Absent (a payment made before this field, or sent from outside the app): name `token`."
                     }
                   }
                 }
@@ -29770,6 +29778,21 @@
           "value": {
             "type": "string",
             "pattern": "^[0-9]+$"
+          },
+          "gas": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "The gas limit handed to the wallet: the node's estimate of this very transaction plus an eighth; absent when the node did not estimate it (the wallet then estimates it) or the network's fee per gas could not be read"
+          },
+          "maxFeePerGas": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Wei: the network's price at normal priority (the next block's base fee plus the median tip) plus a ninth; with gas, what the wallet reserves is the quote's feeKept"
+          },
+          "maxPriorityFeePerGas": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Wei: the median tip of the last ten blocks, never raised (on a node without a fee history: its gas price)"
           }
         }
       },
@@ -29832,6 +29855,11 @@
                   "type": "string",
                   "pattern": "^\\d+(?:\\.\\d+)?$",
                   "description": "The coin's USD price where it was read (Solana; EVM coins with a balance on the whole read; TRX on Tron); absent when unknown, never zero"
+                },
+                "feeKept": {
+                  "type": "string",
+                  "pattern": "^\\d+(?:\\.\\d+)?$",
+                  "description": "On an EVM network's own coin: what a swap of it leaves for its fee before any quote states one (650,000 gas plus an eighth at the network's price now plus a ninth), in the coin; absent when the fee could not be read"
                 },
                 "cmcRank": {
                   "type": "integer",
@@ -29956,6 +29984,11 @@
             "pattern": "^\\d+$",
             "description": "The estimated network fee as a share of the amount paid, in whole percent; present with networkFeeUsd"
           },
+          "feeKept": {
+            "type": "string",
+            "pattern": "^\\d+(?:\\.\\d+)?$",
+            "description": "What this payment leaves of the network's own coin for its fee, in that coin: the network's estimate at normal priority plus a quarter (EVM networks and Tron); absent where no estimate was made"
+          },
           "warnings": {
             "type": "array",
             "items": {
@@ -30013,6 +30046,11 @@
             "type": "string",
             "pattern": "^[0-9]+$",
             "description": "Solana: the payment's lastValidBlockHeight; with it the receipt can answer reverted for a payment that never landed (finalized height past it, two empty status reads 20 s apart, and no transaction)"
+          },
+          "coin": {
+            "type": "string",
+            "pattern": "^[\\p{L}\\p{N}\\p{Sc}._+-]{1,24}$",
+            "description": "Additive (PAID-COIN-1110): the ticker of the coin the payment was paid with, as the form showed it (TRX, ETH, SOL); the first one named for the payment is kept and named by its row in GET /api/v1/credits (`history[].paidWith`). Absent: nothing is kept and the row names the coin that arrived"
           }
         }
       },
@@ -37311,7 +37349,14 @@
           },
           "returnOnEquity": {
             "$ref": "#/components/schemas/order-row.signed",
-            "description": "Optional venue ROE ratio (not percent), including zero. Older rows omit it; display/sort falls back to entry margin."
+            "description": "Optional venue ROE ratio (not percent), including zero. Older rows omit it; display/sort falls back to the margin on the row's roeBasis."
+          },
+          "roeBasis": {
+            "enum": [
+              "entry",
+              "mark"
+            ],
+            "description": "Added 2026-11-10 (ROE-BASIS): the margin the position's percentage divides its unrealised P&L by, as its exchange defines it: \"mark\" the margin at the mark price (Binance), \"entry\" at the entry price. Absent: entry (Hyperliquid; rows from an older runtime)."
           },
           "margin": {
             "$ref": "#/components/schemas/order-row.decimal"

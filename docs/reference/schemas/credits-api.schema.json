@@ -116,7 +116,7 @@
           "description": "The payments and grants goodcryptoX's server answered, newest first, each with its kind and the sequence of the balance change it made, its other fields as the server sent them; null before it ever answered.",
           "oneOf": [
             { "type": "null" },
-            { "type": "array", "items": { "type": "object", "required": ["kind", "seq"], "properties": { "kind": { "enum": ["payment", "grant"] }, "seq": { "type": "integer", "minimum": 0 } } } }
+            { "type": "array", "items": { "type": "object", "required": ["kind", "seq"], "properties": { "kind": { "enum": ["payment", "grant"] }, "seq": { "type": "integer", "minimum": 0 }, "token": { "type": "string", "description": "A payment: the coin that arrived at goodcryptoX (after a swap, the dollar token it delivered), the one its amount and credit are figured in." }, "paidWith": { "type": "string", "description": "Additive (PAID-COIN-1110): a payment: the coin it was paid with (TRX, ETH, SOL, or the dollar token itself), as this installation's Add credits sent it; the Payments row names it. Absent (a payment made before this field, or sent from outside the app): name `token`." } } } }
           ]
         }
       }
