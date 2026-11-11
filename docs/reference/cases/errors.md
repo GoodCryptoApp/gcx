@@ -123,6 +123,9 @@ An answer goodcryptoX does not know: new risk is held and you are paged; nothing
 ## "Insufficient balance"
 `REJECTED_TERMINAL`.
 
+## "Isolated position does not have sufficient margin available to decrease leverage"
+`REJECTED_TERMINAL`: lowering the leverage of an open isolated position that has too little margin for it. Observed 2026-11-11. The person reads "Add margin to this position before lowering leverage" at the leverage control, Hyperliquid's words behind it.
+
 ## "Invalid leverage value"
 `REJECTED_TERMINAL`.
 

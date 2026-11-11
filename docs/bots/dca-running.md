@@ -19,7 +19,7 @@ On **Trade**, open **Bots** under the chart and choose **DCA**:
 | **Position** | Coin amount and dollar value. |
 | **R · U · APR** | Realized PnL, unrealized PnL and yearly rate so far. |
 
-Click a heading to sort, or a row for details. Row actions include **Stop**, **Chart** and **Fix failed**. **Stop all** stops the running bots the filtered list shows, after confirmation.
+Click a heading to sort, or a row for details. Row actions include **Stop**, **Chart** and **Fix failed**. **Stop all** stops the running bots the filtered list shows, after confirmation, and says how many stopped and how many are stopping. A bot whose order's cancel the exchange never answered reads "An order of this bot needs a decision" while it stops: **Retry** on its item sends that cancel again; **Refresh** on the order's details asks the exchange about it.
 
 ## The bot's details
 

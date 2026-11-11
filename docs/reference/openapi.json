@@ -14546,7 +14546,7 @@
         },
         "responses": {
           "200": {
-            "description": "`{accepted: true}` once the exchange took it; 422 `Invalid Leverage` above the market's maximum or for a mode it does not allow, the exchange's refusal (`bot`, where a bot trades the coin, is no longer sent since 2026-10-05: the change is sent), or no answer (`not-confirmed`, `unknown`: not sent again, with what the exchange shows). The same `requestId` again answers the exchange's refusal again; a request whose reply was lost is answered `accepted` and is never sent again. To a trading key: the exchange's current setting again is `{accepted: true}` with nothing sent; 422 `key.leverage` above its limit (anywhere, the margin mode too: MH 2026-10-05); 403 when a person stopped it."
+            "description": "`{accepted: true}` once the exchange took it; 422 `Invalid Leverage` above the market's maximum or for a mode it does not allow, the exchange's refusal (`bot`, where a bot trades the coin, is no longer sent since 2026-10-05: the change is sent), which for a known leverage refusal also carries `leverageCause` (`position-margin` or `isolated-open`) and `venue` (the exchange's name; older answers have neither), or no answer (`not-confirmed`, `unknown`: not sent again, with what the exchange shows). The same `requestId` again answers the exchange's refusal again; a request whose reply was lost is answered `accepted` and is never sent again. To a trading key: the exchange's current setting again is `{accepted: true}` with nothing sent; 422 `key.leverage` above its limit (anywhere, the margin mode too: MH 2026-10-05); 403 when a person stopped it."
           },
           "400": {
             "description": "The request does not match its schema.",
@@ -27854,9 +27854,18 @@
               "investedCurrent": {
                 "type": "string"
               },
+              "closesPosition": {
+                "type": "boolean",
+                "description": "While the grid is stopping (state closing): whether this stop closes its position (Stop with close, Force close) or only cancels its orders. Absent in every other state, and from a runtime older than this field. Added 2026-11-11 (STOP-ENDS)"
+              },
+              "unconfirmed": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "While the grid is stopping: how many of its orders' cancels got no answer from the exchange after every try (each is an item on the bot; Stop pressed again sends those cancels again, and is a Stop like the first: it takes the bot's Close position on stop setting, not the close choice of the stop under way). Absent when none, and from a runtime older than this field. Added 2026-11-11 (STOP-ENDS)"
+              },
               "coinFeePct": {
                 "type": "string",
-                "description": "Grid on spot: the coin-fee percent a buy level's size is grossed up by (the size the grid rests for that level is the plan divided by one minus this); absent means the default rate. Additive: the previous build ignores it and reads the row as before"
+                "description": "Grid on spot: the coin-fee percent used to size a sell that keeps profit in the coin; buys are always the plan. Absent: the default rate. Additive: the previous build ignores it and reads the row as before"
               },
               "aprCurrent": {
                 "type": "string"
@@ -33376,6 +33385,13 @@
                 }
               }
             }
+          },
+          "stopping": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Stop all: the ids of the bots whose Stop was accepted and that are still stopping (cancelling their orders, closing their position) once it was taken; the other ids have stopped. A bot already stopping when it was pressed is listed here too (a grid's Stop sends again any cancel of its whose answer never came). Absent from Cancel all and Close all, and from a runtime older than this field. Added 2026-11-11 (STOP-ENDS)."
           }
         }
       },

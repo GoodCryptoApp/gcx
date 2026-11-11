@@ -537,9 +537,18 @@
         "investedCurrent": {
           "type": "string"
         },
+        "closesPosition": {
+          "type": "boolean",
+          "description": "While the grid is stopping (state closing): whether this stop closes its position (Stop with close, Force close) or only cancels its orders. Absent in every other state, and from a runtime older than this field. Added 2026-11-11 (STOP-ENDS)"
+        },
+        "unconfirmed": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "While the grid is stopping: how many of its orders' cancels got no answer from the exchange after every try (each is an item on the bot; Stop pressed again sends those cancels again, and is a Stop like the first: it takes the bot's Close position on stop setting, not the close choice of the stop under way). Absent when none, and from a runtime older than this field. Added 2026-11-11 (STOP-ENDS)"
+        },
         "coinFeePct": {
           "type": "string",
-          "description": "Grid on spot: the coin-fee percent a buy level's size is grossed up by (the size the grid rests for that level is the plan divided by one minus this); absent means the default rate. Additive: the previous build ignores it and reads the row as before"
+          "description": "Grid on spot: the coin-fee percent used to size a sell that keeps profit in the coin; buys are always the plan. Absent: the default rate. Additive: the previous build ignores it and reads the row as before"
         },
         "aprCurrent": {
           "type": "string"

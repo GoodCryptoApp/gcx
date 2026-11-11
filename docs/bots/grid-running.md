@@ -138,6 +138,8 @@ When the bot's position is flat, which on a Long grid happens only once its top 
 
 Check the position-close choice when you stop. **Close position on stop** decides whether price stops and errors also close the remaining position at market. If it is off, stopping cancels the grid's orders and leaves the position for you to manage. PnL stops close the position themselves. After the grid finishes, inspect **Positions** for any remaining exposure before starting a replacement.
 
+While the grid stops it reads **Stopping**, with what it waits for: "Canceling the bot's orders", or "Closing the position" when the stop closes it. **Bot stopped** shows once it has. If the exchange never answers the cancel of one of its orders, the line reads "An order may still be open. Press Stop again" and Needs attention shows the bot: pressing **Stop** again sends that cancel again. **Refresh** on an order's details asks the exchange about that order.
+
 ### Is funding included in the result?
 
 Yes. On perpetuals, funding paid or received is included in **Realized PnL**. Open that figure to see Funding beside trading result, exchange fees and platform fees. Use **Show funding** in **Activity** to inspect the payments alongside trades. Funding can change the result even when no round trip has just completed; include it when comparing a long-running grid with a shorter one.
