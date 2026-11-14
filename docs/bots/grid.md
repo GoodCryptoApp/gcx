@@ -83,7 +83,7 @@ Choose a value or coin amount for each level, your investment and whether to rei
 
 **Approx. margin** shows the funds needed to back your grid. Orders worth 1,000 at 5x need 200 in order margin, before fees and losses. Leverage can bring liquidation before price reaches the grid's edge or stop.
 
-Check **Approx. liquidation** and the warning before launching. Use the offered lower leverage, move your stop before liquidation, or consider Cross where supported. The bot never adds margin by itself. These are estimates: fees, funding, gaps and other positions can change the outcome. Reaching the range's edge gives no protection against a further move.
+Check **Est. liquidation** and the warning before launching. Use the offered lower leverage, move your stop before liquidation, or consider Cross where supported. The bot never adds margin by itself. These are estimates: fees, funding, gaps and other positions can change the outcome. Reaching the range's edge gives no protection against a further move. On Cross, Est. liquidation assumes every order fills and nothing else in your account changes.
 
 On an API key’s last day, Launch warns that it expires in under 24 hours. **Launch anyway** creates the bot; new automatic openings still wait. Resting orders, fills and exits continue. After expiry, the exchange answers sends.
 

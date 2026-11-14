@@ -2,10 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/asset-ctx-frame.schema.json",
   "title": "Asset context frame",
-  "description": "One perp's asset context: mark, mid (nullable), oracle/index, day's notional volume and the venue's native funding rate. Hyperliquid supplies activeAssetCtx with hourly funding and no venue timestamp; Binance B4 adds nextFundingTime for its native settlement period. Also the data of the panel socket's `asset-ctx/<instrumentId>` topic (the trade screen's price header). Mirrors src/domain/marketdata/frames.ts (AssetCtxFrame).",
+  "description": "One perp's asset context: mark, mid (nullable), oracle/index, day's notional volume and the venue's native funding rate. Hyperliquid supplies activeAssetCtx with hourly funding and no venue timestamp; Binance B4 adds nextFundingTime for its native settlement period. Also the data of the panel socket's `asset-ctx/<instrumentId>` topic (the trade screen's price header). `mark`, `oracle` and `funding` are absent until the venue has sent them (a figure not yet known is left out, never null). Mirrors src/domain/marketdata/frames.ts (AssetCtxFrame).",
   "type": "object",
   "additionalProperties": false,
-  "required": ["venue", "instrument", "mark", "mid", "oracle", "dayNtlVlm", "funding"],
+  "required": ["venue", "instrument", "mid", "dayNtlVlm"],
   "properties": {
     "venue": { "type": "string" },
     "instrument": { "type": "string", "description": "The venue's coin name, with the dex prefix on HIP-3." },

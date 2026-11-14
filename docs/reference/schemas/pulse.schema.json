@@ -51,6 +51,7 @@
               "venue": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$", "description": "hyperliquid today; solana and others when built." },
               "live": { "type": "boolean", "description": "A bot ran or an order of gcx's rested on this venue at any moment of the day (active trader, wide)." },
               "created": { "type": "boolean", "description": "The person or their agent created a bot or an order on this venue that day; a bot's own orders do not count (active sender, narrow)." },
+              "added": { "type": "integer", "minimum": 1, "maximum": 1000000, "description": "Accounts this installation connected on this venue that UTC day, including a removed account added again; never a key replacement or renewal. Optional, absent at zero and on older records; demo and testnet excluded." },
               "volume": {
                 "type": "array",
                 "maxItems": 8,

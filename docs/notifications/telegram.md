@@ -125,7 +125,8 @@ Under a message about one of your bots or one of your own orders, goodcryptoX pu
 | A bot's take-profit, stop-loss or close held after a refusal | **Retry** · **Close position** · **Stop bot** |
 | A bot in repair: its entry refused, or the allowance | **Retry** · **Stop bot** |
 | A bot waiting for a renewed API wallet or for room in an agent's limits | **Stop bot** (the renewal and the limit are in Settings) |
-| Your own stop-loss, take-profit or triggered order held after a refusal | **Retry** · **Cancel order** |
+| Your order canceled on the exchange | **Place again** · **Leave canceled** |
+| Your order needs attention for another reason | The same applicable actions as its card; otherwise **Open**, and **Refresh** on its card |
 | An hourly reminder (below) | its item's buttons and **Silence** |
 | A running bot holding a position | **Stop bot** · **Close position** |
 | A running bot holding nothing (its take-profit or stop-loss executed, it repeats) | **Stop bot** |
@@ -140,7 +141,9 @@ A refused sale is one message, with the exchange's own words in it; the order's 
 
 Each button is the panel's own command for the same thing, with the same checks, written to goodcryptoX's ledger the same way and marked as sent from Telegram:
 
-- **Stop bot** stops the bot whatever cycle it is in; **Close position** closes what the bot holds at market (on a running bot, the panel's Close pos.: with Repeat on, the bot then starts its next cycle); **Retry** places again what the repair is about (a refused sale, the same sale once more; your own order, the panel's Retry); **Retry order** places again each averaging order of the message that is still failed; **Cancel order** cancels your order.
+A canceled-order message also says: “If you changed it on {venue}, the new order is already there”.
+
+- **Stop bot** stops the bot whatever cycle it is in; **Close position** closes what the bot holds at market (on a running bot, the panel's Close pos.: with Repeat on, the bot then starts its next cycle); **Retry** places again what the repair is about (a refused sale, the same sale once more; your own order, **Place again** for the unfilled remainder); **Retry order** places again each averaging order of the message that is still failed; **Cancel order** cancels an order that may still rest on the exchange; **Leave canceled** closes an already canceled order in goodcryptoX.
 - **Exchange is right**, **Bot is right**, **Accept**, **Make the exchange match the bot** and **Cancel that order** are the bot page's answers of the same names ([When the bot needs you](../bots/dca-running.md#when-the-bot-needs-you)). Bot is right and Accept send nothing: the bot keeps its count and goodcryptoX stops comparing it with the exchange.
 - **Relaunch** starts a new bot on the same account and pair with the stopped bot's settings as they are now (not its name, note, start and end times or notification switches, as the panel's Repeat), on perpetuals at the leverage and margin mode the account has on that pair now, which the question names.
 - **TP & SL 5%** adds a take-profit 5% above your fill price and a stop-loss 5% below it (mirrored for a short), reduce-only on perpetuals when Settings › General › Trading's reduce-only is on as you press, attached to that order as the panel's Attach TP/SL does; **TP +5%** a limit take-profit alone. A spot sell gets none (it opened nothing to protect).
@@ -151,7 +154,7 @@ Each button is the panel's own command for the same thing, with the same checks,
 
 **The answer.** The pressed message gains a result line, above Open, "Accepted: Stop bot.", "Accepted: Retry." and so on. What you did with a button sends no message of its result: a bot you stopped or whose position you closed is not told again as "DCA stopped" or "DCA Exit"; what happens later by itself arrives as its own message, as always. A button pressed while goodcryptoX was away receives a new message naming the bot or the order’s instrument. A refusal is always a result line, above Open, "Refused: <why>."; refused for something that may pass (goodcryptoX locked, starting, stopping, the disk full), the buttons come back and a later press is judged again.
 
-**When the message is old.** A button acts only on what its message was about: Stop on the bot in any cycle; Close only on the cycle the message reported ("Refused: the bot has moved on since this message (cycle 4 now)."); an item's answer only while that item is open ("Refused: this repair has been resolved"; a refusal of what you pressed opens a new item with its own message); Retry only while that repair stands; Retry order only on that message's levels still failed; Relaunch only on a stopped bot; a TP/SL shortcut only while the position from that order is still held ("Refused: the position from this order is no longer held"). Sizes and prices are always read again.
+**When the message is old.** A button acts only on what its message was about: Stop on the bot in any cycle; Close only on the cycle the message reported ("Refused: the bot has moved on since this message (cycle 4 now)."); an item's answer only while that item is open ("Refused: this was already settled"; a refusal of what you pressed opens a new item with its own message); Retry only while that repair stands; Retry order only on that message's levels still failed; Relaunch only on a stopped bot; a TP/SL shortcut only while the position from that order is still held ("Refused: the position from this order is no longer held"). Sizes and prices are always read again.
 
 **Who can press.** Only you, in your linked chat, on a message your current bot sent. A forwarded copy, a press from someone else or from another chat answers "Not available here" and does nothing. A second press, a press on another phone, or Telegram delivering a press twice acts once and answers "Already done". While goodcryptoX is locked every button answers "Refused: unlock first.".
 
@@ -165,7 +168,7 @@ When something leaves a position without its working stop-loss or close (a bot's
 
 ## Where the token is kept
 
-In the file `telegram.token` in goodcryptoX's data folder, readable by you only. It is not in the key store: the token can send messages as your bot, but it cannot trade, and keeping it outside means goodcryptoX can still tell you "Runtime locked" when the key store is locked. It is never shown back, logged or written anywhere else. A backup of the data folder holds it; treat the folder as private.
+In the file `telegram.token` in goodcryptoX's data folder, readable by you only. It is not in the key store: the token can send messages as your bot, but it cannot trade, and keeping it outside means goodcryptoX can still tell you "goodcryptoX is locked" when it is locked. It is never shown back, logged or written anywhere else. A backup of the data folder holds it; treat the folder as private.
 
 ## What goodcryptoX reads from your bot
 

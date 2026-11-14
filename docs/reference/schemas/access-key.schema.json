@@ -172,6 +172,7 @@
         "amount": { "type": "string", "description": "A margin move: the isolated margin added (positive) or taken out (negative), a decimal string, in `asset`." },
         "asset": { "type": "string", "description": "A margin move: the coin `amount` is counted in, the position's margin coin as the catalogue names it for the market (the dex's collateral on Hyperliquid, the contract's margin asset on Binance)." },
         "sizeUnit": { "enum": ["base", "quote"], "description": "A proposal's size unit: the base asset, or the pair's quote currency." },
+        "contract": { "$ref": "contract.schema.json", "description": "The market's contract facts (added in 3.2.1, 0045 amendment 3), on a placed or cancelled order and a proposal; absent: size is in sizeUnit." },
         "outcome": { "enum": ["waiting", "launched", "rejected", "withdrawn"], "description": "What became of a proposal." }
       }
     },
@@ -415,6 +416,7 @@
           "action": { "enum": ["place", "cancel", "leverage", "margin", "propose", "modify", "bot-create", "bot-modify", "bot-stop", "bot-close", "propose-bot"] },
           "orderId": { "type": "string" }, "botId": { "type": "string" }, "proposalId": { "type": "string" }, "sourceId": { "type": "string" }, "instrumentId": { "type": "string" },
           "side": { "enum": ["buy", "sell"] }, "size": { "type": "string" }, "sizeUnit": { "enum": ["base", "quote"] }, "leverage": { "type": "string" }, "amount": { "type": "string" }, "asset": { "type": "string" }, "edited": { "type": "boolean" },
+          "contract": { "$ref": "contract.schema.json", "description": "An order's market contract facts (added in 3.2.1, 0045 amendment 3); absent: size is in sizeUnit." },
           "outcome": { "enum": ["waiting", "launched", "rejected", "withdrawn"] }
         }
       }

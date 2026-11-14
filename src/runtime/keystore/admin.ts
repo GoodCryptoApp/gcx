@@ -15,7 +15,7 @@ export type KeyStoreAdmin = Pick<
   KeyStore,
   "locked" | "moved" | "addressesStale" | "cexUnreadable" | "unlock" | "signer" | "addAgent" | "rotate" | "pending" | "confirmRotation" | "removeAgent" | "exportSealed" | "exportCex" | "markMoved"
   | "keepAccess" | "access" | "hasAccess" | "dropAccess"
-  | "signKey" | "newRsaKey" | "putHmacKey" | "putWalletKey" | "publicKey" | "cexKeys" | "apiKey" | "setApiKey" | "removeKey"
+  | "signKey" | "newRsaKey" | "putHmacKey" | "putRsaKey" | "putWalletKey" | "publicKey" | "cexKeys" | "apiKey" | "setApiKey" | "removeKey"
 >;
 export type { ImportedAgent } from "./store.js";
 export type { Address } from "./signer.js";
@@ -35,3 +35,4 @@ export const unsealWith = async (file: Buffer, secret: Buffer): Promise<Buffer> 
 
 export { CEX_FILE, CEX_KEYS_FILE, KEYSTORE_FILE, MOVED_FILE, KeystoreError, removeKeyFiles, type KeystoreErrorCode } from "./format.js";
 export { CREDENTIAL, DPAPI_OWNER, PATIENT_TOOL_MS, credentialFile, dpapi, environment, macosKeychain, passphrase, provision, secretService, systemdCredential, type StoringSource, type UnlockSource } from "./sources.js";
+export { rsaPrivateKey } from "./store.js";

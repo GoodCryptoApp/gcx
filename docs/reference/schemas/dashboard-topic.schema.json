@@ -134,6 +134,10 @@
                   "type": "string",
                   "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
                 },
+                "contract": {
+                  "$ref": "contract.schema.json",
+                  "description": "The market's contract facts (added in 3.2.1, 0045 amendment 3); absent: the size is a coin quantity."
+                },
                 "display": {
                   "$ref": "instrument-display.schema.json"
                 }
@@ -544,6 +548,10 @@
           "settlement": {
             "type": "string",
             "description": "An inverse contract's settlement coin, the currency of its upnl (added in 3.2.0, FIX-21299 S1); absent: the market's quote currency."
+          },
+          "contract": {
+            "$ref": "contract.schema.json",
+            "description": "The market's contract facts (added in 3.2.1, 0045 amendment 3); absent: the size is a coin quantity."
           }
         },
         "required": [

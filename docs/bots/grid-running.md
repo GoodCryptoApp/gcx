@@ -4,7 +4,7 @@
 
 Once goodcryptoX's Grid bot runs, you follow it in the Bots list on the Trade page and in its details, and you can change its range, levels, sizing, Follow, trailing exits and stops while it trades.
 
-On **Trade**, open **Bots**, choose **Grid**, then click your bot. The row shows its mode, position, realized and unrealized PnL, and APR. **Trades** counts completed round trips; the filled-order count below it also includes openings. Click a heading to sort.
+On **Trade**, open **Bots**, choose **Grid**, then click your bot. The row shows its mode, position, realized and unrealized PnL, and APR. **Trades** counts completed round trips; the filled-order count below it also includes openings. Click a heading to sort. The row offers **Stop**, **Copy** and **Chart**, plus **Fix failed** if any orders failed. **Copy** fills the form with this bot's settings.
 
 <figure><img src="../pictures/grid/running-1-bots-list.webp" alt="The Bots list on Grid, the arrow at the Trades column" width="563"><figcaption></figcaption></figure>
 
@@ -84,13 +84,15 @@ A size label shows a level whose size changed. Use it to see differences after R
 
 ## Orders and notifications
 
-**Open** shows active orders and names levels below the exchange minimum. Use **Show all** to see the rest. **Activity** shows filled orders; **Show funding** includes the bot's funding payments and **Show more** opens more history.
+**Open** shows active orders. A bot launched before 3.2.1 places the orders it had held back for the exchange's minimum as soon as it runs on 3.2.1. Use **Show all** to see the rest. **Activity** shows filled orders; **Show funding** includes the bot's funding payments and **Show more** opens more history.
 
 <figure><img src="../pictures/grid/running-5-orders.webp" alt="Notifications, Open and Activity of a Grid, the arrow at Show funding" width="300"><figcaption></figcaption></figure>
 
 A row can read **Sell 1 SOL × 101.00 · +0.91 USDC**. Open its order card for fills, fees and times. **Closed** or **Closed by** links the paired orders; open one to inspect the other half of the trade. Liquidation and auto-deleveraging appear as **Liquidation** and **ADL** in red.
 
 <figure><img src="../pictures/grid/running-6-order-card.webp" alt="An order's card, the arrow at the link to the order it closed" width="430"><figcaption></figcaption></figure>
+
+On Hyperliquid spot, while you have other orders on the same coin, the bot places its limit orders as post-only, so one your balance doesn't cover is refused instead of canceling your other orders. One that would fill at once goes again as an ordinary order after goodcryptoX checks your balance.
 
 Choose your four notification switches here. **Stop** offers the position-close choice. **Copy** fills a new form without launching. A finished grid keeps Copy and Chart; close a remaining position from **Positions**.
 
@@ -100,7 +102,13 @@ Use **Every order**, **Every PnL change**, **Range, follows, resizes** and **Sta
 
 ## When the bot needs you
 
-A failed level does not stop the whole grid; the other levels keep trading. Read the problem and the action offered before retrying it.
+A failed order does not stop the grid: the rest keeps trading, and the level is free for the grid's next order there.
+
+### Failed orders
+
+When an order is refused or canceled for money, the grid puts it back by itself once its own trades free the money: nearest the price first, at most three times a level an hour. Money from anywhere else (a deposit, another bot) is used only when you press **Fix failed**.
+
+The Dashboard's **Needs your attention** shows how many of the grid's orders failed. Add money and press **Fix failed** on the bot: it places the failed orders nearest the price first, as far as your free balance goes, and says what the rest needs. What still doesn't fit stays failed; press again later. An order the price has already passed goes at once, at the market.
 
 If the bot needs a decision about its position, its status says so. Existing exits keep working while it takes no new risk. A notice about other resting orders alone leaves it running.
 
@@ -140,6 +148,8 @@ Check the position-close choice when you stop. **Close position on stop** decide
 
 While the grid stops it reads **Stopping**, with what it waits for: "Canceling the bot's orders", or "Closing the position" when the stop closes it. **Bot stopped** shows once it has. If the exchange never answers the cancel of one of its orders, the line reads "An order may still be open. Press Stop again" and Needs attention shows the bot: pressing **Stop** again sends that cancel again. **Refresh** on an order's details asks the exchange about that order.
 
+A grid still stopping, or still launching, 5 minutes after it began sends you one message and shows in Needs attention with **Stop**; a grid waiting for a signal or an activation price is not launching.
+
 ### Is funding included in the result?
 
 Yes. On perpetuals, funding paid or received is included in **Realized PnL**. Open that figure to see Funding beside trading result, exchange fees and platform fees. Use **Show funding** in **Activity** to inspect the payments alongside trades. Funding can change the result even when no round trip has just completed; include it when comparing a long-running grid with a shorter one.
@@ -147,6 +157,10 @@ Yes. On perpetuals, funding paid or received is included in **Realized PnL**. Op
 ### Can I use coins I already hold on spot?
 
 Yes. **Use them** lets free coins replace part of the grid's starting purchase. Check **You hold**, the purchase and **Funds needed** before launching. Spot has no short mode or leverage. **Profit in the coin** can retain earnings in the coin; those coins appear separately from quote PnL. The bot can still sell and buy within the range, so choose it for ongoing trading.
+
+### Why did my bot's profit change overnight?
+
+Once a day, at 00:00 UTC, Hyperliquid sells any coin balance too small to trade (worth 1 USD or less). If some of those coins were your bot's leftovers, the sale counts in the bot's realized PnL.
 
 ### Do fees matter with a small gap?
 
@@ -157,6 +171,6 @@ Yes. PnL per level previews the return after exchange and platform fees; a narro
 Keep goodcryptoX running for the grid to react to price, move its range, manage trailing exits and apply its stop rules. Orders already resting on the exchange can still fill while the app is off. Those fills can change the position you hold. If you want to end the strategy before shutting down, use **Stop** and review its position-close choice and result first.
 
 
-On an inverse contract, position quantities are contracts and their equivalent value is USD; profit, fees, funding, Investment and Own funds are in the settlement coin. Average entry is harmonic. A hedge-mode Neutral grid shows its Long and Short positions separately, and its total PnL includes both even when their contract counts cancel.
+On an inverse contract, sizes read in USD with the settlement coin under them; profit, fees, funding, Investment and Own funds are in the settlement coin. Average entry is harmonic. A hedge-mode Neutral grid shows its Long and Short positions separately, and its total PnL includes both even when their contract counts cancel.
 
-Launching on the API key’s last day asks for **Launch anyway**. The bot is created, but its new automatic openings wait; existing orders and exits continue. After expiry, Grid releases that wait and the exchange answers its orders; a refused opening stays in repair with **Retry**.
+Launching on the API key’s last day asks for **Launch anyway**. The bot is created, but its new automatic openings wait; existing orders and exits continue. After it expires, the grid stops waiting and sends its openings; any the exchange refuses become failed orders, and **Fix failed** places them again once you renew the key.

@@ -37,6 +37,7 @@
         "type": { "$ref": "#/$defs/type" },
         "extra": { "$ref": "#/$defs/type" },
         "unit": { "enum": ["base", "quote", "coin"] },
+        "otherUnit": { "enum": ["base", "quote", "coin"], "description": "The unit last shown on the other kind of market (ordinary or coin-margined), taken again when the form returns to that kind. Absent (every draft of an earlier build): that kind's default." },
         "size": {
           "type": "object",
           "additionalProperties": false,
@@ -109,7 +110,14 @@
         "v": { "type": "string", "description": "As typed; validated when a command is built." },
         "t": { "enum": ["relative", "price", "base", "quote", "coin"] },
         "source": { "enum": ["typed", "filled"], "description": "Stepping provenance; absent on older drafts means typed." },
-        "q": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A base size waiting for the new instrument's first price: the quote value it had." }
+        "q": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A base or coin size waiting for the new instrument's first price: the value it had." },
+        "kept": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["v", "was", "in"],
+          "description": "The size as typed before a move to another market (MH 2026-11-13): back on the asset `in`, while the field still shows `v`, it is `was` again. Absent on older drafts: nothing to restore.",
+          "properties": { "v": { "type": "string" }, "was": { "type": "string" }, "in": { "type": "string" } }
+        }
       }
     }
   }

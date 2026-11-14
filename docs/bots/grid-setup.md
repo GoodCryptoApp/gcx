@@ -6,7 +6,7 @@ You set up goodcryptoX's Grid bot on the Trade page, in the form beside the char
 
 On **Trade**, choose your account and pair, select **Bots**, then **Grid**. Work down the form and check the chart as you go.
 
-**Only this bot trades this pair** is ticked for a new bot unless a position is already open on that perp. Leave it ticked if nobody else will trade this pair in this account, neither you nor another bot. When another bot is on the pair the box is unticked and a short line under it names that bot (with "and others" when there are several); if that bot has it ticked, launching this one turns it off for both. It does not prevent trades elsewhere; [Running a Grid](grid-running.md#when-the-bot-needs-you) explains what to do if the position needs review.
+**Only this bot trades this pair** is ticked for a new bot unless a position is already open on that perp. Leave it ticked if nobody else will trade this pair in this account, neither you nor another bot. When another bot is on the pair the box is unticked and a short line under it names that bot (with "and others" when there are several); if that bot has it ticked, launching this one turns it off for both. When orders that are not a bot's already rest on the pair (yours, or ones placed on the exchange), a second line says how many ("2 orders already open"); it is a warning only, and the bot's notice names them once it runs. It does not prevent trades elsewhere; [Running a Grid](grid-running.md#when-the-bot-needs-you) explains what to do if the position needs review.
 
 ## Entry condition
 
@@ -48,7 +48,7 @@ Choose % for consistent percentage gaps, or the quote currency for fixed price g
 
 ## Margin, Investment and Level size
 
-**Margin**, on perpetuals, chooses margin mode and leverage where supported. Check [Margin and liquidation](grid.md#margin-and-liquidation) before launching.
+**Margin**, on perpetuals, shows the exchange's margin mode and leverage for the coin and changes them where supported. On a coin whose leverage you've never set, that is the exchange's own default, which can be Cross at the highest leverage, so check it before you launch. A change goes to the exchange as soon as you pick it, as in the order form; if the exchange refuses it, the reason shows under the row and the row goes back to what the exchange has. If the exchange still has another leverage when you launch, the bot runs at the exchange's and tells you which after Launch. Check [Margin and liquidation](grid.md#margin-and-liquidation) before launching. With % of account, DCA and Grid size their orders using your chosen leverage, including in portfolio margin. In portfolio margin, a refused leverage change is shown as a warning; the bot can still submit orders.
 
 **Investment** is the planned orders' total in the quote currency. Changing it changes Level size. Choose **% of account** to use a share of account value, including unrealized PnL. That share targets Approx. margin on perpetuals, the orders' total on spot.
 
@@ -92,6 +92,18 @@ Choose % for consistent percentage gaps, or the quote currency for fixed price g
 
 > Stop loss and Max drawdown close immediately when triggered, regardless of the Neutral choice. Market closing fees and price changes can take the final result past your limit.
 
+### Max loss at a stop
+
+Under each stop's field the form shows **Max loss**: the most the grid can lose when that stop fires, fees included, as a share of its Investment and in money. It is the worst case: the price goes straight from the start to the stop and every order on the way fills. Any bounce on the way closes a round trip at a profit, so a real run usually loses less. A Neutral grid shows a figure under each stop; a Long grid's Stop above and a Short grid's Stop below show none.
+
+- With **Follow**, the figure counts the levels the grid sells at a loss as it follows toward the stop, or the most it can lose after following away from it as far as its limit lets it.
+- **Max loss: no limit** means there is no most: with both follows on, with a follow away from the stop and no limit, or when a round trip loses after fees. The tooltip says why; a **Stop loss** caps it.
+- When a **Stop loss** or **Max drawdown** ends the grid first, the line says so. With **Close position on stop** unticked it reads **Loss at stop**, and the position stays open.
+- A grid that starts on a signal with a fixed range is figured from its worst start: the top of the range for Stop below, the bottom for Stop above.
+- No figure is shown yet: with Reinvest on; with the investment in % of the account; on a Neutral grid with one follow on and its limit set, under the stop that follow moves away from (and under a Long grid's Stop above with Follow down, a Short grid's Stop below with Follow up); with a follow limit more than 1,000 levels away; on a running grid.
+
+> Max loss is an estimate, not a guaranteed limit. Gaps can make the loss larger, funding is not counted, and on perpetuals liquidation can come first: then the line shows the larger loss.
+
 ## Notify me
 
 Choose **Every order**, **Every PnL change**, **Range, follows, resizes** and **Starts, stops, changes**. Every order is off initially; the other three are on. Use Every PnL change if you want results from completed round trips without a message for every opening fill.
@@ -100,7 +112,7 @@ Actions you take yourself send no message when their result is there at once. La
 
 ## Check the funds and launch
 
-**Position** is the maximum possible exposure the grid can build. On perpetuals, check it alongside **Approx. margin** and **Approx. liquidation**, including the [margin warning](grid.md#margin-and-liquidation).
+**Position** is the maximum possible exposure the grid can build. On perpetuals, check it alongside **Approx. margin** and **Est. liquidation**, including the [margin warning](grid.md#margin-and-liquidation).
 
 <figure><img src="../pictures/grid/setup-6-launch.webp" alt="The Grid form with the liquidation warning, the arrow at Launch" width="300"><figcaption></figcaption></figure>
 
@@ -108,17 +120,17 @@ On spot, **Funds needed** shows coins and quote currency, with the starting purc
 
 <figure><img src="../pictures/grid/setup-7-spot-funds.webp" alt="The spot Grid form, the arrow at Use them" width="430"><figcaption></figcaption></figure>
 
-Levels below the exchange minimum are not placed. Increase Investment or use fewer levels if needed; the warning still offers **Launch anyway**.
+Levels below the exchange minimum are still placed, and the exchange may refuse them: a refused level joins the bot's failed orders, and **Fix failed** sends it again. Increase Investment or use fewer levels if needed; the warning still offers **Launch anyway**.
 
-Add a **Bot name** and **Note**, review the summary under **Launch**, then launch. Manual starts now; Price and Signal wait. Open the bot to [monitor it and change settings](grid-running.md).
+Add a **Bot name** and **Note**, review the summary under **Launch**, then launch. **Launch** asks once more and shows that summary; press **Launch** in it to start the bot, or **Back** to leave the form as it is. **Don't ask again** skips the question, and the switch **Launching a bot** in Settings brings it back. Manual starts now; Price and Signal wait. Open the bot to [monitor it and change settings](grid-running.md).
 
 ## Coin-margined contracts and hedge mode
 
-On coin-margined inverse contracts, Level size defaults to **Contracts**, with the settlement coin and USD also available. The bot rounds each level down to the contract step at that level's price. Prices are in USD; Investment, margin, PnL and the money amounts in Take profit, Stop loss and Max drawdown are in the settlement coin.
+On coin-margined inverse contracts, Level size is in USD by default, or in the settlement coin. A USD Level size snaps down to the contract's value when you leave the field; in the coin, the bot works out each level at its own price and rounds it down to what the market trades. Prices are in USD; Investment, margin, PnL and the money amounts in Take profit, Stop loss and Max drawdown are in the settlement coin.
 
 On a hedge-mode account, a Long grid trades the Long position and a Short grid the Short position. A Neutral grid can hold both. Each closing order uses the same position side as its opening, and Close position on stop closes both holdings.
 
-If the account’s API key expires in under 24 hours, the form warns before launching. **Launch anyway** creates the Grid bot; its automatic openings still wait. Exactly 24 hours remaining does not ask for this confirmation.
+If the account's API wallet or API key expires in under 24 hours, the form shows the same warning: “The API wallet expires in under 24 hours. Replace it in Settings” or “The API key expires in under 24 hours. Replace it in Settings”. **Launch anyway** creates the bot; its automatic openings still wait. Exactly 24 hours remaining does not ask for this confirmation.
 
 ## Questions
 

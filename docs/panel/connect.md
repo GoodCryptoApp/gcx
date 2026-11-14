@@ -71,7 +71,7 @@ Hyperliquid allows 3 named API wallets per account (and 2 more per sub-account).
 
 - No account, or one waiting for approval: the order form and the bot form work as with an account, except that one **Connect {exchange} account** button, with no title, takes the send button's place (Launch included) and opens that exchange's Add form in Settings › Exchanges; Available is not shown, the leverage row works on the form alone until you connect, and the lists say they are empty.
 - The builder fee not approved: the form shows no Buy, Sell or Launch, and the red-tinted line "Allow builder fees to enable trading" with **Fix**. **Close** stays.
-- The API wallet expired, or no longer approved by Hyperliquid: the form shows no Buy, Sell or Launch, and in their place "Your API wallet for … has expired: renew it in Settings." (or "… is no longer approved on Hyperliquid: renew it in Settings.") with **Fix**, as goodcryptoX 2.0 showed its red "not ready for trading" line in place of its send slider. **Close** stays.
+- An expired API wallet or API key: **API wallet expired** or **API key expired**, with **Replace API wallet** or **Replace API key** beside enabled Buy, Sell and Launch. The exchange answers each send. A wallet no longer approved still disables new sends and shows its approval line with **Fix**. **Close** stays.
 - Right after goodcryptoX starts, until Hyperliquid's market list has arrived, a new order or bot is answered "The market list has not arrived from Hyperliquid yet; goodcryptoX keeps trying."
 
 ## The wallet window and your privacy
@@ -80,6 +80,6 @@ The wallet window is Reown's (AppKit), as goodcryptoX 2.0 used. While it is open
 
 ## Not in this version
 
-The affiliate code field: it says so and changes nothing. Renewing the API wallet works (**Replace API wallet**, and **Fix** on the expiry line): the same steps in the account's card, with your main account's wallet; see [Safety and keys](../concepts/safety.md#the-api-wallet). Removing it works: tick **Also remove the API wallet from Hyperliquid** in the Remove account dialog (your main account's wallet signs once); see [Removing an account](settings.md#removing-an-account). The expiry reminders are on the account's card and in Telegram: see [Safety and keys](../concepts/safety.md#the-api-wallet).
+The affiliate code field: it says so and changes nothing. Renewing the API wallet works (**Replace API wallet**, on the expiry line or in Edit account): the same steps in the account's card, with your main account's wallet; see [Safety and keys](../concepts/safety.md#the-api-wallet). Removing it works: tick **Also remove the API wallet from Hyperliquid** in the Remove account dialog (your main account's wallet signs once); see [Removing an account](settings.md#removing-an-account). The expiry reminders are on the account's card and in Telegram: see [Safety and keys](../concepts/safety.md#the-api-wallet).
 
 A failed wallet step shows the actual error and the normal retry button. Unfinished checks stay grey, and the tile has no chevron while open. Rename keeps the account card’s width: Account name is editable; Address is text with the account’s kind and main account where applicable.

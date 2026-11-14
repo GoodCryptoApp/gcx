@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/leverage-topic.schema.json",
   "title": "Leverage topic",
-  "description": "The `leverage/<sourceId>/<instrumentId>` topic (decision 0007 part 3 decision 8; roadmap P3): the account's leverage, margin mode and margin available on one perpetual, from Hyperliquid's `activeAssetData` (leverage-frame.schema.json) with the catalogue's maximum leverage and whether only isolated margin is offered. Served by src/runtime/account/topics.ts; mirrors src/panel/model/form.ts (LeverageState). `availableToTrade` is the venue's pair as sent: the panel reads the first as buy and the second as sell, which pin P6 of decision 0003a still has to confirm. Never a JSON number. A read that fails before any figure came is told instead as a frame of `venue`, `sourceId`, `instrumentId` and `unread: true`, outside this shape.",
+  "description": "The `leverage/<sourceId>/<instrumentId>` topic (decision 0007 part 3 decision 8; roadmap P3): the account's leverage, margin mode and margin available on one perpetual, from Hyperliquid's `activeAssetData` (leverage-frame.schema.json) with the catalogue's maximum leverage and whether only isolated margin is offered. Served by src/runtime/account/topics.ts; mirrors src/panel/model/form.ts (LeverageState). `availableToTrade` is the venue's pair as sent: the panel reads the first as buy and the second as sell, which pin P6 of decision 0003a still has to confirm. Never a JSON number. A read that fails before any figure came is told instead as a frame of `venue`, `sourceId`, `instrumentId` and `unread: true`, outside this shape; when the account's wallet was read, that frame also carries Available from it (`availableToTrade`, `availableUnit`, the receipt facts of this shape and `readAt`): the leverage and margin mode unread, Available known (additive, bybit-inverse-1112).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,6 +16,16 @@
     "availableToTrade"
   ],
   "properties": {
+    "spotAvailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base", "quote"],
+      "properties": {
+        "base": { "$ref": "leverage-frame.schema.json#/$defs/canonical" },
+        "quote": { "$ref": "leverage-frame.schema.json#/$defs/canonical" }
+      },
+      "description": "Market-specific spot cash in base and quote currencies; absent preserves account-wide cash."
+    },
     "availableUnit": {
       "type": "string",
       "description": "Available's currency; absent means the instrument's native margin asset."
@@ -72,6 +82,14 @@
     },
     "onlyIsolated": {
       "type": "boolean"
+    },
+    "accountMarginMode": {
+      "const": true,
+      "description": "Additive: the account, not the market, owns the margin mode (a Bybit unified account; Binance's Multi-Assets mode on USD-M and Portfolio Margin), so `marginMode` is the only mode that can be chosen, as on a position row. Absent where the market chooses its own mode, and from an older runtime."
+    },
+    "noLeverage": {
+      "const": true,
+      "description": "Additive (0007 amendment 12): The exchange states no leverage for this market: `leverage` carries \"1\" for older readers, no leverage applies there and no bot sizes by the field (Bybit's portfolio margin). Kept on a frame marked failed. Absent elsewhere and from an older runtime."
     },
     "availableToTrade": {
       "$ref": "leverage-frame.schema.json#/$defs/pair"
@@ -138,6 +156,15 @@
           }
         }
       }
+    },
+    "coinCollateral": {
+      "type": "string",
+      "pattern": "^-?\\d+(\\.\\d+)?$",
+      "description": "On a pool of several coins (Bybit's unified account, Binance's Multi-Assets): the market's own coin's equity there, in that coin (linear the base, inverse the settlement coin), negative when owed, \"0\" with none. The Cross estimate counts it as moving with the price. Absent: a pool of one coin."
+    },
+    "maintenanceUnit": {
+      "enum": ["settlement"],
+      "description": "\"settlement\": an inverse market's maintenanceBrackets bounds and deductions are in its settlement coin (Bybit's risk limits). Absent: contracts and the quote currency."
     },
     "isolatedPositions": {
       "type": "object",

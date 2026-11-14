@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gcx.ai/schemas/key-facts.schema.json",
+  "title": "Reported key facts (BY2)",
+  "description": "Venue key facts. Positive whole remaining days can supply an estimated expiry date; missing expiry is unknown. Older accounts have no facts until a successful read.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "readOnly",
+    "permissions",
+    "ips",
+    "expiredAt",
+    "deadlineDay",
+    "lines"
+  ],
+  "properties": {
+    "readOnly": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "ips": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expiryDerived": {
+      "const": true,
+      "description": "Expiry estimated from whole remaining days. Absent on older records means absolute."
+    },
+    "expiredAt": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "deadlineDay": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "trade-both",
+          "trade-spot",
+          "trade-futures",
+          "read-only",
+          "withdrawals",
+          "ip-list",
+          "no-trading"
+        ]
+      }
+    },
+    "permissionIssues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation",
+          "permission"
+        ],
+        "properties": {
+          "operation": {
+            "enum": [
+              "account",
+              "spot",
+              "fund",
+              "positions",
+              "orders"
+            ]
+          },
+          "permission": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Permission refusal evidence scoped to the failed operation; absent or empty means none observed. Never an order gate."
+    }
+  }
+}

@@ -8,7 +8,7 @@ First, connect your exchange account in **Settings › Exchanges**. On **Trade**
 
 <figure><img src="../pictures/dca/setup-1-bots-tab.webp" alt="The bot form, the arrow at Bots" width="430"><figcaption></figcaption></figure>
 
-**Only this bot trades this pair** is ticked for a new bot unless a position is already open on that perp. Leave it ticked if nobody else will trade this pair in this account, neither you nor another bot. When another bot is on the pair the box is unticked and a short line under it names that bot (with "and others" when there are several); if that bot has it ticked, launching this one turns it off for both. This choice does not prevent other trading; see [Running the bot](dca-running.md#when-the-bot-needs-you) if a position needs review.
+**Only this bot trades this pair** is ticked for a new bot unless a position is already open on that perp. Leave it ticked if nobody else will trade this pair in this account, neither you nor another bot. When another bot is on the pair the box is unticked and a short line under it names that bot (with "and others" when there are several); if that bot has it ticked, launching this one turns it off for both. When orders that are not a bot's already rest on the pair (yours, or ones placed on the exchange), a second line says how many ("2 orders already open"); it is a warning only, and the bot's notice names them once it runs. This choice does not prevent other trading; see [Running the bot](dca-running.md#when-the-bot-needs-you) if a position needs review.
 
 Choose when to enter:
 
@@ -36,15 +36,26 @@ Next, choose how to enter:
 
 **Trailing Stop**, the default, follows a falling price and buys on a rebound by your **Trailing distance**. Starting at 100, a fall to 90 with a 10% distance gives a trigger of 99. A Sell entry works the other way round. Averaging orders are always Limit orders.
 
-**Margin**, on perpetuals, chooses margin mode and leverage where supported. Check [Margin and liquidation](dca.md#margin-and-liquidation) before using leverage.
+**Margin**, on perpetuals, shows the exchange's margin mode and leverage for the coin and changes them where supported. On a coin whose leverage you've never set, that is the exchange's own default, which can be Cross at the highest leverage, so check it before you launch. A change goes to the exchange as soon as you pick it, as in the order form; if the exchange refuses it, the reason shows under the row and the row goes back to what the exchange has. If the exchange still has another leverage when you launch, the bot runs at the exchange's and tells you which after Launch. Check [Margin and liquidation](dca.md#margin-and-liquidation) before using leverage. With % of account, DCA and Grid size their orders using your chosen leverage, including in portfolio margin. In portfolio margin, a refused leverage change is shown as a warning; the bot can still submit orders.
 
 ## Investment and entry size
 
-**Investment** — the planned total of your entry and averaging orders. Orders of 100, 200 and 400 total 700. Doubling Investment doubles their sizes while keeping the ladder's shape. Choose **% of account** to use a share of your account value, including unrealized PnL: it targets Approx. margin on perpetuals and the orders' total on spot.
+**Investment** — the planned total of your entry and averaging orders. Orders of 100, 200 and 400 total 700. Type Investment and the app works out the sizes from it, keeping the ladder's shape, and shows them in grey; type the sizes and Investment shows their total in grey. Changing any of the ladder's settings after typing Investment works the sizes out again. Choose **% of account** to use a share of your account value, including unrealized PnL: it targets Approx. margin on perpetuals and the orders' total on spot.
 
 **Entry size** — the first order's value in the quote currency, or quantity in the coin. Averaging orders use the same unit. We suggest sticking with the quote currency for **Entry size**, unless you want a fixed coin amount at each level. Typing Entry size returns Investment to the quote currency.
 
 Sizing in the quote currency keeps the planned funds and potential profit broadly similar from cycle to cycle as the coin price changes. A fixed coin size needs less money, and earns less at the same percentage target, when price falls; it needs more money as price rises.
+
+### Coin-margined markets
+
+On a coin-margined (inverse) futures market, size the bot in USD or in the coin it settles in. The coin is the default.
+
+- **In USD**, every order puts up the same dollars, times the multiplier. As the price falls, the same dollars buy more of the coin. On a contract worth 100 USD, an entry of 300 USD with ×1.5 sends 300, 400, 600 and 1,000 USD: 450 and 675 round down to 400 and 600.
+- **In the coin**, every order puts up the same amount of the coin, times the multiplier, at that order's own price. As the price falls, the same coin is fewer dollars. On a contract worth 1 USD, an entry of 3.52 HYPE at 71 sends 249 USD, and an averaging order of 7.04 HYPE at 70.29 sends 494 USD.
+
+Sizes worked out from Investment are rounded down the same way. Every order is rounded down to what the market trades: for example, steps of 100 USD on Binance's BTC contract, 10 USD on its others and 1 USD on Bybit. An averaging order that rounds to nothing is not placed; an entry that does holds the bot until you press Retry or Stop. When you leave a USD **Entry size** or **First averaging order** field, it snaps down to that step: 250 becomes 200 on a contract worth 100 USD. A size in the coin stays as you typed it, and the planned orders show what each one sends.
+
+**Investment** and **Approx. margin** are in the coin the market settles in, the coin your account holds. A bot sized in the coin has the coins you typed as its Investment (3.52 + 7.04 = 10.56 HYPE, whatever the price); a bot sized in USD has an Investment that moves with the price.
 
 ## Reinvest
 
@@ -88,18 +99,6 @@ Now set the averaging ladder:
 
 Next, choose your exits. Both are optional:
 
-## Stop Loss
-
-<figure><img src="../pictures/dca/setup-5-stop-loss.webp" alt="The bot form, the arrow at the Stop Loss menu" width="300"><figcaption></figcaption></figure>
-
-**Stop Loss** — the percentage distance from the last planned averaging order, or entry when there are none. For a Buy ladder ending at 80, a 5% stop is 76. It closes the bot's position and cancels averaging orders and Take Profit. The menu also offers **Max loss, %**, an estimated loss if all planned orders fill and the stop closes at its planned price. This loss is a share of margin on perpetuals, or funds on spot. The line below shows the other reading and the loss in money. Choose the distance for where you want to exit, then review its estimated loss.
-
-On a Sell ladder the stop sits above the last averaging order. The stop sends a Market order when triggered. Its distance from that last order is not your total loss percentage: the sizes and prices of the whole ladder determine the result. The expected-loss figure uses the current setup and assumes every averaging order fills.
-
-> Max loss is an estimate, not a guaranteed limit. Gaps and fees can make the loss larger; on perpetuals, liquidation can come first.
-
-On spot, with a Limit take-profit and a stop-loss both on, the form says **May cause sell price slippage**. The take-profit order holds your coins, so the stop-loss cancels it before selling. See [Spot stop-loss with a Limit take-profit](../trading/take-profit-stop-loss.md#spot-stop-loss-with-a-limit-take-profit) for the price and cancellation risks.
-
 ## Take Profit
 
 <figure><img src="../pictures/dca/setup-6-take-profit.webp" alt="The bot form, the arrow at the Limit take profit" width="300"><figcaption></figcaption></figure>
@@ -128,9 +127,21 @@ For a long with an average entry of 100, a 10% start activates at 110. With a 2%
 
 > A Limit Take Profit works while goodcryptoX is off. Market and Trailing Take Profit, and Stop Loss, need goodcryptoX running. On spot, a Limit Take Profit must be canceled before Stop Loss sells, which can worsen the stop's fill price.
 
+On spot, with a Limit take-profit and a stop-loss both on, the form says **May cause sell price slippage**. The take-profit order holds your coins, so the stop-loss cancels it before selling. See [Spot stop-loss with a Limit take-profit](../trading/take-profit-stop-loss.md#spot-stop-loss-with-a-limit-take-profit) for the price and cancellation risks.
+
+## Stop Loss
+
+<figure><img src="../pictures/dca/setup-5-stop-loss.webp" alt="The bot form, the arrow at the Stop Loss menu" width="300"><figcaption></figcaption></figure>
+
+**Stop Loss** — the percentage distance from the last planned averaging order, or entry when there are none. For a Buy ladder ending at 80, a 5% stop is 76. It closes the bot's position and cancels averaging orders and Take Profit. The menu also offers **Max loss, %**: the estimated loss if every planned order fills and the position closes at the stop price, fees included, as a percentage of the Investment. The line under the field shows the other one and the loss in money: under a distance, the Max loss; under Max loss, the distance. Choose the distance for where you want to exit, then review its estimated loss.
+
+On a Sell ladder the stop sits above the last averaging order. The stop sends a Market order when triggered. Its distance from that last order is not your total loss percentage: the sizes and prices of the whole ladder determine the result. The expected-loss figure uses the current setup and assumes every averaging order fills.
+
+> Max loss is an estimate, not a guaranteed limit. It includes the fees on every order and on the stop, but not funding or credits. Gaps can make the loss larger, and on perpetuals liquidation can come first.
+
 ## Orders list
 
-Press **Orders list** to review the entry, averaging orders, Stop Loss and Take Profit, with size, value, distance and price. **Total** is the whole ladder. An averaging order under the exchange minimum says “not sent”: the bot skips it.
+Press **Orders list** to review the entry, averaging orders, Stop Loss and Take Profit, with size, value, distance and price. **Total** is the whole ladder. An averaging order below the exchange's minimum says “may be refused”. The bot still sends it; if the exchange refuses it, the order fails and the bot keeps running. An order whose size rounds to zero says “not sent”.
 
 <figure><img src="../pictures/dca/setup-7-orders-list.webp" alt="The Orders list open in the bot form, the arrow at its title" width="300"><figcaption></figcaption></figure>
 
@@ -166,9 +177,9 @@ Finally, check the funds:
 
 <figure><img src="../pictures/dca/setup-9-launch.webp" alt="The bot form with the liquidation warning, the arrow at Launch" width="430"><figcaption></figcaption></figure>
 
-**Max position** is what the bot holds after entry and all averaging orders fill. On spot, **Funds needed** shows the coins or quote currency needed for the ladder. On perpetuals, check **Approx. margin** and **Approx. liquidation** before launching; see [Margin and liquidation](dca.md#margin-and-liquidation). Check the warning against your intended stop and averaging range.
+**Max position** is what the bot holds after entry and all averaging orders fill. On spot, **Funds needed** shows the coins or quote currency needed for the ladder. On perpetuals, check **Approx. margin** and **Est. liquidation** before launching; see [Margin and liquidation](dca.md#margin-and-liquidation). Check the warning against your intended stop and averaging range.
 
-Add a **Bot name** and **Note** if you like. Review the description under **Launch**, then launch. A trading warning offers **Launch anyway**; check the named issue first, since the exchange may refuse the order.
+Add a **Bot name** and **Note** if you like. Review the description under **Launch**, then launch. **Launch** asks once more and shows that description; press **Launch** in it to start the bot, or **Back** to leave the form as it is. Tick **Don't ask again** to skip the question; the switch **Launching a bot** in Settings brings it back. A trading warning asks with **Launch anyway** instead, and no second question follows. Check the named issue first, since the exchange may refuse the order.
 
 <figure><img src="../pictures/dca/setup-11-running-message.webp" alt="The message after Launch, the arrow at Details" width="300"><figcaption></figcaption></figure>
 

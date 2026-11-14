@@ -19,7 +19,7 @@ On **Trade**, open **Bots** under the chart and choose **DCA**:
 | **Position** | Coin amount and dollar value. |
 | **R · U · APR** | Realized PnL, unrealized PnL and yearly rate so far. |
 
-Click a heading to sort, or a row for details. Row actions include **Stop**, **Chart** and **Fix failed**. **Stop all** stops the running bots the filtered list shows, after confirmation, and says how many stopped and how many are stopping. A bot whose order's cancel the exchange never answered reads "An order of this bot needs a decision" while it stops: **Retry** on its item sends that cancel again; **Refresh** on the order's details asks the exchange about it.
+Click a heading to sort, or a row for details. Row actions include **Stop**, **Copy**, **Chart** and **Fix failed**; **Copy** fills the form with this bot's settings. **Stop all** stops the running bots the filtered list shows, after confirmation, and says how many stopped and how many are stopping. A bot whose order's cancel the exchange never answered reads "An order of this bot needs a decision" while it stops: **Retry** on its item sends that cancel again; **Refresh** on the order's details asks the exchange about it. A bot still stopping, or still launching with a market entry, 5 minutes after it began sends you one message and shows in Needs attention: **Refresh** on its close order asks the exchange; a launch has **Stop** beside it.
 
 ## The bot's details
 
@@ -29,7 +29,7 @@ The details open in the right column, from the top down.
 
 <figure><img src="../pictures/dca/running-2-header.webp" alt="The bot's details, the arrow at Chart" width="300"><figcaption></figcaption></figure>
 
-The header names the account, pair and bot, with status, cycle, position and total PnL. Use **+ Add a name** or **+ Add a note** to help identify it. **What happened?** explains an error or a problem needing attention.
+The header names the account, pair and bot, with status, cycle, position and total PnL. Use **+ Add a name** or **+ Add a note** to help identify it. **What happened?** explains an error here, or a repair in **Needs your attention**.
 
 - **Stop** cancels all the bot's orders, including Take Profit and Stop Loss. With **Close pos. on stop** on, it also closes the position; otherwise you keep it.
 - **Close pos.** closes at market and ends the cycle. Another cycle needs **Repeat after** with **TP** selected, subject to Run, cooldown and entry conditions.
@@ -44,9 +44,13 @@ The header names the account, pair and bot, with status, cycle, position and tot
 
 Open **Parameters** to edit settings. Confirm with ✓ or Enter; × or Escape cancels.
 
-**Close pos. on stop**, **Repeat after**, **Cooldown**, **TP from**, **Run**, **finish the cycle** and **Only this bot trades BTC.USDC perp in this account** apply at once; the checkbox names your chosen instrument. Other changes apply next cycle while one is open. For example, changing Entry size from 100 to 150 leaves this cycle's entry unchanged. The pending value appears below the running value. See [Features & setup](dca-setup.md) for field meanings.
+**Reinvest**, the signals in **Entry condition**, **Close pos. on stop**, **Repeat after**, **Cooldown**, **TP from**, **Run**, **finish the cycle** and **Only this bot trades BTC.USDC perp in this account** apply at once; the checkbox names your chosen instrument. Reinvest affects the next cycle's order sizes. Signal changes apply while the bot waits for an entry; this cycle's orders stay as they are. Other changes apply next cycle while one is open. For example, changing Entry size from 100 to 150 leaves this cycle's entry unchanged. The next cycle's value appears below the current one; enter the current value again to cancel the change. See [Features & setup](dca-setup.md) for field meanings.
 
 **Move to break even** fixes this cycle's **Take Profit** at a price that covers the position's cost and fees already paid. It excludes the closing fee. Later averaging does not move this fixed price.
+
+For a bot set up with Max loss, % before 3.2.1, the percentage now refers to the Investment: 20% of margin at 10x is shown as 2%. The stop price stays the same.
+
+A bot launched before 3.2.1 sends the orders it had held back for the exchange's minimum as soon as it runs on 3.2.1.
 
 A stopped bot allows only its name and note to change. Use Copy to prepare another trading plan.
 
@@ -54,7 +58,7 @@ A stopped bot allows only its name and note to change. Use Copy to prepare anoth
 
 <figure><img src="../pictures/dca/running-4-orders-list.webp" alt="The bot's Orders list, the arrow at its title" width="300"><figcaption></figcaption></figure>
 
-This is the planned ladder for the selected cycle: entry, averaging orders, Stop Loss and Take Profit, with size, value, distance and price. Failed orders are red; below-minimum orders are grey. Use it to check which averaging levels remain before your stop.
+This is the planned ladder for the selected cycle: entry, averaging orders, Stop Loss and Take Profit, with size, value, distance and price. Failed orders are red; an order too small to send at all is grey. Use it to check which averaging levels remain before your stop.
 
 ### Profitability
 
@@ -70,7 +74,7 @@ This is the planned ladder for the selected cycle: entry, averaging orders, Stop
 
 PnL percentages use Max planned. **APR** projects the realized return over a year; **ROE** shows realized return on your own funds. Neither promises future earnings. The chart shows realized PnL bars and an APR line; historical APR is estimated, and older history may show only the current point.
 
-With quote Investment and Reinvest, **incl. … reinvested** shows profit included in this cycle's sizes, or a negative amount after losses. Account-percent sizing has no separate line.
+When a cycle was sized with Reinvest, **incl. … reinvested** shows profit included in this cycle's sizes, or a negative amount after losses. Account-percent sizing has no separate line.
 
 ### Position
 
@@ -89,6 +93,8 @@ With quote Investment and Reinvest, **incl. … reinvested** shows profit includ
 <figure><img src="../pictures/dca/running-7-progress-activity.webp" alt="Progress and the cycle's orders, the arrow at the next-cycle arrow" width="430"><figcaption></figcaption></figure>
 
 **Progress** shows the cycle and runtime. Use the cycle arrows to review another cycle's orders. Click an order for its fills, fees and times; **Show more** opens more activity. **Show funding** includes funding payments. Liquidation and auto-deleveraging appear as **Liquidation** and **ADL** in red. An open order of a stopped or errored bot offers **Cancel**; Cancel all leaves bot orders alone.
+
+On Hyperliquid spot, while you have other orders on the same coin, the bot places its limit orders as post-only, so one your balance doesn't cover is refused instead of canceling your other orders. One that would fill at once, and a market entry, go after goodcryptoX checks your balance. Its stop-loss goes as it is.
 
 ## What goodcryptoX tells you
 
@@ -136,8 +142,12 @@ Yes: open **Parameters** and edit a setting. Some apply at once; the others appl
 
 ### What if an averaging order fails?
 
-The bot keeps running; **Fix failed** sends failed averaging orders again at their prices.
+The bot keeps running; **Fix failed** sends failed averaging orders again at their prices. You get one Telegram message while averaging orders remain failed. A later refusal after **Fix failed** or **Retry order** can send another message, as can a refusal in a new cycle. Immediate retry failures are shown in the bot.
 
 ### Is funding included in the bot's result?
 
 Yes: on perpetuals, funding paid or received is included in the bot's result. Open **Realized PnL** to see it beside the trading result and fees.
+
+### Why did my bot's profit change overnight?
+
+Once a day, at 00:00 UTC, Hyperliquid sells any coin balance too small to trade (worth 1 USD or less). If some of those coins were your bot's leftovers, the sale counts in the bot's realized PnL.

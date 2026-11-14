@@ -30,7 +30,9 @@
         "orderId": { "$ref": "#/$defs/id" },
         "attempt": { "$ref": "#/$defs/attempt" },
         "size": { "$ref": "#/$defs/decimal" },
+        "recoveryAt": { "$ref": "#/$defs/time", "description": "Durable first order SendEntry.at. Added B1 round 2; older rows retain their existing recovery window. Never reset by status, retry or restart." },
         "at": { "$ref": "#/$defs/time" },
+        "sizePending": { "const": true, "description": "Added P:176: size is executed coins so far; the final coin size is not yet known. Recovery and the existing late-fill bound continue until a final accepted size or terminal event. Absent on older journals: size is final, unchanged." },
         "nativeTriggerState": { "enum": ["waiting", "triggered"], "description": "Optional MH141 display fact from an acknowledged native trigger order. The reducer ignores it. Absent on older events: no phase is inferred. Replayed into an incremental read index, never a reason to place, cancel or retry an order." }
       }
     },
@@ -42,8 +44,10 @@
         "type": { "const": "rejected" },
         "orderId": { "$ref": "#/$defs/id" },
         "attempt": { "$ref": "#/$defs/attempt" },
-        "reason": { "enum": ["price-race", "no-liquidity", "already-flat", "terminal", "unclassified"], "description": "The adapter's error class (0003 §2.13): price-race (post-only would have matched), no-liquidity (an Ioc that matched nothing, a market order with no liquidity), already-flat (reduce-only would increase the position), terminal (anything else that will not succeed as sent), unclassified (the adapter's UNKNOWN: pages, the order goes to repair)." },
+        "reason": { "enum": ["price-race", "no-liquidity", "already-flat", "terminal", "unclassified", "crossed", "funds"], "description": "The adapter's error class (0003 §2.13): price-race (post-only would have matched), no-liquidity (an Ioc that matched nothing, a market order with no liquidity), already-flat (reduce-only would increase the position), terminal (anything else that will not succeed as sent), unclassified (the adapter's UNKNOWN: pages, the order goes to repair). Added in 3.2.1 (0059 S1): crossed (a post-only gcx added because another order of the account holds the same coin would have matched; the order goes again as an ordinary limit), funds (gcx did not send it: one balance read showed it not covered while another order holds the coin)." },
         "message": { "type": "string", "description": "The venue's own text, shown to the user." },
+        "failedEpisode": { "const": true, "description": "Added in 3.2.1: the supervisor stamps new rejected inputs before journaling. Averaging refusals use one message per episode. Absent on older journaled inputs: retain per-level notifications on replay and do not open an episode. Independent of refusalClass." },
+        "refusalClass": { "enum": ["below-minimum", "coins-short", "already-flat", "other"], "description": "Added in 3.2.1 (refusal-messages-1114), optional: what the refusal says, classified by the venue's adapter from the venue's error code (Hyperliquid, which has no codes, from its words): below-minimum (under the exchange's minimum order value), coins-short (a spot balance short of the order), already-flat (a reduce-only order the venue says would increase the position), other. Absent on events journaled before it: their message is read as it was then." },
         "at": { "$ref": "#/$defs/time" }
       }
     },
@@ -63,6 +67,7 @@
         "feeIn": { "const": "base", "description": "Added in 0016 L6. The fee was charged in the instrument's base coin (a spot buy on a venue that charges the coin received: the account got size minus fee). Absent: the fee is in the contract’s settlement currency." },
         "feeAsset": { "type": "string", "minLength": 1, "description": "Optional native commission asset, preserved beside its valued fee." },
         "nativeFee": { "$ref": "#/$defs/signedDecimal", "description": "Optional exact commission in feeAsset; fee remains in the contract's settlement currency (or base under feeIn)." },
+        "feeParts": { "type": "array", "minItems": 2, "description": "Added in 0045 BY4 (D26). A fill's several charges, each in its own asset, signed (negative is a rebate): the commission first, then each extra fee (Bybit EU fiat). fee, feeAsset and nativeFee keep their meaning; absent with a single charge.", "items": { "type": "object", "additionalProperties": false, "required": ["asset", "amount"], "properties": { "asset": { "type": "string", "minLength": 1 }, "amount": { "$ref": "#/$defs/signedDecimal" } } } },
         "builderFee": { "$ref": "#/$defs/decimal", "description": "Added in A46. The part of fee that is gcx's platform fee (Hyperliquid's builderFee, in the same coin as fee; the venue's fee includes it). Absent: zero (Hyperliquid leaves it out when zero; a journal from before A46 never carried it)." },
         "time": { "$ref": "#/$defs/time", "description": "Added in 0016 amendment 5. The exchange's time of the fill (ms; Hyperliquid's time). Absent: a fill recorded before it; at is then the only time." },
         "at": { "$ref": "#/$defs/time" }
@@ -77,7 +82,7 @@
         "type": { "const": "cancelled" },
         "orderId": { "$ref": "#/$defs/id" },
         "attempt": { "$ref": "#/$defs/attempt" },
-        "reason": { "enum": ["requested", "ioc-remainder", "reduce-only", "margin", "liquidation", "venue", "gone"], "description": "gone (added 2026-11-08, ORDER-ENDS O5): the venue answered 'no such order' for an order it had accepted, and its order read, its open orders and the order's own trades all answered without it. requested: our cancel confirmed. ioc-remainder: the unfilled rest of an Ioc, which the venue does not report; the adapter emits it from its classification of 'filled x of y'. reduce-only: the venue removed a resting reduce-only order because the position closed (reduceOnlyCanceled). margin, liquidation: marginCanceled, liquidatedCanceled. venue: any other removal by the venue." },
+        "reason": { "enum": ["requested", "ioc-remainder", "reduce-only", "margin", "liquidation", "venue", "gone", "funds"], "description": "funds (added 2026-11-11, 0040 amendment 8): a resting order the venue removed for money (Hyperliquid insufficientWeiCanceled). gone (added 2026-11-08, ORDER-ENDS O5): the venue answered 'no such order' for an order it had accepted, and its order read, its open orders and the order's own trades all answered without it. requested: our cancel confirmed. ioc-remainder: the unfilled rest of an Ioc, which the venue does not report; the adapter emits it from its classification of 'filled x of y'. reduce-only: the venue removed a resting reduce-only order because the position closed (reduceOnlyCanceled). margin, liquidation: marginCanceled, liquidatedCanceled. venue: any other removal by the venue." },
         "executed": { "$ref": "#/$defs/decimal", "description": "ioc-remainder only: the size the send's reply said executed (Hyperliquid filled.totalSz). Evidence, never a fill: the fills arrive as fill events, and the reducer re-sends the rest only once they account for this size." },
         "at": { "$ref": "#/$defs/time" }
       }
@@ -161,6 +166,7 @@
         "type": { "const": "fills-due" },
         "orderId": { "$ref": "#/$defs/id" },
         "attempt": { "$ref": "#/$defs/attempt" },
+        "recoveryAt": { "$ref": "#/$defs/time", "description": "Durable first order SendEntry.at. Added B1 round 2; older rows retain their existing recovery window. Never reset by status, retry or restart." },
         "at": { "$ref": "#/$defs/time" }
       }
     }

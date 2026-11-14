@@ -51,7 +51,7 @@ export function removeKeyFiles(dir: string): void {
   for (const f of [KEYSTORE_FILE, ADDRESSES_FILE, CEX_FILE, CEX_KEYS_FILE]) rmSync(join(dir, f), { force: true });
 }
 
-export type KeystoreErrorCode = "unavailable" | "bad-secret" | "damaged" | "cex-unreadable" | "exists" | "unknown-source" | "no-rotation";
+export type KeystoreErrorCode = "unavailable" | "bad-secret" | "damaged" | "cex-unreadable" | "invalid-key" | "exists" | "unknown-source" | "no-rotation";
 /** Messages name the failure, never a secret, a key, or a tool's output. */
 export class KeystoreError extends Error {
   constructor(readonly code: KeystoreErrorCode, message: string) {

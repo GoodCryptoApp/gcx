@@ -8,7 +8,9 @@ Open **Settings › Exchanges › Binance**. With no account yet, **Add Binance 
 
 * **Self-generated API key:** trades from any IP address. The first choice if you are not sure.
 * **Sign in with Binance:** fewest steps, but trades only from a fixed IP address.
-* **System-generated API key:** trades only from the fixed IP addresses you listed on Binance.
+* **System-generated API key:** trades only from the fixed IP addresses you whitelisted on Binance.
+
+Paste only the API key and secret Binance shows: a wallet's recovery phrase or private key pasted into an API key, API secret or account name field is emptied at once and never sent.
 
 Not sure if your IP address is fixed? Read [Is my IP address fixed?](#is-my-ip-address-fixed). Activate the Binance Futures account before you make a key for futures: a key made earlier cannot trade futures, so make a new one after activating.
 
@@ -59,7 +61,7 @@ Binance puts a red warning under **Unrestricted (Less Secure)**: "To protect the
 
 ## System-generated API key
 
-Binance makes the key and a secret to go with it. A key made this way can trade only from the IP addresses you list, so use it when your IP address is fixed. In goodcryptoX, choose **System-generated API key** and answer the question about your IP address: goodcryptoX shows the address to add, with a copy button.
+Binance makes the key and a secret to go with it. A key made this way can trade only from the IP addresses you whitelist, so use it when your IP address is fixed. In goodcryptoX, choose **System-generated API key** and answer the question about your IP address: goodcryptoX shows the address to add, with a copy button.
 
 **1.** On Binance, open **Account**, then **API Management**, and press **Create API**, as in steps 1 and 2 above.
 
@@ -85,13 +87,13 @@ The shortest way, with no key to copy. Choose **Sign in with Binance** and answe
 
 ## Is my IP address fixed?
 
-A fixed IP address is one that stays the same, so a key can list it. It is the address Binance sees from where goodcryptoX runs, which is not always the device you are reading this on. A home connection usually changes its address from time to time, when the router restarts for example. A server or VPS usually keeps its address as long as you rent it.
+A fixed IP address is one that stays the same, so it can be whitelisted for a key. It is the address Binance sees from where goodcryptoX runs, which is not always the device you are reading this on. A home connection usually changes its address from time to time, when the router restarts for example. A server or VPS usually keeps its address as long as you rent it.
 
 To check, open **Settings › Exchanges › Binance**: goodcryptoX shows the address it read. Look again in a few days and after a restart. If it never changes, it is probably fixed, and your provider can tell you for sure. [Supported exchanges](../exchanges.md#is-my-ip-address-fixed) has more ways to check.
 
 If it is not fixed, or you are not sure, choose **Self-generated API key**: it trades from any IP address, so a changing address does not matter.
 
-**If the address changes later,** Binance refuses a key that lists the old one. The Dashboard's **Needs your attention** row opens the account's card, which shows the address to allow. On Binance, open **API Management**, press **Edit restrictions** and add that address to the key's list, or press **Replace API key** and connect again. After Binance accepts the same key, its streams reconnect within a minute and the refusal clears when they are live.
+**If the address changes later,** Binance refuses a key with the old one whitelisted. The Dashboard's **Needs your attention** row opens the account's card, which shows the address to allow. On Binance, open **API Management**, press **Edit restrictions** and add that address to the key's trusted IPs, or press **Replace API key** and connect again. After Binance accepts the same key, its streams reconnect within a minute and the refusal clears when they are live.
 
 ## Trading without an IP address
 
@@ -109,15 +111,15 @@ This makes every key on the master account and its sub-accounts less safe, so we
 
 **The account's card** is laid out like a Hyperliquid account's: its name with **User ID** under it and the **Exchange balance** at the right, what the key can do, **Include in portfolio**, then **Edit account** with **Rename account**, **Replace API key** and **Remove account**.
 
-**What the key can do** is shown on the card after **Save and validate**: spot, futures, withdrawals, and whether it works only from listed addresses. goodcryptoX never withdraws; a key without withdrawals is safer. A key that can only read, or that can withdraw, is marked yellow. If you change the key's permissions on Binance, press **Check again** beside that line; goodcryptoX also reads them when it starts and when you open this page. While refused, the card shows the refusal in red, and **Replace API key** instead of capability lines.
+**What the key can do** is shown on the card after **Save and validate**: spot, futures, withdrawals, and whether it works only from whitelisted addresses. goodcryptoX never withdraws; a key without withdrawals is safer. A key that can only read, or that can withdraw, is marked yellow. If you change the key's permissions on Binance, press **Check again** beside that line; goodcryptoX also reads them when it starts and when you open this page. While refused, the card shows the refusal in red, and **Replace API key** instead of capability lines.
 
 To change the key, press **Replace API key** on the account's card and connect again. A key of another Binance account is refused there.
 
 **Remove account** asks first. Your bots on this account stop and your orders stay on Binance as they are; untick **Keep trading history** to erase the account's history from goodcryptoX. If goodcryptoX placed the small order that keeps your key alive in the last seconds, the removal waits for it to be cancelled. goodcryptoX then deletes its copy of the key; delete the key on Binance too, under **API Management**. While the key store is locked, goodcryptoX cannot remove the account: unlock it first. You can add the same account again once it is removed.
 
-**With a proxy.** While the proxy is on, exchanges see its address, and that is the address goodcryptoX shows and asks about. Turning the proxy on or off, or changing it, changes the address exchanges see: goodcryptoX names the accounts whose keys work only from listed addresses before it applies the change.
+**With a proxy.** While the proxy is on, exchanges see its address, and that is the address goodcryptoX shows and asks about. Turning the proxy on or off, or changing it, changes the address exchanges see: goodcryptoX names the accounts whose keys work only from whitelisted addresses before it applies the change.
 
-**Restricted location.** If Binance is unavailable from this installation’s location, change its connection or proxy location; adding an address to the key’s list does not resolve a location restriction.
+**Restricted location.** If Binance is unavailable from this installation’s location, change its connection or proxy location; whitelisting an address for the key does not resolve a location restriction.
 
 ## Keep your API key alive
 
@@ -139,12 +141,12 @@ Connect each Binance account or sub-account with its own key, through **Add Bina
 
 ## Trading on Binance
 
-* **Markets:** Spot under **Spot**; USD-M and COIN-M futures, quarterly contracts included, under **Perps**, and TradFi perpetuals there too, with a small **tradfi** tag. The first time you pick a TradFi perpetual, goodcryptoX offers Binance's agreement above the form.
-* **Leverage and margin:** the form's **Margin** control sets a futures market's leverage and its margin type, cross or isolated. On an isolated position, the pencil on **Margin** in its details adds or removes margin; Binance refuses to remove more than the position can spare.
+* **Markets:** Spot under **Spot**; USD-M and COIN-M futures, quarterly contracts included, under **Perps**, and TradFi perpetuals there too, with the **tradfi** tag. On a tab with both kinds, **All | Crypto | TradFi** filters the markets. Choose **Spot › TradFi** to see shares and Binance's tokenized stocks. The first time you pick a TradFi perpetual, goodcryptoX offers Binance's agreement above the form.
+* **Leverage and margin:** the form's **Margin** control sets a futures market's leverage and its margin type, cross or isolated. On an isolated position, the pencil on **Margin** in its details adds or removes margin, on Binance and Bybit; the exchange refuses to remove more than the position can spare.
 * **Hedge mode:** the cog at the end of the order form's **Position** row switches between **One-way mode** and **Hedge mode** for all the account's futures: Binance keeps one setting for USD-M and COIN-M, so switching one switches both. Binance allows the change only with no open positions or orders there. In hedge mode the Position row picks **Long** or **Short**, and the button says **Open long**, **Close long**, **Open short** or **Close short**; a DCA bot picks its side; a Grid keeps its long and short apart.
-* **COIN-M sizes** default to **Contracts**; the form also takes the coin or USD.
+* **COIN-M sizes** are in USD, in steps of the contract's value (100 USD on BTC, 10 USD on the others), or in the coin. Binance's own app counts contracts ("3 Cont"); goodcryptoX shows that as 300 USD, and you can't type a contract count. The API still serves contracts.
 * **Liquidations:** if Binance liquidates or auto-deleverages a position while goodcryptoX is running, the bots on it stop and you get an alert.
-* **Account modes:** Classic, Multi-Assets, Portfolio Margin and Portfolio Margin Pro accounts trade; change the mode on Binance.
+* **Account modes:** Classic, Multi-Assets, Portfolio Margin and Portfolio Margin Pro accounts trade; change the mode on Binance. In Classic and Multi-Assets the DCA and Grid forms show Est. liquidation; in Portfolio Margin and Portfolio Margin Pro they show none, as Binance shows none.
 * **Balances** come from every Binance wallet: Spot, Funding, futures, Margin, Earn and the others Binance lists for your account.
 
 A bStock is a token backed by a US share, traded on Binance Spot 24/7 like a coin, by hand and with the bots. A split or reinvested dividend changes your token balance without a trade. Availability depends on your Binance account. Extra tokens appear in Account position; bot sizes and entry prices stay unchanged.
@@ -171,7 +173,7 @@ Binance's own trading fees apply as on Binance. goodcryptoX's fee, 0.03% of each
 | "Binance does not hold goodcryptoX's key under this API key: paste it there again" | On Binance, paste goodcryptoX's key into that API key again. |
 | "The secret does not match this API key: copy both again" | Copy the API key and the secret again. |
 | "This computer's clock is off: set the right time and try again" | Set the computer's time automatically, then press **Save and validate**. |
-| "Binance is unavailable from this installation’s location. Change its connection or proxy location" | Change the installation’s connection or proxy location; adding an address to the key’s list does not resolve a location restriction. |
+| "Binance is unavailable from this installation’s location. Change its connection or proxy location" | Change the installation’s connection or proxy location; whitelisting an address for the key does not resolve a location restriction. |
 | "You already added this account as Binance. Adding it again counts it twice on your Dashboard" | Press **Save anyway** to add it as a second card. To give the first card a new key, use **Replace API key** on its card. |
 | "This key belongs to another Binance account" | Use a key of the account you are replacing. |
 

@@ -892,7 +892,7 @@
                 "upnlPct",
                 "realizedPct"
               ],
-              "description": "By unit: every amount of a bot's create, step or command in the quote currency under sizingMode cost (today entryAmount, level1Amount), a funding usdc, a fill's closedPnl, a liquidation record's position pnl (C66 144), a Grid record's profit, PnL and funding figures."
+              "description": "By unit: every amount of a bot's create, step or command in the quote currency under sizingMode cost (today entryAmount, level1Amount; not under size or coin), a funding usdc, a fill's closedPnl, a liquidation record's position pnl (C66 144), a Grid record's profit, PnL and funding figures."
             },
             "principal": {
               "enum": [

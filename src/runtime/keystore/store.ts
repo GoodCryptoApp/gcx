@@ -27,7 +27,7 @@ import { promisify } from "node:util";
 import { signAction } from "../../venues/hyperliquid/actions.js";
 import { writeAtomic } from "../fs/atomic.js";
 import { ACCESS_BYTES, ADDRESSES_FILE, CEX_FILE, CEX_KEYS_FILE, KEYSTORE_FILE, KeystoreError, MOVED_FILE, OLD_MOVED_FILE, decodeCex, decodeEntries, encodeCex, removeKeyFiles, encodeEntries, newSealer, reopen, seal, unseal, type CexEntry, type Entry, type Sealer } from "./format.js";
-import { SignerRefused, type Address, type KeySignIntent, type SignIntent, type Signer } from "./signer.js";
+import { SignerRefused, type Address, type CexSignIntent, type SignIntent, type Signer } from "./signer.js";
 import { PATIENT_TOOL_MS, type UnlockSource } from "./sources.js";
 import { agentAddress, localWallet, newAgentKey } from "./wallet.js";
 
@@ -84,6 +84,15 @@ async function readSecret(source: UnlockSource): Promise<Buffer> {
   } catch (e) {
     throw e instanceof KeystoreError ? e : new KeystoreError("unavailable", `${source.kind}: the unlock source failed`);
   }
+}
+
+/** Parse before creating a first store; the admin write uses the same RSA type/size check. */
+export function rsaPrivateKey(pem: Buffer) {
+  try {
+    const key = createPrivateKey(pem);
+    if (key.asymmetricKeyType !== "rsa" || (key.asymmetricKeyDetails?.modulusLength ?? 0) < 2048) throw new Error();
+    return key;
+  } catch { throw new KeystoreError("invalid-key", "the RSA private key could not be read"); }
 }
 
 export class KeyStore {
@@ -214,7 +223,7 @@ export class KeyStore {
   async #sign(sourceId: string, intent: SignIntent, vault: Address | null): Promise<Uint8Array> {
     if (this.#moved || this.#marking) throw new SignerRefused("moved", "this data folder was exported; it signs nothing until the user acts");
     // A key venue's request is never signed with an API wallet's key; this build signs none (0037 §10 d1).
-    if (intent.venue === "binance") throw new KeystoreError("unknown-source", "this version of goodcryptoX signs no Binance request");
+    if (intent.venue !== undefined && intent.venue !== "hyperliquid") throw new KeystoreError("unknown-source", "this version of goodcryptoX signs no Binance request");
     const entry = this.#entry(sourceId);
     const signed = await signAction(localWallet(entry.key, this.#address(sourceId)), intent.action, intent.nonce, intent.expiresAfter, intent.isTestnet, vault);
     return Buffer.from(JSON.stringify(signed), "utf8");
@@ -225,20 +234,42 @@ export class KeyStore {
    * HMAC-SHA256 in hex for a secret Binance made; RSASSA-PKCS1-v1_5 SHA-256 for the key gcx made, base64 then percent-encoded.
    * The bytes returned are the query that goes on the wire. This Binance signer does not sign Ed25519 before pin P6.
    */
-  signKey(intent: KeySignIntent): Promise<Uint8Array> {
+  signKey(intent: CexSignIntent): Promise<Uint8Array> {
     return Promise.resolve().then(() => this.#signKey(intent));
   }
 
-  #signKey(intent: KeySignIntent): Uint8Array {
+  #signKey(intent: CexSignIntent): Uint8Array {
     if (this.#moved || this.#marking) throw new SignerRefused("moved", "this data folder was exported; it signs nothing until the user acts");
     this.#unlocked();
     const e = this.#cex.get(intent.keyId);
     if (e === undefined) throw new KeystoreError("unknown-source", `no key ${intent.keyId}`);
+    if (intent.venue !== "binance") {
+      if (intent.request.entity !== intent.venue || !intent.keyId.startsWith(`${intent.venue}:`) ||
+          !(intent.request.account === `connect:${intent.venue}` || new RegExp(`^${intent.venue}:[1-9][0-9]*$`).test(intent.request.account)) ||
+          !Number.isSafeInteger(intent.timestamp) || intent.timestamp < 0 || !Number.isSafeInteger(intent.recvWindow) || intent.recvWindow <= 0)
+        throw new KeystoreError("unknown-source", "the key does not belong to this registration or account");
+      const apiKey = this.apiKey(intent.keyId);
+      if (apiKey === undefined) throw new KeystoreError("unknown-source", "the API key is not available");
+      // 0045 D20: the private socket's `auth` signs `GET/realtime` and its expiry (`timestamp`), with no payload; every REST read and write the timestamp, key, window and exact payload.
+      const preimage = intent.request.method === "GET" && intent.request.path === "/realtime" && intent.payload === "" ? `GET/realtime${String(intent.timestamp)}` : `${String(intent.timestamp)}${apiKey}${String(intent.recvWindow)}${intent.payload}`;
+      if (e.kind === "hmac") return Buffer.from(createHmac("sha256", e.key).update(preimage, "utf8").digest("hex"));
+      if (e.kind === "rsa") return Buffer.from(signWith("sha256", Buffer.from(preimage), createPrivateKey({ key: e.key, format: "der", type: "pkcs8" })).toString("base64"));
+      throw new KeystoreError("unknown-source", "this key kind cannot sign for Bybit");
+    }
     let signature: string;
     if (e.kind === "hmac") signature = createHmac("sha256", e.key).update(intent.query, "utf8").digest("hex");
     else if (e.kind === "rsa") signature = percent(signWith("sha256", Buffer.from(intent.query, "utf8"), createPrivateKey({ key: e.key, format: "der", type: "pkcs8" })).toString("base64"));
     else throw new KeystoreError("unknown-source", `key ${intent.keyId} is of a kind this build does not sign with`);
     return Buffer.from(`${intent.query}&signature=${signature}`, "utf8");
+  }
+
+  /** A pasted RSA key stays sealed like one made here; only its public half may leave. */
+  async putRsaKey(keyId: string, pem: Buffer): Promise<void> {
+    const der = rsaPrivateKey(pem).export({ format: "der", type: "pkcs8" });
+    try { await this.#mutateCex((cex) => {
+      if (cex.has(keyId)) throw new KeystoreError("exists", "this key is already kept");
+      cex.set(keyId, { kind: "rsa", key: Buffer.from(der) });
+    }); } finally { der.fill(0); }
   }
 
   /** 0037 §3 d1, d2: an RSA-2048 key made here for `keyId`, durable before this resolves; only its public half (SPKI PEM) leaves. */

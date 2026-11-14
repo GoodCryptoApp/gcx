@@ -38,6 +38,7 @@
         "type": {
           "const": "dca"
         },
+        "credentialKind": { "enum": ["wallet", "key"], "description": "The owning credential kind, independent of venue and account kind. Additive; legacy wallet rows may omit it." },
         "sourceId": {
           "type": "string"
         },
@@ -131,6 +132,7 @@
               "items": {
                 "enum": [
                   "entry-refused",
+                  "entry-too-small",
                   "allowance",
                   "venue-flat",
                   "wallet-expiring",
@@ -138,7 +140,7 @@
                   "differs"
                 ]
               },
-              "description": "key-limit (added 2026-10-04): the trading key that created the bot cannot start the next cycle: its limits have no room for it (the 24 hours, the largest order, the account or the market; rulings 109 2 (a), 171 (a)); the bot goes on by itself as soon as they have room (ruling 170 (b)). differs (added 2026-10-05, decision 0016 Amendment 2): the exchange's position differs from the bots' records and the item is open (`attention`)."
+              "description": "key-limit (added 2026-10-04): the trading key that created the bot cannot start the next cycle: its limits have no room for it (the 24 hours, the largest order, the account or the market; rulings 109 2 (a), 171 (a)); the bot goes on by itself as soon as they have room (ruling 170 (b)). differs (added 2026-10-05, decision 0016 Amendment 2): the exchange's position differs from the bots' records and the item is open (`attention`). entry-too-small (added 2026-11-13, decision 0045 amendment 3 d10): the entry was not sent because at this price it is under the exchange's minimum (it rounds to no contract or coin, or a cycle scaled by the Investment is under the minimum order value); entry-refused is the exchange's own refusal; both wait for Retry or Stop."
             },
             "orders": {
               "type": "array",
@@ -347,6 +349,11 @@
           "type": "integer",
           "description": "When the current iteration's first entry was made."
         },
+        "leverage": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+          "description": "Added 3.2.1 (0016 amendment 14): the bot's last known account leverage on its coin, the one its next cycle takes; absent on spot and until first read. A bot with settings.slLossPct (deprecated, a percent of the margin) shows it as a share of the Investment: slLossPct ÷ leverage, rounded down to two places (20 at 10x reads 2), as the panel does; with no leverage known on a perpetual, the stop it runs on is the distance slPct."
+        },
         "pastStop": {
           "type": "object",
           "additionalProperties": false,
@@ -367,7 +374,7 @@
               "const": true
             }
           },
-          "description": "Added 2026-10-17 (MH 623 (f)): the current cycle's stop, worked out from the expected loss (settings slLossPct), comes before averaging orders `from` to `to`, which the cycle does not place; `spot` on a spot pair, where no leverage moves it. Absent otherwise. The details and the Dashboard's Worth a look name them."
+          "description": "Added 2026-10-17 (MH 623 (f)): the current cycle's stop, worked out from the expected loss (settings slMaxLossPct or slLossPct), comes before averaging orders `from` to `to`, which the cycle does not place; `spot` where no leverage moves it: a spot pair, or (added 3.2.1, 0016 amendment 14) a stop typed as a share of the Investment (slMaxLossPct). Absent otherwise. The details and the Dashboard's Worth a look name them."
         },
         "accountPosition": {
           "type": "object",
@@ -433,6 +440,7 @@
         "type": {
           "const": "grid"
         },
+        "credentialKind": { "enum": ["wallet", "key"], "description": "The owning credential kind, independent of venue and account kind. Additive; legacy wallet rows may omit it." },
         "endedAt": {
           "type": "integer",
           "minimum": 0,
@@ -457,6 +465,28 @@
         },
         "gridProfit": {
           "type": "string"
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Added 2026-11-11 (0040 amendment 8 d166): how many of the grid's orders failed (refused, or canceled by the exchange) and wait for Fix failed or for the grid to put them back. Absent: none (and on a grid that is done)."
+        },
+        "paused": {
+          "const": true,
+          "description": "Added 2026-11-11 (0040 amendment 8 §6), as the DCA row's: the trading key that created the grid is suspended or revoked; it adds nothing, and Fix failed answers at once that it is paused. Absent: not paused."
+        },
+        "failedPast": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Added 2026-11-11 (0040 amendment 8 d158.8): how many of the grid's failed orders a Fix failed now would send at once, the last price already past them. Absent: none."
+        },
+        "sendAll": {
+          "const": true,
+          "description": "Added 2026-11-13 (MH: we never withhold an order for a limit we believe the exchange has): the grid places every level whose size is not zero, under the exchange's minimum or not; a level the exchange refuses is one of its failed orders. Absent: a grid launched by an earlier version, whose levels under the minimum wait without an order until it is relaunched."
+        },
+        "failedWhy": {
+          "enum": ["money", "other", "mixed"],
+          "description": "Added 2026-11-11 (0040 amendment 8 d166), while `failed` is above zero: money when every failed order was refused or canceled for money, other when none was, mixed otherwise."
         },
         "gridProfitUnit": {
           "enum": [

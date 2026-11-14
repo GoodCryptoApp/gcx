@@ -1,6 +1,6 @@
 # What is goodcryptoX 3.0
 
-goodcryptoX 3.0 is goodcryptoX self-hosted: the trading app runs on your computer, a NAS at home or a server you rent, and you use it in a browser or on your phone. It trades on Hyperliquid and Binance, by hand and with DCA and Grid bots, and needs no servers of ours.
+goodcryptoX 3.0 is goodcryptoX self-hosted: the trading app runs on your computer, a NAS at home or a server you rent, and you use it in a browser or on your phone. It trades on Hyperliquid, Binance, Bybit and Bybit EU, by hand and with DCA and Grid bots, and needs no servers of ours.
 
 **[Download goodcryptoX for Mac](https://goodcrypto.app/download/mac?utm_source=docs&utm_medium=page&utm_campaign=first-release)** · or [set it up on a server](install/server.md) or [on a NAS](install/nas.md), and use it from any computer or your phone.
 
@@ -34,7 +34,7 @@ Wherever it runs, you use it in a browser, and its notifications reach you in Te
 
 ## Secure and free to run
 
-Free to run: no subscription, no limits. The one charge is 0.03% of each filled trade goodcryptoX places for you, on top of the exchange's own fees: on Hyperliquid taken from each trade (on spot, from each sell), on Binance paid with [credits](credits.md) after your first 10,000 USD of volume ([Terms of service](legal/terms.md)).
+Free to run: no subscription, no limits. The one charge is 0.03% of each filled trade goodcryptoX places for you, on top of the exchange's own fees: on Hyperliquid taken from each trade (on spot, from each sell), on Binance and Bybit paid with [credits](credits.md) after your first 10,000 USD of volume ([Terms of service](legal/terms.md)).
 
 Your keys stay on your machine. They trade; goodcryptoX never withdraws.
 
@@ -66,7 +66,7 @@ Give an AI agent or your own program a key in Settings › MCP & API. **Read** s
 
 ### Is goodcryptoX free?
 
-Free to run: no subscription, no limits. The one charge is 0.03% of each filled trade goodcryptoX places for you, on top of the exchange's own fees: taken from each trade on Hyperliquid, paid with credits on Binance after your first 10,000 USD of volume.
+Free to run: no subscription, no limits. The one charge is 0.03% of each filled trade goodcryptoX places for you, on top of the exchange's own fees: taken from each trade on Hyperliquid, paid with credits on Binance and Bybit after your first 10,000 USD of volume.
 
 ### Is goodcryptoX 3.0 self-hosted?
 
@@ -74,7 +74,7 @@ Yes: it runs on your machine, or on a server you rent, and needs no servers of o
 
 ### Which exchanges does goodcryptoX support?
 
-Hyperliquid, with its sub-accounts and vaults, and Binance: Spot, USD-M and COIN-M futures, with sub-accounts ([Supported exchanges](exchanges.md)). More will follow ([Roadmap](#roadmap)).
+Hyperliquid, Binance, Bybit and Bybit EU: see [Supported exchanges](exchanges.md) for their markets and accounts. More will follow ([Roadmap](#roadmap)).
 
 ### Does goodcryptoX hold my funds or keys?
 

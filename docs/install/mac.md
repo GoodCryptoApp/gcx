@@ -82,4 +82,4 @@ Yes: add your phone from Settings › Devices › **Add a device** ([Phone acces
 
 ### Do I still need your server?
 
-No: at home your devices open goodcryptoX directly. Away from home, our server is the way in ([Phone access](../phone.md)).
+No: at home your devices open goodcryptoX directly. Away from home, use your own VPN into your home or our server ([Phone access](../phone.md)).

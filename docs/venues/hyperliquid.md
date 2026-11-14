@@ -48,9 +48,9 @@ Once your main account is connected, goodcryptoX lists its sub-accounts and the 
 
 Another main account? Press **Add Hyperliquid account** and connect its own wallet. Each account is separate: removing one leaves the others trading.
 
-## Renew the API wallet
+## Replace API wallet <a href="#renew-the-api-wallet" id="renew-the-api-wallet"></a>
 
-Hyperliquid's API wallets expire after 180 days. From 30 days before, the account's card says so, the Dashboard shows one row per API wallet with **Replace API wallet**, and reminders arrive through your alerts. Press it, or open the account's **Edit account › Replace API wallet**, and sign with your wallet as when you connected; trading goes on until the new one is ready. **Edit account** also renames or removes the account.
+Hyperliquid's API wallets expire after 180 days. From 30 days before, the account's card says so, the Dashboard shows one row per API wallet with **Replace API wallet**, and reminders arrive through your alerts. Press it, or open the account's **Edit account › Replace API wallet**, and sign with your wallet as when you connected; trading goes on until the new one is ready. **Edit account** also renames or removes the account. The reminder shows the time left, such as “API wallet expires in 30 days”, then “API wallet expires within 24 hours” and “API wallet expired”.
 
 <figure><img src="../pictures/hyperliquid/hl-5-edit-account.webp" alt="Edit account opened, the arrow at Replace API wallet" width="563"><figcaption></figcaption></figure>
 
@@ -90,6 +90,7 @@ If your main Hyperliquid account has no referrer yet, goodcryptoX offers the dis
 
 * goodcryptoX keeps every connected account's orders, fills and positions up to date while it runs, including what you do in Hyperliquid's own app.
 * The smallest order on Hyperliquid is 10 USDC.
+* On spot, while you have other orders on the same coin, your bots place their limit orders as post-only and check your balance before a market buy. So a bot's order your balance doesn't cover is refused instead of canceling your other orders. Stops and closes go as they are.
 * How goodcryptoX reads Hyperliquid, its limits and its maintenance windows: the [Hyperliquid reference](../reference/hyperliquid.md).
 
 ## Questions

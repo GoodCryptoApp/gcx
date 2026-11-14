@@ -1,6 +1,6 @@
 # Trading credits
 
-Credits are how you pay goodcryptoX's fee on exchanges that cannot collect goodcryptoX's fee from each trade, Binance first. The fee is the same 0.03% of each trade goodcryptoX places for you, as on Hyperliquid; there it is taken from each trade, here it is paid with credits you buy upfront and spend as you trade. Your first 10,000 USD of CEX volume costs nothing.
+Credits are how you pay goodcryptoX's fee on exchanges that cannot collect goodcryptoX's fee from each trade, Binance and Bybit. The fee is the same 0.03% of each trade goodcryptoX places for you, as on Hyperliquid; there it is taken from each trade, here it is paid with credits you buy upfront and spend as you trade. Your first 10,000 USD of CEX volume costs nothing.
 
 ## How credits work
 

@@ -45,7 +45,7 @@ You can change settings and monitor your position in [Running the bot](dca-runni
 
 **Approx. margin** shows the funds needed to back your plan. Orders worth 1,000 at 5x need 200 in order margin, before fees and losses. Leverage also brings liquidation risk: the position can be liquidated before your averaging orders or stop help.
 
-Check **Approx. liquidation** before launching. Use the lower leverage offered by the warning, or move your stop before liquidation. Cross is another choice where supported. The bot never adds margin by itself. These figures are estimates; fees, funding, gaps and other positions can change the outcome.
+Check **Est. liquidation** before launching. Use the lower leverage offered by the warning, or move your stop before liquidation. Cross is another choice where supported. The bot never adds margin by itself. These figures are estimates; fees, funding, gaps and other positions can change the outcome. On Cross, Est. liquidation assumes every order fills and nothing else in your account changes.
 
 ## Questions
 

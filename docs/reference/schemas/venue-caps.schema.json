@@ -7,6 +7,7 @@
   "additionalProperties": false,
   "required": ["reduceOnly", "nativeStops", "modify", "batchOrders", "expiresAfterMs"],
   "properties": {
+    "uncoveredCancelsIn": {"type": "array", "items": {"enum": ["standard", "unified", "portfolio", "dexAbstraction", "unknown"]}, "uniqueItems": true, "description": "Added 2026-11-11. Account modes in which an uncovered order cancels other orders holding the coin, for this market kind. An empty or absent list means refusal in every mode. Required in the TypeScript port; an unread account mode counts as unknown."},
     "feeRates": { "type": "object", "additionalProperties": false, "required": ["maker", "taker"], "properties": { "maker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }, "taker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" } }, "description": "Published base maker/taker fractions for display before an account rate read (0040 amendment d28.4)." },
     "reduceOnly": { "type": "boolean", "description": "The venue enforces reduce-only on this kind (Hyperliquid spot: no)." },
     "nativeStops": {
@@ -16,6 +17,7 @@
         { "type": "object", "additionalProperties": false, "required": ["triggerPrice"], "properties": { "triggerPrice": { "const": "mark" } } }
       ]
     },
+    "placesTriggers": { "const": true, "description": "Added 2026-11-14 (venue-playbook §8d). The venue's wire places its own trigger orders on this kind, so a stop placed outside the app can be changed as one; absent: it places none (an outside stop is Cancel only)." },
     "modify": { "const": "cancel-then-place", "description": "A resting order is changed by cancelling it and placing a new one with a new client order id; the venue's own modify is not used." },
     "batchOrders": { "type": "boolean", "description": "Several orders in one signed action." },
     "expiresAfterMs": { "type": "integer", "minimum": 1, "description": "Every order and cancel expires this many milliseconds after it is stamped." },

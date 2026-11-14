@@ -28,8 +28,22 @@ export interface KeySignIntent {
   /** Routing and account binding carried beside the query; never part of the signature or a secret. */
   request?: { endpoint: string; account: string };
 }
+/** Bybit's API-key-containing preimage is assembled only inside the store. Never journal it. */
+export interface BybitSignIntent {
+  venue: "bybit" | "bybit-eu";
+  keyId: string;
+  timestamp: number;
+  recvWindow: number;
+  payload: string;
+  request: { entity: "bybit" | "bybit-eu"; account: string;
+    /** Routing is outside the signed payload. Absent for BY2's connection reads. GET `/realtime` with an empty payload is the private socket's auth: `timestamp` is its expiry. */
+    method?: "GET" | "POST"; path?: string; category?: string; symbol?: string; positionIdx?: 0 | 1 | 2;
+    orderFilter?: string; orderLinkId?: string; broker?: string;
+  };
+}
+export type CexSignIntent = KeySignIntent | BybitSignIntent;
 /** What the signer signs: a union by venue behind the one boundary (0008 §7.4). */
-export type SignIntent = HlSignIntent | KeySignIntent;
+export type SignIntent = HlSignIntent | CexSignIntent;
 
 /** One source's agent. `sign` returns the `/exchange` request body as UTF-8 JSON bytes, journaled and re-sent as is. */
 export interface Signer {

@@ -23,9 +23,10 @@ filled. goodcryptoX cannot tell which until the exchange says so, so it checks, 
 - **Hyperliquid checks:** start about 11 seconds after the send. Only after the request has expired for 90 seconds,
   with two clean "not found" answers and no fill, is the order treated as never placed. Failed reads retry after 5, then
   15 seconds, then at the usual slower pace.
-- **Binance crypto checks:** come at 4, 6 and 9 seconds. If they succeed and show no order or fill, the order is sent again
-  with the same id. If the first is still open, Binance refuses the duplicate and goodcryptoX recovers the original. A fill
-  Binance shows later can still double the order; goodcryptoX warns you that it is over-filled.
+- **Binance crypto and Bybit:** goodcryptoX checks at 4, 6 and 9 seconds. If the checks work and show no order or fill,
+  it sends the order again with the same id. If the first one is still there, the exchange refuses the copy and goodcryptoX
+  picks up the original. A fill the exchange shows later can still double the order; goodcryptoX warns you that it is
+  over-filled.
 - **Found: it carries on from what the exchange holds.** A resting order is kept; a filled one is counted. For a
   market order that filled in part, the rest of a stop-loss, take-profit or Close is sent from the size the exchange
   says executed, never from the fills goodcryptoX happens to have seen so far.

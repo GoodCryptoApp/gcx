@@ -37,6 +37,8 @@ Each coin remembers its native aggregation rung in this browser, including acros
 
 Changing the step keeps the current rows and block height until the new stream’s first matching frame. The retained rows keep their own aggregation’s digits and quote approximation. A different coin starts with its own data; old-coin frames cannot fill it. Missing data and stale/absent feed notices retain their existing meaning.
 
+On coin-margined markets the book and Trades show sizes in USD until you pick the coin. In a grouped book the USD figures are approximate (≈).
+
 ## Trades
 
 The trades stream lists the latest public trades, newest first, up to 100. Green is a trade where the buyer took the offer, red where the seller hit the bid. The bar behind a trade is its size as a share of the largest trade in the list. Your own trades are shown in bold. When you open the screen, the recent trades the runtime already holds appear at once. In a bounded desktop pane, only complete rows are painted; growing the pane reveals more retained trades. Narrow page layouts keep the natural list height.
@@ -46,9 +48,9 @@ The trades stream lists the latest public trades, newest first, up to 100. Green
 The runtime watches every market data stream and tells the screen its state:
 
 - **Delayed**: the book or the trades are greyed out with "Delayed since" and the time the data stopped. A click on the book still inserts that row's price, so it does the same whether the book is fresh or not; the grey and the time tell you how old it is.
-- **No data**: the runtime says there is no data for the stream. Right after you open the page it says so for a moment while it starts; the screen waits with a spinner rather than saying so, and only when nothing has come for 30 seconds (no book, or for the trades no trade at all, even an empty answer counting as nothing) does the view say "No data from Hyperliquid since" the time. If the stream was live and then stops, the last rows stay, greyed, with the same line; a click on one still inserts its price.
+- **No data**: the runtime says there is no data for the stream. Right after you open the page it says so for a moment while it starts; the screen waits with a spinner rather than saying so, and only when nothing has come for 30 seconds (no book, or for the trades no trade at all, even an empty answer counting as nothing) does the view say "No data from {venue} since {time}", with the displayed market’s exchange and time. If the stream was live and then stops, the last rows stay, greyed, with the same line; a click on one still inserts its price.
 - **Quiet**: a market with no trades for a while is normal; the trades stream is not greyed for that.
-- **Runtime not reachable**: when the screen loses its connection to your goodcryptoX runtime, both views grey out with "Runtime not reachable", and a click on the book inserts nothing.
+- **Can't reach goodcryptoX**: when the screen loses its connection to your goodcryptoX runtime, both views grey out with "Can't reach goodcryptoX", and a click on the book inserts nothing.
 
 ## For developers
 

@@ -20,6 +20,8 @@ One Save is one change: the order's part and its take-profit and stop-loss go to
 
 Each value you can change also has a pencil in the details, for one quick change: **Size**, **Limit price**, **Trigger price**, **Trailing distance** and a waiting trailing order's **Trailing start price**, as that order type and its state allow; **Trigger timeout** is a list. A flag that is on (**Post only**, **Reduce only**, **Improve only**) shows as its own row with a click to turn it off; a flag is turned on from Modify. Type or pick the new value and press the check mark: that one change is sent at once. The cross puts the old value back. If the change is refused, the field stays open with its edge red and the reason in its tooltip. A bot's order has no pencils and no Modify: a bot's orders change from the bot.
 
+**An order sized in USDC.** An order you size in the quote currency, say 100 USDC, stays a 100 USDC order. Its coins are worked out each time it is sent, at the price it is sent at: move a limit from 75,000 to 74,000 and it buys 100 USDC worth at 74,000. Modify opens with 100 USDC in it; type a size in the coin to make it a coin order. If part of it has filled, the rest is what is left of the 100 USDC.
+
 An order goodcryptoX watches itself (a stop, a trailing stop) changes in place, at once. An order resting on the exchange is cancelled and placed again with the new values once the exchange confirms the cancel; if the exchange refuses the new one, the old one comes back by itself and you are told.
 
 **Take profit and stop loss.** Until the order fills, its take-profits and stop-loss are a plan: they are not on the exchange and not rows of Open orders; the order's row shows them as +TP and +SL, and its details list them under it. There each one's price and size (its share, in %) have a pencil; a stop-loss's size is the whole. Once the order has filled, each one is an order of its own: open it from the list under the order; its **Modify** opens the first part of the form with that one take-profit or stop-loss, and everything in it changes but the size: its type (a take-profit's while it is the only one; several targets share one type, changed from the order's own form), its level (by price or by percent), a trailing take-profit's or stop-loss's distance, a trailing take-profit's minimum profit while it waits, a stop-loss's trigger timeout and Follow TPs, and the time in force of the order's take-profits and stop-loss (one for all of them). Its size is set by the plan and does not change there; Reduce only, one setting for all of the order's take-profits and stop-loss, reads as words there. On its page the **Trailing distance** of a trailing take-profit or stop-loss has a pencil too, and moving its lines on the chart (a trailing take-profit's **Activate**, a stop-loss's trigger) changes the same plan as the form does.
@@ -40,7 +42,7 @@ The form's type row is Market, Limit and a third cell that shows the type you la
 
 **The trigger price** is compared with the last trade on the exchange. A stop fires at the trade that crosses its trigger, not at the trigger itself: if the price jumps from 105 to 111 over a stop at 110, the order goes at 111. A stop placed exactly at the last price fires at once (there it counts as a take-profit).
 
-**The minimum.** The minimum order value and any exception for a reduce-only order that closes the whole position depend on the exchange and market. The form warns when an order is below the applicable minimum; **Send anyway** sends it for the exchange to accept or refuse. On perpetuals, an order whose size closes the whole position exactly goes reduce-only by itself; the form says "reduce only" under the button and leaves the box unchanged. Where the exchange exempts a full-position close from its minimum, that order and **Close** are not warned about.
+**The minimum.** The minimum order value and any exception for a reduce-only order that closes the whole position depend on the exchange and market. The form warns when an order is below the applicable minimum; **Send anyway** sends it for the exchange to accept or refuse. On perpetuals, an order whose size closes the whole position exactly goes reduce-only by itself; the form says "reduce only" under the button and leaves the box unchanged. Where the exchange exempts a full-position close from its minimum, that order and **Close** are not warned about. Where it takes any reduce-only order under its minimum (Binance futures), no reduce-only order is warned about, take profits included. Bybit futures have no minimum order value, only a minimum size; Bybit spot has one.
 
 ## The ticks under the size
 
@@ -70,7 +72,7 @@ An attached Take Profit and Stop Loss have their own Time in force. A duration c
 
 ## Order value and margin
 
-**Order value** is the size multiplied by price, in the pair's quote currency. For example, 2 coins at 100 have a value of 200. Contracts use the contract's size and value convention; check the units in the form.
+**Order value** is the size multiplied by price, in the pair's quote currency. For example, 2 coins at 100 have a value of 200. On a coin-margined market, size the order in USD or in the coin. When you leave the size field, it snaps down to what the market trades: 250 USD becomes 200 USD on a contract worth 100 USD.
 
 On perpetuals, **Margin** is your own money backing the position. At 5x leverage, an order worth 1,000 needs about 200 in margin: order value divided by leverage, before fees and losses. **Leverage** increases the exposure backed by your funds; it does not multiply the amount of money you own.
 
@@ -87,7 +89,7 @@ The **Repeat** setting on a DCA bot means something else: the bot starts a new c
 
 An order that repeats itself, cycle after cycle, outside a bot is *planned* for a later version.
 
-If the account’s API key expires in under 24 hours, sending a manual order shows the warning and **Send anyway**. Confirming sends the order as entered, with no expiry-driven change to its size or price. Exactly 24 hours remaining has no such warning. After expiry, the exchange answers. Close and automatic exits continue.
+If the account's API wallet or API key expires in under 24 hours, the form says “The API wallet expires in under 24 hours. Replace it in Settings” or “The API key expires in under 24 hours. Replace it in Settings”. **Send anyway** submits the order as entered. Exactly 24 hours remaining has no such warning. After expiry, the exchange answers. Close and automatic exits continue.
 
 ## Order details
 
@@ -104,6 +106,8 @@ If the account’s API key expires in under 24 hours, sending a manual order sho
 **Margin** is the funds backing the position. **ROE**, Return on Equity, is Unrealized PnL divided by position margin, expressed as a percentage. For example, 20 unrealized profit on 200 margin is 10% ROE. A bot's own return figures use its own investment base, so they need not match the account position.
 
 **Liquidation** is the Mark Price at which the exchange liquidates the position. In Cross, it can move as your other positions and shared collateral change. It is not a fixed stop order.
+
+Funding is what the exchange paid you (positive) or charged you (negative), in the contract's settlement coin. Realized PnL is the profit or loss already realized on this position, as the exchange reports it. It starts again when you reopen. Funding is separate and counted once. Until the position's opening is known, Realized PnL and Funding show –. In Binance hedge mode a position's Funding shows –, because Binance doesn't say which side a payment was for.
 
 ## Sources in the trade lists
 

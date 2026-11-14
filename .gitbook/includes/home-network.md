@@ -57,7 +57,7 @@ On a laptop, turning on **Connect directly at home** first shows a warning: choo
 
 ### What "home network" means
 
-goodcryptoX turns away requests that plainly come from outside the networks your machine is connected to. That check is best effort, not a lock: a proxy, a VPN or a router that forwards traffic can pass it, and the connection a VPN sends your traffic through is not your home network. It does not know which Wi-Fi a device is on, or tell a guest from a family member. What keeps others out is the link, and the devices you keep.
+goodcryptoX answers devices on the networks your machine is on, and on your own VPN into your home; it turns away the rest of the internet. That check is best effort, not a lock: a proxy, a VPN or a router that forwards traffic can pass it, and the connection a VPN sends your traffic through is not your home network. It does not know which Wi-Fi a device is on, or tell a guest from a family member. What keeps others out is the link, and the devices you keep.
 
 ### Your own address
 
@@ -102,7 +102,7 @@ A proxy on this machine that passes goodcryptoX a `localhost` address reaches it
 * A device unused for 90 days must be added again. One you use stays signed in. Your browser keeps its sign-in for the address it was added at, so the same machine at another address (a name instead of a number) is added again; the browser may also forget it sooner if you clear its data.
 * A phone that uses both our server (away) and the home link (at home) has two rows: one for each way in. Remove removes the row you press.
 * Turning the switch off closes goodcryptoX to every home-network device; their rows stay, and turning it on again lets them back in. Devices that use our server are not affected (Phone access).
-* Away from home the address does not answer: use our server for that (Phone access).
+* Away from home, connect to your own VPN into your home network and open the same address, or use our server (Phone access).
 * Sign in with Binance works at your home-network address, such as 192.168.1.20. At your own address (a name), use a self-generated API key.
 
 ### Connect a wallet at this address

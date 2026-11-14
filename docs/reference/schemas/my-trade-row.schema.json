@@ -53,7 +53,7 @@
     },
     "venue": {
       "type": "string",
-      "description": "The venue the exits trade on, from the instrument id (\"hyperliquid\", \"binance\"). Before 2026-10-30 always \"hyperliquid\"."
+      "description": "The exchange the exits trade on, from the instrument’s venue. Older records without a venue use Hyperliquid."
     },
     "subject": {
       "enum": [

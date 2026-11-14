@@ -1,11 +1,13 @@
 # Supported exchanges
 
-goodcryptoX trades on Hyperliquid and Binance, by hand and with the DCA and Grid bots, from your own computer, NAS or server. It trades through a key kept on your machine, never withdraws, and charges one fee: 0.03% of each trade it places for you. More exchanges follow.
+goodcryptoX trades on Hyperliquid, Binance, Bybit and Bybit EU, by hand and with the DCA and Grid bots, from your own computer, NAS or server. It trades through a key kept on your machine, never withdraws, and charges one fee: 0.03% of each trade it places for you. A wallet's recovery phrase or private key is never an exchange key: pasted into a key, secret or account name field of any exchange, it is emptied at once and never sent, kept or logged.
 
 | Exchange | Spot | Perpetuals and futures | Accounts | goodcryptoX's fee |
 |---|---|---|---|---|
 | Hyperliquid | Yes | Yes | Main accounts, sub-accounts and the vaults you lead | Hyperliquid's builder fee, taken from each trade |
 | Binance | Yes | USD-M and COIN-M | Accounts and sub-accounts, each with its own key | Paid with [credits](credits.md) |
+| Bybit | Yes | USDT and USDC futures; coin-margined inverse futures | Accounts and sub-accounts, each with its own key | Paid with [credits](credits.md) |
+| Bybit EU | Yes | No | Accounts and sub-accounts, each with its own key | Paid with [credits](credits.md) |
 
 ## Hyperliquid
 
@@ -23,11 +25,17 @@ goodcryptoX trades on Hyperliquid and Binance, by hand and with the DCA and Grid
 * **The fee:** Binance has no way for goodcryptoX to take its fee from each trade, so the same 0.03% of each trade goodcryptoX places, buys and sells, is paid with [credits](credits.md) you buy upfront and spend as you trade. Your first 10,000 USD of CEX volume costs nothing.
 * **Connect:** **Sign in with Binance**, or a self-generated API key, set up on Binance in a minute ([Connect Binance](venues/binance.md)).
 
-Trades you place outside goodcryptoX, in the exchange's own app or elsewhere, pay goodcryptoX nothing on either exchange. A [referral code](referral-program.md) lowers goodcryptoX's fee on both.
+## Bybit and Bybit EU
+
+Bybit supports spot, USDT and USDC perpetuals and dated futures, and coin-margined inverse perpetuals and dated futures. Bybit EU supports spot only. Trade by hand or with DCA and Grid bots; connect each account or sub-account with its own API key ([Connect Bybit](venues/bybit.md)).
+
+On Bybit, change leverage and supported contracts’ hedge mode in goodcryptoX. Change a Unified Trading Account’s margin mode on Bybit. On both exchanges, you pay goodcryptoX's fee with [credits](credits.md).
+
+Trades you place outside goodcryptoX pay us no fee. A [referral code](referral-program.md) lowers goodcryptoX’s fee on your trades.
 
 ## Is my IP address fixed?
 
-Exchanges see the IP address of the computer running goodcryptoX. A fixed IP address is one that stays the same for months, so a key tied to it keeps working. Some keys, like the ones Binance makes (Sign in with Binance and System-generated API keys), trade only from IP addresses you list, so it matters whether that address stays the same. goodcryptoX shows the address it read and asks if it is fixed. If you can't tell, here is how to check:
+Exchanges see the IP address of the computer running goodcryptoX. A fixed IP address is one that stays the same for months, so a key tied to it keeps working. Some keys, like the ones Binance makes (Sign in with Binance and System-generated API keys), trade only from IP addresses you whitelist, so it matters whether that address stays the same. goodcryptoX shows the address it read and asks if it is fixed. If you can't tell, here is how to check:
 
 * **On a server or VPS** (Hostinger, DigitalOcean, Hetzner and others), a VPS usually keeps its address as long as you rent it. Look in your hosting panel for a dedicated or static IP, or ask your provider "Is this IP address static?".
 * **At home,** most lines change their address from time to time, for example when the router restarts. Some providers sell a fixed address (a static IP) as an extra.
@@ -36,9 +44,9 @@ Exchanges see the IP address of the computer running goodcryptoX. A fixed IP add
 * **By looking.** Open the exchange's page in Settings › Exchanges and note the address on the question. Look again in a few days, and after the machine restarts. If it never changes, it is probably fixed.
 * **With a proxy,** exchanges see the proxy's address. It is fixed if your proxy provider keeps it; ask them.
 
-**Yes** means the address stays the same: you can add it to the key's address list, and Sign in does that for you. **No** means a key tied to the address stops working when it changes; use a self-generated API key, which works from any IP address. **Not sure** is fine: a self-generated API key works either way, and you can switch later.
+**Yes:** whitelist the fixed IP address for the key. **No** or **Not sure:** choose a key that works without a whitelisted address; the form tells you whether it expires.
 
-**If the address changes later,** a key tied to it stops trading until the new address is on its list. The account's card in Settings › Exchanges shows the new address with **Copy**. On Binance, open **API Management**, edit the key's trusted IPs and add it, or press **Replace API key** and connect again.
+**If the address changes later,** a key tied to it stops trading until the new address is whitelisted. The account's card in Settings › Exchanges shows the new address with **Copy**. On Binance, open **API Management**, edit the key's trusted IPs and add it, or press **Replace API key** and connect again.
 
 ## Removing an account
 
@@ -54,11 +62,11 @@ Where each account has its own API key, as on Binance, there is no shared approv
 
 ### Which exchanges does goodcryptoX support?
 
-Hyperliquid (perpetuals and spot, with sub-accounts and vaults) and Binance (Spot, USD-M and COIN-M futures, with sub-accounts). More exchanges follow.
+Hyperliquid, Binance, Bybit and Bybit EU. See the table above for each exchange’s markets and accounts.
 
 ### What does goodcryptoX cost on each exchange?
 
-0.03% of each trade goodcryptoX places for you, on top of the exchange's own fees. On Hyperliquid it is the builder fee, taken from each trade; on Binance it is paid with credits, after the first 10,000 USD of CEX volume, which costs nothing.
+0.03% of each trade goodcryptoX places for you, on top of the exchange's own fees. On Hyperliquid it is the builder fee, taken from each trade; on Binance and Bybit it is paid with credits, after the first 10,000 USD of CEX volume, which costs nothing.
 
 ### Can goodcryptoX withdraw my funds?
 

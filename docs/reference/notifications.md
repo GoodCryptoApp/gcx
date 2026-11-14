@@ -17,6 +17,7 @@ Nothing you or a bot planned is ever sent as an alert.
 | Event | Template id | Kind | Switch |
 |---|---|---|---|
 | An account-percent bot’s unfilled orders resize after a leverage change | `grid.resized`, `dca.resized` | information | Grid: Range, follows, resizes; DCA: Bot stop or error |
+| A Grid or DCA bot is still Stopping, or still Launching without waiting for anything you set, 5 minutes after it began, counted while goodcryptoX runs (once per stop or launch; not while an order of the bot's is already waiting for you, whose own message told you; an order's own message is always sent) | `bot.stuck-stopping`, `bot.stuck-launching`, `bot.stuck-entry` (a DCA's entry not filled) | needs you | none |
 | An active Grid or DCA position comes within the selected distance of its liquidation price (once per approach: told again only after the price has been twice that distance away, or when the position grew) | `bot.liquidation-near` | alert | Alert when the price is … from liquidation (Trading) |
 | A Grid follows the price, re-enters its range or changes new opening sizes through Reinvest/account sizing | `grid.range`, `grid.resized` | information | Range, follows, resizes |
 | A Grid or DCA Modify takes effect, made by an agent or a program, or a change you made for the next cycle when that cycle starts | `grid.modified`, `dca.modified` | information | Grid: Starts, stops, changes; DCA: Bot stop or error |
@@ -24,10 +25,12 @@ Nothing you or a bot planned is ever sent as an alert.
 | A DCA bot's entry fills | `dca.executed-enter` | information | fills, level 0 |
 | A DCA bot's averaging order N fills | `dca.executed-safety` | information | fills, from level |
 | A DCA bot's take-profit or stop-loss fills | `dca.executed-tp`, `dca.executed-sl` | information | take-profit and stop-loss |
+| The exchange refuses a DCA bot's averaging orders: one message while averaging orders remain failed, sent at the first refusal, naming the exchange and, when the orders were under its minimum order value, saying so. A later refusal after **Fix failed** or **Retry order** can send another message, as can a refusal in a new cycle. Immediate retry failures are shown in the bot | `dca.failed`, `dca.failed-min` | alert | none |
+| A Grid bot's orders are refused or canceled: one message for all of them, once the grid has put back what it can, with the count still failed; nothing more until you press **Fix failed** or the count is back at zero | `grid.failed`, `grid.failed-mixed` | alert | none |
 | A manual order fills (in part, or in full) | `order.partial`, `order.fill` | information | Manual orders placed from goodcryptoX |
 | A manual stop triggers; a trailing stop starts trailing | `order.open-stop`, `order.trail-active` | information | Manual orders placed from goodcryptoX |
 | An order placed outside goodcryptoX fills: title "… fill (external)", the fill's size and price | `order.fill-outside` | information | Orders placed outside goodcryptoX |
-| An order needs repair | `repair.order` | needs you | none |
+| An order needs attention | `repair.order` | says what happened; a cancellation says where, without guessing who canceled it | applicable existing actions |
 | An order alert: an exit or a triggered order retried, part of an order not filled, a stop crossed while prices were missing, a late fill, a fill over the size, an order never placed, a position that changed side so its exits were ended | `order.alert` | alert | none |
 | A price feed is delayed | `md.stale` | alert | none |
 | The price feed is live again (only after a "delayed" message) | `md.recovered` | information | none |
@@ -35,7 +38,7 @@ Nothing you or a bot planned is ever sent as an alert.
 | The exchange halted trading on a market group | `md.halted` | information | none |
 | Prices that could not be checked against your stops (no longer sent since 2026-10-05; an older one still shows) | `md.gap-overdue` | needs you | none |
 
-A repair whose reason has no wording is still sent: "Unrecognised error." with the reason in the detail line. Every reason the engine raises today has its sentence; `fills-missing` reads "A fill was reported but its details have not arrived" (the order waits in repair: a later fill closes it, and Retry sends only the rest); `missed` (a stop or trailing order whose trigger was crossed while goodcryptoX was off, asleep or without prices, held for you) reads "Not placed: its trigger was crossed while goodcryptoX was off, asleep or without prices. It waits for you in the missed list."; an order on the missed list because the exchange's answer to it was lost reads "Not sent again by itself: the exchange's answer to it was lost, and goodcryptoX could not establish in time what became of it. It waits for you in the missed list." (its `reason` is `missed` all the same)
+A canceled order says **Canceled on {venue}: {instrument} {type}**, its side, size and price, and **It wasn't canceled from goodcryptoX**. Its next line is “If you changed it on {venue}, the new order is already there”. **Place again** places the unfilled remainder using the order's current parameters; **Leave canceled** closes its record. Other causes have their own sentence and applicable actions. An unknown result still offers **Cancel order**; **Refresh** remains on the card. A later press on an old message says “Refused: this was already settled”; a repeated accepted Telegram press says Already done.
 
 Not sent, only kept in the record: an order send whose outcome is not known yet (the runtime resolves it), and a change the exchange refused (you already see the refusal where you asked for it).
 
@@ -47,9 +50,9 @@ The DCA bot's own messages (its stops, a level not placed, its repairs, a liquid
 
 | Event | Template id | Kind | When |
 |---|---|---|---|
-| The API wallet expires within 30 days, within 7 days | `account.agent-expires` | information | once per credential, verified deadline and threshold; runtime boundary schedule, independent of Telegram linkage |
-| The API wallet expires within 24 hours | `account.agent-expires-day` | needs you | once per credential and verified deadline |
-| The API wallet expired | `account.agent-expired` | needs you | once per credential and verified deadline |
+| API wallet expires · In 30 days / In 7 days · Account · Replace API wallet | `account.agent-expires` | information | once per credential, verified deadline and threshold; runtime boundary schedule, independent of Telegram linkage |
+| API wallet expires · Within 24 hours · Account · Replace API wallet | `account.agent-expires-day` | needs you | once per credential and verified deadline |
+| API wallet expired · Account · Replace API wallet | `account.agent-expired` | needs you | once per credential and verified deadline |
 | A date-bearing venue's API key expires / last day / expired | `account.key-expires`, `account.key-expires-day`, `account.key-expired` | information / needs you / needs you | same shared schedule; venue/account/days/action variables; no Binance reader |
 | goodcryptoX started with its key store locked | `runtime.locked` | needs you | once until a start that unlocks: restarting while locked sends nothing more |
 | goodcryptoX was away (asleep, not running, updating) and something happened meanwhile | `runtime.away` | information | once, when the exchange has been read again and the late fills' window (3 minutes) has passed; per bot and manual order in the order they came, a line per message of that time (`•`) and its state now (`↳`, `runtime.away-now`); a manual order closed with no message (`runtime.away-order`), a trailing stop's extreme from that time (`runtime.away-trail`) and a page of that time (`runtime.away-page`) are lines too; a time away with nothing in it sends nothing |

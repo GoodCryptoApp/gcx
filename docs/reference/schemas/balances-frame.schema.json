@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["source", "mode", "modeReadAt", "state", "receivedAt", "collateral", "dexes", "spot"],
   "properties": {
-    "balanceState": { "enum": ["loading", "unread", "live", "stale"], "description": "Public Binance read summary. Raw internal wallet groups are not published; older frames may retain groups." },
+    "balanceState": { "enum": ["loading", "unread", "live", "stale"], "description": "Public read summary covering required parts only: the trading wallets and the account's status. Optional parts carry their own state. Raw internal wallet groups are not published; older frames may retain groups." },
     "accountValue": { "type": "string", "description": "0040 A2 d61: held runtime yardstick for bot sizing, including unrealized PnL. Optional for older peers; absence is unknown, never Available." },
     "walletValues": { "type": "array", "items": { "$ref": "#/$defs/walletValue" }, "description": "Quote-only venue valuations counted instead of asset detail, never holdings or available collateral. Binance PM/Pro uses the selected pool actualEquity in USD; components remain non-additive details and P/R/O retain incomplete. USD is already dollar value. Absent on older frames defaults to no value-only owners; existing spot/collateral/extra rows still count." },
     "binanceModes": {
@@ -19,8 +19,34 @@
         "multiAssets": { "type":"object", "additionalProperties":false, "required":["value","at","stale"], "properties": {"value":{"type":"boolean"},"at":{"type":"integer"},"stale":{"type":"boolean"}} }
       }
     },
+    "bybitModes": {
+      "type": "object", "additionalProperties": false,
+      "description": "Additive (0045 BY5): a Bybit or Bybit EU account's mode line, from its signed account read. Missing means never read; a failed read keeps the last value with stale true, never a default. classic is unifiedMarginStatus 1, unified 3 to 6; the margin mode is the account's (ISOLATED_MARGIN, REGULAR_MARGIN, PORTFOLIO_MARGIN).",
+      "properties": {
+        "account": { "type":"object", "additionalProperties":false, "required":["value","at","stale"], "properties": {"value":{"enum":["classic","unified"]},"at":{"type":"integer"},"stale":{"type":"boolean"}} },
+        "margin": { "type":"object", "additionalProperties":false, "required":["value","at","stale"], "properties": {"value":{"enum":["isolated","cross","portfolio"]},"at":{"type":"integer"},"stale":{"type":"boolean"}} }
+      }
+    },
+    "perCoinCollateral": {
+      "type": "object", "additionalProperties": false, "required": ["wallet", "state", "asOf", "coins"],
+      "description": "Additive (0045 amendment 2): the account's per-coin collateral choice, present only where the exchange lets the person select collateral coin by coin on this account and margin mode (today a Bybit or Bybit EU unified account outside isolated margin). Absent: no such choice, or not known yet; never Off. Only the person changes it, in goodcryptoX's panel; keys and agents read it.",
+      "properties": {
+        "wallet": { "type": "string", "description": "The wallet whose coins the choice selects, by the exchange's own name (Unified Trading Account)." },
+        "state": { "enum": ["live", "stale"], "description": "stale: the last read failed; the flags are the last known." },
+        "asOf": { "type": ["integer", "null"] },
+        "coins": { "type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["coin", "accepted", "selected"],
+          "properties": {
+            "coin": { "type": "string", "description": "The coin's code as the exchange writes it, within this account." },
+            "accepted": { "type": ["boolean", "null"], "description": "Whether the exchange accepts the coin as collateral; null: its answer did not say." },
+            "selected": { "type": ["boolean", "null"], "description": "Whether the coin is used as collateral; null: unknown, which does not mean Off." },
+            "fixed": { "const": true, "description": "Always used as collateral; the exchange offers no Off (USDT and USDC on Bybit)." }
+          }
+        } }
+      }
+    },
     "source": { "type": "string" },
-    "venue": { "type": "string", "description": "Additive (0037 B4): the venue namespace. Absent retains Hyperliquid's existing mode and token-index semantics. Binance has no Hyperliquid token index and reports independently read wallet totals even though its shared mode is unknown." },
+    "venue": { "type": "string", "description": "Additive (0037 B4): the venue namespace. Absent retains Hyperliquid's existing mode and token-index semantics. Binance, Bybit and Bybit EU (0045 BY4) have no Hyperliquid token index and report independently read wallet totals even though their shared mode is unknown." },
     "groups": {
       "type": "object", "description": "Additive (0037 B4): named wallet reads using the venue-neutral Group union from src/domain/balances/groups.ts. Absent on older frames. Empty wallets are hidden; a stale wallet retains its last holdings and time; loading/unread counts zero.",
       "additionalProperties": { "$ref": "#/$defs/group" }
@@ -116,7 +142,7 @@
   },
   "allOf": [
     {
-      "if": { "type": "object", "properties": { "venue": { "not": { "const": "binance" } } } },
+      "if": { "type": "object", "properties": { "venue": { "not": { "enum": ["binance", "bybit", "bybit-eu"] } } } },
       "then": { "type": "object", "properties": { "collateral": { "type": "array", "items": { "type": "object", "properties": { "token": { "type": "integer" } } } } } }
     },
     {
@@ -124,7 +150,7 @@
       "then": { "type": "object", "properties": { "dexes": { "type": "array", "items": { "type": "object", "properties": { "accountValue": { "type": "null" }, "withdrawable": { "type": "null" }, "marginUsed": { "type": "null" } } } } } }
     },
     {
-      "if": { "type": "object", "properties": { "mode": { "const": "unknown" }, "venue": { "not": { "const": "binance" } } } },
+      "if": { "type": "object", "properties": { "mode": { "const": "unknown" }, "venue": { "not": { "enum": ["binance", "bybit", "bybit-eu"] } } } },
       "then": {
         "type": "object",
         "properties": {

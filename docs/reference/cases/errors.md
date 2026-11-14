@@ -8,7 +8,7 @@ Every answer of the exchange maps to exactly one action class (`exchanges[].clas
 Refused for good: the order is never sent again as it is (a price off the tick, a value under the minimum, not enough margin, a leverage refused).
 
 ## `PRICE_RACE`
-A post-only order would have matched at once: goodcryptoX prices it again at the fresh best price, a bounded number of times.
+A post-only order would have matched at once: goodcryptoX prices it again at the fresh best price, a bounded number of times. A post-only goodcryptoX added itself (a bot's limit order on Hyperliquid spot while another order holds the same coin) goes again as an ordinary limit at its own price after one balance read, and opens no case.
 
 ## `NO_LIQUIDITY`
 Nothing to match an immediate order against: that attempt ends; an exit tries again at a wider price.
@@ -61,7 +61,7 @@ An answer goodcryptoX does not know: new risk is held and you are paged; nothing
 `ALREADY_FLAT`.
 
 ## "Post only order would have immediately matched"
-`PRICE_RACE`.
+`PRICE_RACE`. On a post-only goodcryptoX added itself: sent again as an ordinary limit at its own price after one balance read; no case.
 
 ## "Order could not immediately match against any resting orders"
 `NO_LIQUIDITY`: an immediate-or-cancel order found nothing.

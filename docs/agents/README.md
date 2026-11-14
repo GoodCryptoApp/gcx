@@ -4,6 +4,9 @@ goodcryptoX has a built-in MCP server and API: Claude Desktop, Claude Code, Code
 
 Our relay is the default way to reach your installation from another device. It cannot read your access key, requests or replies. A computer can instead use an [SSH tunnel](#use-an-ssh-tunnel-instead), bypassing the relay; a [phone](../phone.md) can also connect through the relay.
 
+
+Demo accounts and the Bybit developer view, including read-only-key Send examples and recovery, are for people signed in to the panel. Access keys and MCP cannot use `demoBybitView` or `demo=1`.
+
 ## What an agent can do
 
 These actions are available through both MCP and the API. The key sets what goodcryptoX allows; the AI agent's own rules may allow less. A payment from your wallet, such as buying credits, stays yours: the agent can tell you how to make it.
@@ -11,9 +14,11 @@ These actions are available through both MCP and the API. The key sets what good
 With any key, it can:
 
 - **Accounts and holdings**: read your accounts, balances, positions, open orders and bots, plus account and goodcryptoX status. The `portfolio` tool identifies known coins across accounts and unmatched exchange assets, with each holding's own price and any missing prices ([API](api.md#portfolio-identities)).
+- **Collateral settings**: read each account's collateral settings in the `balances` snapshot (`perCoinCollateral`). It names the wallet, whether the exchange accepts each coin and whether it is used as collateral; a missing value doesn't mean Off. Only the person can change collateral settings in goodcryptoX; API keys and MCP tools can read them. Demo accounts and their settings are available only in a person session.
 - **Trading volume**: read how much you traded since you connected each account, your filled trades, fees and closed P&L, by account and who placed the order, all time or by UTC day. The answer tells you where history or prices are missing ([API](api.md#trading-volume)).
 - **Orders and history**: read order details and finished orders, and ask the exchange about one order now, as the order card's Refresh does (nothing changes at the exchange).
 - **Bot details**: read plans, orders, results and funding payments.
+- **Funding payments**: read what an account paid or received on a market, the payment coin and each bot's share.
 - **Markets**: read available markets, their trading rules, and candle prices and volumes.
 - **Base currency**: read the currency you chose for goodcryptoX and its rate to the dollar.
 - **Credits**: read your credits, the starter CEX volume left (`remaining`; add what `balance` buys at `rate` for the panel’s total CEX volume left), the fee, which of your exchanges pay with credits, whether they run low or new orders and bots are paused, and how to add more. On Solana, credits can also be paid in $GOOD, held or bought from any coin in the same payment, at the $GOOD discount; a program can quote a payment with `POST /api/v1/credits/pay` (`input`, the coin amount, or `amount`, with `build: false`); the payment itself stays yours, from your wallet. The same `credits` tool returns `totals`: lifetime paid USD, payment credits, grants, CEX volume and fees; average daily and 30-day monthly volume and fees; the date window, whether cash is estimated, and the balance difference. Per-day reads with `before` remain available.
@@ -182,7 +187,7 @@ Picking another base currency converts each key's limits once, at that day's rat
 
 An order that makes a position smaller is always allowed, whatever the position limits say. The same key shares its limits across all apps and devices using it.
 
-A key trades every exchange you connect the same way. On Binance it places orders and runs bots within the same accounts, markets and limits, and sets a futures market's leverage and margin type within **Highest leverage** and **Margin**. Its trades there pay goodcryptoX's fee from your [credits](../credits.md), and its new orders and bots need credits as yours do.
+A Trade key can place orders and run bots on the accounts and markets you allow, within its limits. Bybit supports spot, USDT and USDC futures and inverse futures; Bybit EU supports spot only. On Binance and Bybit, the key can set futures leverage within **Highest leverage** and change margin mode within **Margin** where the exchange allows it. Change a Bybit Unified Trading Account's margin mode on Bybit. Trades on Binance, Bybit and Bybit EU pay goodcryptoX’s fee with [credits](../credits.md); new orders and bots need credits as yours do. On coin-margined markets the API and the MCP tools give sizes in contracts, with the contract's value beside them; the panel shows the same sizes in USD and in the coin.
 
 For the agent in this guide, Max 24h volume for orders is 10,000 USD and 9,800 USD is already used. Another 400 would take it to 10,200, so goodcryptoX refuses that order. Choose limits for the trading you intend, then copy the key and [connect your agent or program](#connect-any-mcp-app-or-program).
 
@@ -212,6 +217,8 @@ A bot is bounded by its own limits, never by the order limits: its entry, averag
 
 The bots' **Max 24h volume** counts each DCA cycle's money when the cycle starts, and a Grid bot's investment when it is launched and whenever it grows. If this agent launches three DCA bots with an entry of 500 USD and four averaging orders of 300 USD each, every cycle is 1,700 USD. Under a 5,000 USD limit the first two start; the third is created and waits, and you receive a Telegram message. It starts by itself once the first start is 24 hours old. Existing take-profits and stop-losses keep working meanwhile.
 
+A create that leaves out `leverage` or `marginMode` takes the open position's, else isolated 5x, as the API's reference says. If the exchange refuses the leverage or margin mode, the create is refused and no bot starts.
+
 The key can change only bots it created directly. Use a strategy sheet (the example at the end of [Proposals](#proposals)) to prepare and review a complete plan before allowing it to launch.
 
 A key made before these limits keeps its old rule until you save its limits again: each bot order must fit its largest order, and each cycle counts up front against the one 24-hour allowance it shares with its orders.
@@ -223,6 +230,10 @@ The Dashboard shows **At its limit**, and Telegram names the agent and the limit
 ### Checking an order first
 
 Ask for a preview before placing an order. It shows the proposed size, price, value and warnings without sending anything. The key's limits are checked on placement. A preview is a check of the plan, not approval of the trade.
+
+A DCA bot's preview has, for each side, `liquidation.price`: where the exchange would liquidate the position as the bot's orders fill. On Cross it is an estimate that assumes nothing else in the account changes. `"0"` means there is no liquidation price (the account fully covers the position); `liquidation` is `null` where the exchange gives a position none (portfolio margin).
+
+A Grid bot's preview also has `maxLoss`, the Grid form's **Max loss** line: for Stop below and Stop above, the most the grid can lose when that stop fires, fees included (`loss` in money; `lossPct` a percent of the Investment (the orders' value), as the form shows it; `by` says whether the stop, a Stop loss, Max drawdown or a liquidation ends it first). `by: none` with a `reason` means there is no most, for example with both follows on. It is an estimate at the price now; see [Max loss at a stop](../bots/grid-setup.md#max-loss-at-a-stop).
 
 A trading key's orders go through with the form's warnings; the exchange may still refuse them. Ask the agent to explain those warnings before trading. A Propose key keeps that decision in your hands.
 
@@ -248,7 +259,7 @@ Here an AI agent turns a strategy sheet, a description of the bots you want to r
 1. **Choose how to approve.** Make a **Propose** key to review and launch each bot in goodcryptoX. Choose **Trade** to let the agent create bots itself, with the accounts, markets and limits you allow. Start with Propose if you want to check how it reads your sheet.
 2. **Connect it** using [Connect any MCP app or program](#connect-any-mcp-app-or-program). For goodcryptoX on another computer, use [From another computer](#from-another-computer) to pair through the relay; an SSH tunnel is an alternative.
 3. **Give it the sheet and your choice.** Start with one profile: “Prepare this ETH profile on my trading sub-account. Show me the settings before creating it.” Say which profiles you want; several profiles on the same market add their exposure.
-4. **Compare the preview with the sheet.** Ask for goodcryptoX's bot preview. Check the entry, every averaging order, total investment, exits and repeat choices. With Propose, [open the proposal](#proposals) and check the filled form before **Launch**. With Trade, tell the agent when to create it.
+4. **Compare the preview with the sheet.** Ask for goodcryptoX's bot preview. Check the entry, every averaging order, total investment, exits and repeat choices. With Propose, [open the proposal](#proposals) and check the filled form before **Launch**. With Trade, tell the agent when to create it. The preview's stop loss (`stop.loss`) has the fees included: every order's and the stop's. A DCA bot's Max loss is `slMaxLossPct`, a percent of its Investment. A bot made before 3.2.1 may hold `slLossPct` instead, a percent of the margin: show it as `slLossPct ÷` the row's `leverage`, rounded down to 0.01 (20 at 10x is 2), and send `slMaxLossPct` to change it.
 5. **Check the result.** Open **Bots** and the bot's details. Review what the key did in **Settings › MCP & API**.
 
 Here is one ETH DCA profile. Its entry and four averaging orders are each 359.35 USDC: five orders total 1,796.75 USDC for one cycle. The Take Profit is 1.61% above the average entry price. That target does not guarantee a profit after every cost or a fill at the target price.

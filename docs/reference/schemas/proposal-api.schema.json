@@ -102,13 +102,13 @@
                     "isolated"
                   ],
                   "default": "isolated",
-                  "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated."
+                  "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated. If the exchange refuses the leverage a create names, the bot still starts at the exchange's leverage and the answer carries a `leverage-kept` warning."
                 },
                 "leverage": {
                   "type": "string",
                   "pattern": "^[1-9]\\d*$",
                   "default": "5",
-                  "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x."
+                  "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x. If the exchange refuses the leverage a create names, the bot still starts at the exchange's leverage and the answer carries a `leverage-kept` warning."
                 },
                 "settings": {
                   "$ref": "dca-bot-create.schema.json"
@@ -163,13 +163,13 @@
                     "isolated"
                   ],
                   "default": "isolated",
-                  "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated."
+                  "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated. If the exchange refuses the leverage a create names, the bot still starts at the exchange's leverage and the answer carries a `leverage-kept` warning."
                 },
                 "leverage": {
                   "type": "string",
                   "pattern": "^[1-9]\\d*$",
                   "default": "5",
-                  "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x."
+                  "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x. If the exchange refuses the leverage a create names, the bot still starts at the exchange's leverage and the answer carries a `leverage-kept` warning."
                 },
                 "settings": {
                   "$ref": "grid-bot-create.schema.json"

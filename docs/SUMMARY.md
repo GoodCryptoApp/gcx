@@ -16,6 +16,7 @@
 - [Supported exchanges](exchanges.md)
   - [Connect Hyperliquid](venues/hyperliquid.md)
   - [Connect Binance](venues/binance.md)
+  - [Connect Bybit](venues/bybit.md)
   - [Trading credits](credits.md)
 - [Referral program](referral-program.md)
 

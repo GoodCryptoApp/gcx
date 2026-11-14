@@ -2,6 +2,8 @@
 
 Your own program reads and trades on the exchanges you connect through goodcryptoX's API, which its OpenAPI document describes. A program uses the same keys, permissions and limits as an AI agent ([Keys and limits](README.md#keys-and-limits)).
 
+`POST /api/v1/accounts/{id}/check` (MCP `check_api_key`) reads a Binance, Bybit or Bybit EU account's API key permissions again, as **Check again** does on its card.
+
 Each figure comes in its trade's own currency: prices and values in the market's quote, a PnL in the asset its row names, credits and `GET /api/v1/portfolio` in USD, a key's limits in the currency they were set in. `GET /api/v1/rates` answers your base currency and its rate per 1 USD, to show a figure as goodcryptoX does.
 
 The `instruments` MCP tool and `GET /api/v1/instruments?venue=…` include each market's known 24h volume (quote notional) and price change (percent) and, where the exchange sends it, the last traded price. The API also serves `instrument-stats/<venue>` through its [topics route](../reference/runtime/api.md#the-socket). These figures remain decimal strings. For volume and change, null retains a previous known figure; optional `invalidate` names figures to clear. For `lastPrice`, absent retains the previous price for compatibility and explicit null clears it.
@@ -20,6 +22,9 @@ curl --fail-with-body -H "Authorization: Bearer $GCX_KEY" "$GCX_URL/api/v1/accou
 The OpenAPI document is at `$GCX_URL/api/v1/openapi.json`. A program requests the document with the same Bearer header; the description includes only what its key may call. Amounts, prices and sizes are decimal strings.
 
 </details>
+
+
+Demo accounts and the Bybit developer view, including read-only-key Send examples and recovery, are for people signed in to the panel. Access keys and MCP cannot use `demoBybitView` or `demo=1`.
 
 ## From another computer
 
@@ -65,11 +70,19 @@ Ask for a preview first ([Checking an order first](README.md#checking-an-order-f
 }
 ```
 
+With the account's leverage not read yet, a perpetual's order is sent and the exchange applies its own leverage; the preview's receipt then has no funds and the margin was not checked.
+
+An order sized in the quote currency (`"sizeUnit": "quote"`, or `"coin"` on a coin-margined contract) stays that amount: its coins are worked out again at each send, at the price it is sent at (a limit at its price, after every change of price; a stop when it triggers), and the order's row shows the amount as `cost` and `sizeUnit` beside `size`, the coins it is sized at now. A value at or above the exchange's minimum is rounded up one size step where rounding down would fall under the minimum, so `size` on the row can be worth up to one step more than the value sent. A size above zero that would send nothing (under one size step, after that rounding) is placed as one step of the coin, and the answer then says so: `{"id": "o1", "size": "0.001", "sizeUnit": "base"}`; zero is refused. To change it, `POST /api/v1/orders/{id}/modify` (MCP `modify_order`) takes `changes.sizeUnit` with `size`: `{"size": "150", "sizeUnit": "quote"}` makes it 150, `{"price": "2900"}` keeps the amount at the new price, and `size` alone is coins.
+
+An order under the exchange's minimum order value is sent as you send it (the preview warns with `trade.msgMinNotional`); the exchange's answer is the answer. Bots do the same: a DCA bot's entry and averaging orders and a Grid's levels under the minimum are sent, and one the exchange refuses is the bot's failed order (a DCA level `failed`, a Grid's `failed` count), sent again by Retry order or Fix failed. A bot preview's receipt row marks such an order `under`; `sent` false is only an order too small to send at all. A Grid row with `sendAll` places every level; one without it (launched by an earlier version) holds the levels under the minimum.
+
+On a coin-margined market (`contract.method` `"DIV"`), sizes on orders, positions and bots are served in contracts with the contract's facts: USD = contracts × `contract.multiplier`, and the coin = that USD ÷ the price. A DCA bot sized with `"sizingMode": "coin"` takes `entryAmount` and `level1Amount` in the contract's settlement coin (`contract.settlement`): every order is that coin at its own price, rounded down to whole contracts. `"cost"` puts up the same USD at every order; a USD amount under one contract starts as one contract's USD, and every level scales from it.
+
 On an account in hedge mode a futures market has two ids, `…:long` and `…:short`, and the side opens or closes: a Sell on the long or a Buy on the short only reduces that position, with or without `reduceOnly`; `reduceOnly: true` on the other side is refused (`reduce-only-opens`).
 
 A lost reply after sending does not mean an order failed: check the result before trying again. When retrying a trading request, keep the same `requestId` and body so it cannot place the same order twice.
 
-`POST /api/v1/margin` adds (a positive `amount`) or removes (a negative one) isolated margin on a position, in its margin coin (MCP `change_margin`). A Trade key does it on the accounts and markets its limits name, as it sets leverage: a key with no limits, or one for another account or market, gets 422 `key.*` and nothing is sent.
+`POST /api/v1/margin` adds (a positive `amount`) or removes (a negative one) isolated margin on a position on Hyperliquid, Binance and Bybit, in its margin coin (MCP `change_margin`). Bybit EU supports spot only. A Trade key does it on the accounts and markets its limits name, as it sets leverage: a key with no limits, or one for another account or market, gets 422 `key.*` and nothing is sent.
 
 The request bodies and the refusal messages of every route are in the OpenAPI document at `/api/v1/openapi.json`.
 
@@ -79,9 +92,25 @@ Some routes change something only you decide: a key that calls them gets 403 `pe
 
 * `POST /api/v1/accounts/{id}/bnb-fees` with `{"on": true}` turns **Pay fees in BNB** on or off for a Binance account (MCP `set_bnb_fees`). The account's row in `GET /api/v1/accounts` shows it as `bnbFees`: `on`, and the settings behind it, `spot` and `usdm`.
 
+A coin's **Collateral** switch is only yours too: `POST /api/v1/accounts/{id}/collateral` answers a key 403 and has no MCP tool. A program reads the setting in the `balances` topic (`perCoinCollateral`: the wallet, and for each coin `accepted`, `selected` and `fixed`; null is unknown, never Off), or reads one coin from the exchange now with `GET /api/v1/accounts/{id}/collateral?coin=BTC` (`{coin, accepted, selected}`; 503 when the read failed or took over ten seconds).
+
+Account removal is person-only: `POST /api/v1/accounts/{sourceId}/remove` serves Binance, Bybit and Bybit EU too; no account-removal MCP tool is exposed.
+
 ## Withdrawing a proposal
 
 A key that proposed an order or a bot can take it back while it waits for you: `POST /api/v1/proposals/{id}/withdraw` with `{"requestId": "..."}`, scope **Propose** or above. The answer is `{"accepted": true}`; asking again answers the same. A proposal of another key answers 404, as if it did not exist; one you launched answers 422 `proposal-launched`, and one you rejected 422 `proposal-rejected`. Rejecting stays yours: a key cannot reject.
+
+## Lists over several accounts
+
+`GET /api/v1/lists/positions` and `GET /api/v1/lists/orders` read every account the list covers. One account the exchange could not read does not hide the others: the page's `state` stays `live` while any account is read, and `accountStates` gives each account's own state (`live`, `stale`, `unavailable`, or `waiting` on its first read), so you know whose rows may be missing. The page's `state` is `stale` or `unavailable` only when no account could be read. Cancel all, Stop all and Close all answer each order, bot or position on its own: one that fails is listed in `refused` with its sentence, and the rest are counted in `count` and `ids`.
+
+## A grid's failed orders
+
+A grid row in `GET /api/v1/bots` carries `failed`, how many of its orders failed, and, while it is above zero, `failedWhy`: `money` when every one was refused or canceled for money, `other` when none was, `mixed` otherwise. The orders read lists each failed order with its status.
+
+`POST /api/v1/bots/{id}/command` with `{"requestId": "...", "kind": "fix-failed"}` places them again, the same as **Fix failed** in the panel: one fresh read of what the exchange says is free for a new order, less your orders on their way, then the failed orders nearest the price first, as far as that goes. It sends nothing the read does not cover. The answer is `{"placed", "left", "needed", "unit"}`: how many it sent, how many are still failed, and how much more of `unit` the rest needs (an order the exchange then refuses shows again in the row's `failed`); `later` counts the ones it left for another reason, `past` the ones it sent at once because the price had passed them. A paused grid answers 422 `paused` and places nothing; a balance read that fails answers 422 `balance` and places nothing; a stopped grid answers 409 `state`. It is an order action, so a key may send it for a grid it created. On grids, the bot's items carry one `orders-failed` item with the count (`facts.failed`) in place of one `level-failed` item per order. The MCP tool comes from the same operation.
+
+A bot still stopping or launching five minutes after it began, not waiting for anything you set, carries an item with cause `stuck-stopping`, `stuck-launching` or `stuck-entry` (a DCA's entry not filled); `GET /api/v1/bots/{id}` and the Dashboard's attention rows serve it, and it leaves when the bot leaves that state.
 
 ## Paying credits with $GOOD
 
@@ -124,6 +153,8 @@ A key sees only the connected accounts it is allowed to read. It sees its own `k
 `holdings` retains each account, venue, original code, amount, price, value and missing-price flag. Values and prices are USD decimal strings. Amounts are in that holding's units; value-only wallet amounts are null. A group's value sums the holding values: 2 UBTC at 60,000 on one exchange plus 1 BTC at 61,000 on another is 181,000, not three times a reference price. With no price, the amount remains and the value contributes zero; `unpriced` is true if any constituent lacks a price. Prices are the latest known at the local runtime; this read does not invent a price or require a goodcryptoX service. Accounts excluded from balances and demo money are absent from connected asset totals. Older runtimes omit `assets`; all older fields retain their meaning.
 
 The answer's `pnl` is what the accounts made since they were connected to goodcryptoX, from goodcryptoX's own record, on every exchange alike: closed futures trades after fees, and funding. Each row of `accounts` carries `connected`, the moment that account's PnL counts from; nothing before it is in any period.
+
+Read position figures through the `positions` topic (`snapshot` in MCP). `GET /api/v1/funding?sourceId=&instrumentId=` and the read-only MCP `funding` tool return signed payments and each bot's share. Optional `id` identifies the venue receipt; `asset` is the venue-stated coin of the legacy `usdc` amount. Never assume that amount is USDC. Binance hedge-mode receipts stay with the account because the venue supplies no side. Compatibility: older rows omit `id` and `asset`; all existing fields retain their meaning.
 
 ## Questions
 

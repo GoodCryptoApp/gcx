@@ -73,7 +73,7 @@ Under an alert about one of your bots or orders sit the buttons that fit it:
 - **A bot is running**: **Stop bot**, and **Close position** while it holds one.
 - **A bot's averaging order failed**: **Stop bot** and **Retry order**.
 - **A bot ended**: **Relaunch** starts a new one with its settings, and **Close position** if its position is still open.
-- **A bot or an order needs you**: the same answers as on its page, such as **Retry**, **Exchange is right** or **Cancel order**.
+- **An order canceled on the exchange**: **Place again** places its unfilled remainder again; **Leave canceled** closes it in goodcryptoX. Other repairs and bots offer the answers that apply on their page. If you changed it on {venue}, the new order is already there.
 - **The hourly reminder**: its item's buttons, and **Silence** to stop the reminders.
 
 Each button does what the same button in the panel does. Two switches in Settings › Alerts, under Telegram, both on at first:

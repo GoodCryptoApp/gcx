@@ -2,50 +2,290 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gcx.ai/schemas/runtime-api.schema.json",
   "title": "Runtime API request bodies",
-  "description": "The request bodies of the local API (decision 0008 §4.6) that no other schema defines. The order command is order-command.schema.json; the cancel body and the bot command are in lists-api.schema.json. Every number is a decimal or integer string, never a JSON number. See docs/reference/runtime/api.md.",
+  "description": "The request bodies of the local API (decision 0008 §4.6) that no other schema defines. The order command is order-command.schema.json; the cancel body and the bot command are in lists-api.schema.json. Money uses decimal strings. Counts, timestamps and transient demo generations use JSON integers where declared. See docs/reference/runtime/api.md.",
   "$defs": {
-    "orderFeeEvent": {"type": "object", "additionalProperties": false, "required": ["orderId", "sourceId", "family", "venueOrderId", "currency", "type", "total", "revision", "at"], "properties": {"orderId": {"type": "string", "minLength": 1}, "sourceId": {"type": "string", "minLength": 1}, "family": {"type": "string", "minLength": 1}, "venueOrderId": {"type": "string", "minLength": 1}, "currency": {"type": "string", "minLength": 1}, "type": {"const": "order-fee"}, "total": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"}, "revision": {"type": "string", "pattern": "^\\d+$"}, "at": {"type": "integer"}}, "description": "Journal reader contract only, no API writer. One authoritative total per account/family/UUID and durable serialized read generation. Repeats and older generations do nothing; late revisions replace totals. Absence retains fill-fee accounting. Production writers wait one release after this reader."},
-    "futuresMode": {
-      "type": "object", "additionalProperties": false, "required": ["dual", "disabled"],
-      "properties": { "dual": { "type": "boolean" }, "disabled": { "type": "boolean" } }
-    },
-    "futuresModes": {
-      "description": "Confirmed position modes per account and futures family. An absent family has not been read. disabled is always false; the venue decides whether a mode change is allowed.",
-      "type": "object", "additionalProperties": false,
-      "properties": { "usdm": { "$ref": "#/$defs/futuresMode" }, "coinm": { "$ref": "#/$defs/futuresMode" } }
-    },
-    "positionMode": {
-      "type": "object", "additionalProperties": false, "required": ["family", "dual"],
-      "properties": { "family": { "enum": ["usdm", "coinm"] }, "dual": { "type": "boolean" } }
-    },
-    "currency": { "enum": ["USD", "EUR", "GBP", "BTC", "ETH", "AED", "ALL", "AUD", "BGN", "BRL", "CAD", "CHF", "CLP", "CNY", "COP", "CZK", "DKK", "EGP", "HKD", "HUF", "IDR", "ILS", "INR", "JPY", "KRW", "MXN", "MYR", "NGN", "NOK", "NZD", "PHP", "PKR", "PLN", "RON", "RUB", "SAR", "SEK", "SGD", "THB", "TRY", "TWD", "UAH", "VND", "ZAR"], "description": "Added with 0050 (base currency): one of the 44 base currencies, goodcryptoX's 43 in its order and EGP; BTC and ETH are coins, valued at a venue's price, the rest fiat at a published rate per USD." },
-    "rates": {
-      "description": "GET /api/v1/rates (0050 \u00a75): the base currency's rate held now, units of it per 1 USD. `date` is the source's day for a fiat, `at` when the rate was fetched (a fiat) or read (BTC, ETH), `source` where from (`frankfurter`, `currency-api`, or the venue that priced the coin). With base USD, and with no rate held, it answers only `{currency: \"USD\", rate: \"1\"}` and fetches nothing.",
+    "orderFeeEvent": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["currency", "rate"],
+      "required": [
+        "orderId",
+        "sourceId",
+        "family",
+        "venueOrderId",
+        "currency",
+        "type",
+        "total",
+        "revision",
+        "at"
+      ],
       "properties": {
-        "currency": { "$ref": "#/$defs/currency" },
-        "rate": { "type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
-        "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
-        "at": { "type": "integer" },
-        "source": { "type": "string" }
+        "orderId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "venueOrderId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "order-fee"
+        },
+        "total": {
+          "type": "string",
+          "pattern": "^-?\\d+(\\.\\d+)?$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "at": {
+          "type": "integer"
+        },
+        "settled": {
+          "const": true
+        },
+        "supplemental": {
+          "const": true,
+          "description": "Add to booked fill fees in order projections. Absent preserves the existing replacement total, including old settled rows."
+        }
+      },
+      "description": "Journal reader contract only, no API writer. One authoritative total per account/family/UUID and durable serialized read generation. Repeats and older generations do nothing; late revisions replace totals. Absence retains fill-fee accounting. Production writers wait one release after this reader."
+    },
+    "futuresMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dual",
+        "disabled"
+      ],
+      "properties": {
+        "dual": {
+          "type": "boolean"
+        },
+        "disabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "futuresModes": {
+      "description": "Confirmed position modes: Binance futures families (unchanged) or Bybit market ids plus the existing currently viewed side-id aliases. An absent scope has not been read. For Binance, disabled is always false; the venue decides whether a mode change is allowed. For Bybit, disabled means the latest mode read failed or the market does not support changing mode.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "usdm": {
+          "$ref": "#/$defs/futuresMode"
+        },
+        "coinm": {
+          "$ref": "#/$defs/futuresMode"
+        }
+      },
+      "patternProperties": {
+        "^bybit:(linear|inverse):[^:]+(:(long|short))?$": {
+          "$ref": "#/$defs/futuresMode"
+        }
+      }
+    },
+    "collateral": {
+      "description": "0045 amendment 2: the person's press on one coin's \"Used as collateral\" switch on an account that has the choice (`perCoinCollateral` in the balances topic). Person-only",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coin", "selected"],
+      "properties": {
+        "coin": { "description": "The coin's code as the exchange writes it, from the account's `perCoinCollateral.coins`", "type": "string", "pattern": "^[A-Z0-9]{1,30}$" },
+        "selected": { "description": "true: use the coin as collateral; false: do not", "type": "boolean" }
+      }
+    },
+    "coinCollateral": {
+      "description": "0045 amendment 2: one coin's collateral flags as the exchange states them now; null: not stated (unknown, never Off)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coin", "accepted", "selected"],
+      "properties": {
+        "coin": { "type": "string" },
+        "accepted": { "type": ["boolean", "null"] },
+        "selected": { "type": ["boolean", "null"] }
+      }
+    },
+    "collateralEnd": {
+      "description": "0045 amendment 2: how a press of a coin's collateral switch ended, within ten seconds",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coin", "end", "selected"],
+      "properties": {
+        "coin": { "type": "string" },
+        "end": { "enum": ["confirmed", "refused", "unsent", "unconfirmed"] },
+        "cause": { "enum": ["margin", "coin", "limit", "region", "account", "fixed", "key", "expired", "registration", "permission", "ip-ban", "ip", "restricted", "general"] },
+        "selected": { "type": ["boolean", "null"] }
+      }
+    },
+    "positionMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dual"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "family"
+          ],
+          "not": {
+            "required": [
+              "instrumentId"
+            ]
+          }
+        },
+        {
+          "required": [
+            "instrumentId"
+          ],
+          "not": {
+            "required": [
+              "family"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "family": {
+          "enum": [
+            "usdm",
+            "coinm"
+          ]
+        },
+        "instrumentId": {
+          "type": "string",
+          "pattern": "^bybit:(linear|inverse):[^:]+(:(long|short))?$"
+        },
+        "dual": {
+          "type": "boolean"
+        }
+      }
+    },
+    "currency": {
+      "enum": [
+        "USD",
+        "EUR",
+        "GBP",
+        "BTC",
+        "ETH",
+        "AED",
+        "ALL",
+        "AUD",
+        "BGN",
+        "BRL",
+        "CAD",
+        "CHF",
+        "CLP",
+        "CNY",
+        "COP",
+        "CZK",
+        "DKK",
+        "EGP",
+        "HKD",
+        "HUF",
+        "IDR",
+        "ILS",
+        "INR",
+        "JPY",
+        "KRW",
+        "MXN",
+        "MYR",
+        "NGN",
+        "NOK",
+        "NZD",
+        "PHP",
+        "PKR",
+        "PLN",
+        "RON",
+        "RUB",
+        "SAR",
+        "SEK",
+        "SGD",
+        "THB",
+        "TRY",
+        "TWD",
+        "UAH",
+        "VND",
+        "ZAR"
+      ],
+      "description": "Added with 0050 (base currency): one of the 44 base currencies, goodcryptoX's 43 in its order and EGP; BTC and ETH are coins, valued at a venue's price, the rest fiat at a published rate per USD."
+    },
+    "rates": {
+      "description": "GET /api/v1/rates (0050 §5): the base currency's rate held now, units of it per 1 USD. `date` is the source's day for a fiat, `at` when the rate was fetched (a fiat) or read (BTC, ETH), `source` where from (`frankfurter`, `currency-api`, or the venue that priced the coin). With base USD, and with no rate held, it answers only `{currency: \"USD\", rate: \"1\"}` and fetches nothing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currency",
+        "rate"
+      ],
+      "properties": {
+        "currency": {
+          "$ref": "#/$defs/currency"
+        },
+        "rate": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "at": {
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        }
       }
     },
     "botCreated": {
       "description": "DCA or Grid create answer. warning is additive: absent on older runtimes or when no warning applies. The bot was created; this changes no journal row or trading effect. A retry retains the durable {id} answer, as before.",
       "type": "object",
-      "required": ["id"],
+      "required": [
+        "id"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "warning": { "type": "string", "description": "The existing warning sentence. Both kinds name every other active bot on this account and pair when Only this bot trades was requested and turned off. Grid defaults that switch to on when absent." }
+        "id": {
+          "type": "string"
+        },
+        "warning": {
+          "type": "string",
+          "description": "The existing warning sentence. Both kinds name every other active bot on this account and pair when Only this bot trades was requested and turned off. Grid defaults that switch to on when absent."
+        },
+        "warnings": {
+          "type": "array",
+          "description": "Each warning of `warning` on its own, when one has a code a program can act on (additive). `leverage-kept` (MH 2026-11-12, a launch from the panel; a key's create is refused instead): the exchange did not take the leverage and margin mode asked, so the bot runs at the exchange's: `leverage` and `marginMode` name it when the exchange's could be read after the failed write, and are absent when it could not.",
+          "items": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string" },
+              "code": { "type": "string" },
+              "leverage": { "type": "string" },
+              "marginMode": { "enum": ["cross", "isolated"] }
+            }
+          }
+        }
       },
       "additionalProperties": true
     },
     "botCreate": {
       "oneOf": [
         {
-          "description": "POST /api/v1/bots (decision 0016 \u00a77.2, slice L2): create a DCA bot on one account and instrument. Leverage and margin mode are set on the exchange before the bot starts (0016 d7); after that the exchange's value wins. A person, or a trading key within its limits (0016 Amendment 1 B80). Answers 200 {id, warning?} (`warning`, a sentence, only when a TA bot on spot that a sell signal can arm is created while the coin for a full sell ladder is not free or could not be read), 422 {rejected, text}, 409 a requestId reused with another body, 503 a process state.",
+          "description": "POST /api/v1/bots (decision 0016 §7.2, slice L2): create a DCA bot on one account and instrument. Leverage and margin mode are set on the exchange before the bot starts (0016 d7), and not sent when the exchange already has them; when the exchange does not take them a key's create is refused (422) as released, and a launch from the panel starts at the exchange's, with the `leverage-kept` warning (MH 2026-11-12); after that the exchange's value wins. A person, or a trading key within its limits (0016 Amendment 1 B80). Answers 200 {id, warning?} (`warning`, a sentence, only when a TA bot on spot that a sell signal can arm is created while the coin for a full sell ladder is not free or could not be read), 422 {rejected, text}, 409 a requestId reused with another body, 503 a process state.",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -75,13 +315,13 @@
                 "isolated"
               ],
               "default": "isolated",
-              "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated."
+              "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated. If the exchange refuses it, a key's create is refused and no bot starts, as released."
             },
             "leverage": {
               "type": "string",
               "pattern": "^[1-9]\\d*$",
               "default": "5",
-              "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x."
+              "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x. If the exchange refuses it, a key's create is refused and no bot starts, as released."
             },
             "settings": {
               "$ref": "dca-bot-create.schema.json"
@@ -142,13 +382,13 @@
                 "isolated"
               ],
               "default": "isolated",
-              "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated."
+              "description": "Catalogue A7: isolated unless chosen. Ruling 88 (a): left out, the mode of the position the account holds on the instrument, else isolated. If the exchange refuses it, a key's create is refused and no bot starts, as released."
             },
             "leverage": {
               "type": "string",
               "pattern": "^[1-9]\\d*$",
               "default": "5",
-              "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x."
+              "description": "The integer multiplier; catalogue A7: 5x unless chosen. Ruling 88 (a): left out, the leverage of the position the account holds on the instrument, else 5x. If the exchange refuses it, a key's create is refused and no bot starts, as released."
             },
             "settings": {
               "$ref": "grid-bot-create.schema.json"
@@ -168,8 +408,13 @@
               "description": "Grid notification switches, journaled from creation: activation, finish, PnL and range on by default; orders off (0040 d21)."
             },
             "overrides": {
-              "type": "array", "uniqueItems": true,
-              "items": { "enum": ["trade.msgKeyExpiry"] },
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "trade.msgKeyExpiry"
+                ]
+              },
               "description": "0049 R-b: a last-day create answers 422 trade.msgKeyExpiry; repeat with this key to launch anyway. A trading key's create proceeds without the refusal; automatic openings still wait. Absent: no warning acknowledged."
             },
             "anyway": {
@@ -273,23 +518,89 @@
     },
     "orderPreviewAnswer": {
       "description": "The answer of POST /api/v1/orders/preview (decision 0010 d5; added 2026-10-04): what POST /api/v1/orders would judge now, from the same validator with the runtime's own price, balances, position and leverage (docs/reference/orders/validation.md). Nothing is journaled or sent. A trading key's limits are not part of it.",
-      "type": "object", "additionalProperties": false, "required": ["errors", "warnings", "receipt"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "errors",
+        "warnings",
+        "receipt"
+      ],
       "properties": {
-        "errors": { "type": "array", "items": { "$ref": "#/$defs/previewMessage" }, "description": "Each refuses the order." },
-        "warnings": { "type": "array", "items": { "$ref": "#/$defs/previewMessage" }, "description": "Each refuses a person's order unless its key is in the command's overrides (\"send anyway\"); a trading key's order is sent with them (RULINGS 75)." },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/previewMessage"
+          },
+          "description": "Each refuses the order."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/previewMessage"
+          },
+          "description": "Each refuses a person's order unless its key is in the command's overrides (\"send anyway\"); a trading key's order is sent with them (RULINGS 75)."
+        },
         "receipt": {
           "description": "What would be sent, figured from the values that can be read, beside any errors (MH 564): null when the size or the price cannot be worked out. An order with no error always has one.",
           "oneOf": [
-            { "type": "null" },
             {
-              "type": "object", "additionalProperties": false, "required": ["side", "baseSize", "price", "notional"],
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "side",
+                "baseSize",
+                "price",
+                "notional"
+              ],
               "properties": {
-                "side": { "enum": ["buy", "sell"] },
-                "baseSize": { "$ref": "#/$defs/decimal", "description": "The size sent, in the base coin, floored to its step." },
-                "price": { "$ref": "#/$defs/decimal", "description": "The reference price: the limit, the trigger, the expected trailing stop, or the best opposite price for a market order." },
-                "notional": { "$ref": "#/$defs/decimal", "description": "baseSize × price, in the quote." },
-                "funds": { "type": "object", "additionalProperties": false, "required": ["asset", "amount"], "properties": { "asset": { "enum": ["base", "quote"] }, "amount": { "$ref": "#/$defs/decimal" } }, "description": "What it uses: a spot buy its value in the quote, a spot sell its size; perpetuals the margin on what opens new exposure. Absent for a close." },
-                "stopType": { "enum": ["stop-loss", "take-profit"], "description": "A stop's class by its trigger's side of the last price." }
+                "side": {
+                  "enum": [
+                    "buy",
+                    "sell"
+                  ]
+                },
+                "baseSize": {
+                  "$ref": "#/$defs/decimal",
+                  "description": "The size sent, in the base coin, floored to its step."
+                },
+                "price": {
+                  "$ref": "#/$defs/decimal",
+                  "description": "The reference price: the limit, the trigger, the expected trailing stop, or the best opposite price for a market order."
+                },
+                "notional": {
+                  "$ref": "#/$defs/decimal",
+                  "description": "baseSize × price, in the quote."
+                },
+                "funds": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "asset",
+                    "amount"
+                  ],
+                  "properties": {
+                    "asset": {
+                      "enum": [
+                        "base",
+                        "quote"
+                      ]
+                    },
+                    "amount": {
+                      "$ref": "#/$defs/decimal"
+                    }
+                  },
+                  "description": "What it uses: a spot buy its value in the quote, a spot sell its size; perpetuals the margin on what opens new exposure. Absent for a close."
+                },
+                "stopType": {
+                  "enum": [
+                    "stop-loss",
+                    "take-profit"
+                  ],
+                  "description": "A stop's class by its trigger's side of the last price."
+                }
               }
             }
           ]
@@ -298,23 +609,77 @@
     },
     "previewMessage": {
       "description": "One check the order meets: the message key (src/domain/orders/messages.ts) and its English text with every placeholder filled.",
-      "type": "object", "additionalProperties": false, "required": ["key", "text"],
-      "properties": { "key": { "type": "string", "minLength": 1 }, "text": { "type": "string", "minLength": 1 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "text"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "botPreviewAnswer": {
       "description": "The answer of POST /api/v1/bots/preview: a DCA bot's receipts, or a Grid bot's row (`kind: grid` in the body).",
-      "oneOf": [{ "$ref": "#/$defs/dcaPreviewAnswer" }, { "$ref": "#/$defs/gridPreviewAnswer" }]
+      "oneOf": [
+        {
+          "$ref": "#/$defs/dcaPreviewAnswer"
+        },
+        {
+          "$ref": "#/$defs/gridPreviewAnswer"
+        }
+      ]
+    },
+    "gridStopLoss": {
+      "description": "One range stop's Max loss. `loss` in the settlement currency (rounded up to the cent), `lossPct` a percent of the orders' value, the Investment (rounded up to 0.01), as the DCA preview's stop and as both bot forms' Max loss line shows it. `by`: what ends the grid at that loss (the stop; Stop loss or Max drawdown first; the exchange's liquidation first on isolated margin); `kept`: Close position on stop is off, the position stays open. `by: none`: no most exists, `reason` says why (a follow away from the stop with no limit whose loss grows with every move, both follows on, Reinvest on a short, a round trip that loses after fees, a trailing distance past the profit per level).",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["loss", "lossPct", "by"], "properties": { "loss": { "$ref": "#/$defs/decimal" }, "lossPct": { "$ref": "#/$defs/decimal" }, "by": { "enum": ["stop", "loss", "drawdown", "liquidation"] }, "kept": { "const": true } } },
+        { "type": "object", "additionalProperties": false, "required": ["by", "reason"], "properties": { "by": { "const": "none" }, "reason": { "enum": ["follow", "both", "reinvest", "fees", "trailing"] } } }
+      ]
     },
     "gridPreviewAnswer": {
       "description": "A Grid bot's preview: its row as the `bots` topic would carry it once created (bot-row.schema.json, `type: grid`), the account's fee rates the form's figures use, and the warnings of its levels.",
       "allOf": [
-        { "$ref": "bot-row.schema.json" },
         {
-          "type": "object", "required": ["type", "warnings"],
+          "$ref": "bot-row.schema.json"
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "warnings"
+          ],
           "properties": {
-            "type": { "const": "grid" },
-            "feeRates": { "$ref": "#/$defs/feeRates", "description": "The last read of the account's rates, else the exchange's published base rates (`at` null). Absent on a runtime that reads no rates." },
-            "warnings": { "type": "array", "items": { "enum": ["step-under-tick", "duplicate-levels"] }, "description": "The levels' warnings: a step under the price tick, levels that round to the same price." }
+            "type": {
+              "const": "grid"
+            },
+            "feeRates": {
+              "$ref": "#/$defs/feeRates",
+              "description": "The last read of the account's rates, else the exchange's published base rates (`at` null). Absent on a runtime that reads no rates."
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "step-under-tick",
+                  "duplicate-levels"
+                ]
+              },
+              "description": "The levels' warnings: a step under the price tick, levels that round to the same price."
+            },
+            "maxLoss": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "0040 amendment 9: the most the grid can lose at each range stop, fees included (the Grid form's Max loss line), at the runtime's price now; a stop with no line is absent (off, reached in profit, or a Neutral grid's follow away from it). An estimate: gaps can make it larger, funding is not counted.",
+              "properties": { "below": { "$ref": "#/$defs/gridStopLoss" }, "above": { "$ref": "#/$defs/gridStopLoss" } }
+            }
           }
         }
       ]
@@ -326,140 +691,568 @@
     },
     "dcaPreviewAnswer": {
       "description": "A DCA bot's preview: the price it was made at and one receipt per side the bot can enter on (a manual bot its side; a signal bot both). Every amount is a decimal string, exact (the form rounds for display).",
-      "type": "object", "additionalProperties": false, "required": ["price", "receipts"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "price",
+        "receipts"
+      ],
       "properties": {
-        "price": { "$ref": "#/$defs/decimal", "description": "The instrument's price the receipt was made at, as if the entry were made now." },
+        "price": {
+          "$ref": "#/$defs/decimal",
+          "description": "The instrument's price the receipt was made at, as if the entry were made now."
+        },
         "receipts": {
-          "type": "object", "additionalProperties": false, "minProperties": 1,
-          "properties": { "buy": { "$ref": "#/$defs/botReceipt" }, "sell": { "$ref": "#/$defs/botReceipt" } }
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "buy": {
+              "$ref": "#/$defs/botReceipt"
+            },
+            "sell": {
+              "$ref": "#/$defs/botReceipt"
+            }
+          }
         }
       }
     },
     "botReceipt": {
       "description": "One side's receipt (src/domain/dca/receipt.ts Receipt; release plan A27a, B11, B11a, B22): the orders the bot would send, the position's range, the stop's loss, the take-profit's distance from the last level, the margin (perpetuals) or funds (spot), and the liquidation check after each fill (perpetuals).",
-      "type": "object", "additionalProperties": false, "required": ["rows", "position", "stop", "tpDistancePct", "margin", "funds", "liquidation"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rows",
+        "position",
+        "stop",
+        "tpDistancePct",
+        "margin",
+        "funds",
+        "liquidation"
+      ],
       "properties": {
         "rows": {
           "type": "array",
           "items": {
-            "type": "object", "additionalProperties": false, "required": ["role", "level", "price", "pct", "size", "cost", "sent"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "level",
+              "price",
+              "pct",
+              "size",
+              "cost",
+              "sent"
+            ],
             "properties": {
-              "role": { "enum": ["entry", "avg", "sl", "tp"] },
-              "level": { "type": "integer", "minimum": 0, "description": "0 for the entry and the exits, n for averaging order n." },
-              "price": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] },
-              "pct": { "$ref": "#/$defs/decimal", "description": "From the entry's price, in percent, signed." },
-              "size": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] },
-              "cost": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] },
-              "sent": { "type": "boolean", "description": "false: under the exchange's minimum order value; shown, not sent." }
+              "role": {
+                "enum": [
+                  "entry",
+                  "avg",
+                  "sl",
+                  "tp"
+                ]
+              },
+              "level": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "0 for the entry and the exits, n for averaging order n."
+              },
+              "price": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/$defs/decimal"
+                  }
+                ]
+              },
+              "pct": {
+                "$ref": "#/$defs/decimal",
+                "description": "From the entry's price, in percent, signed."
+              },
+              "size": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/$defs/decimal"
+                  }
+                ]
+              },
+              "cost": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/$defs/decimal"
+                  }
+                ]
+              },
+              "sent": {
+                "type": "boolean",
+                "description": "false: its size rounds to nothing; not sent."
+              },
+              "under": {
+                "const": true,
+                "description": "Sent, and under the exchange's minimum value: the exchange may refuse it. Absent: not under (added 2026-11-13)."
+              }
             }
           }
         },
         "position": {
-          "type": "object", "additionalProperties": false, "required": ["size", "cost"],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size",
+            "cost"
+          ],
           "properties": {
-            "size": { "type": "array", "items": { "$ref": "#/$defs/decimal" }, "minItems": 2, "maxItems": 2, "description": "From the entry alone to every order sent filled." },
-            "cost": { "type": "array", "items": { "$ref": "#/$defs/decimal" }, "minItems": 2, "maxItems": 2 }
+            "size": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/decimal"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "From the entry alone to every order sent filled."
+            },
+            "cost": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/decimal"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
           }
         },
         "stop": {
-          "oneOf": [{ "type": "null" }, {
-            "type": "object", "additionalProperties": false, "required": ["price", "loss", "lossPct", "fromEntryPct"],
-            "properties": { "price": { "$ref": "#/$defs/decimal" }, "loss": { "$ref": "#/$defs/decimal" }, "lossPct": { "$ref": "#/$defs/decimal" }, "fromEntryPct": { "$ref": "#/$defs/decimal" } }
-          }]
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "price",
+                "loss",
+                "lossPct",
+                "fromEntryPct"
+              ],
+              "properties": {
+                "price": {
+                  "$ref": "#/$defs/decimal"
+                },
+                "loss": {
+                  "$ref": "#/$defs/decimal",
+                  "description": "What the orders lose when the stop sells them all, every one filled, in the settlement currency: the price loss plus the fee of every order (a limit entry and the averaging orders at the maker rate, a market or trailing entry at the taker) and of the stop's sale (the taker), each the exchange's rate for the account plus ours where it is taken on the fill. Fees counted since 2026-11-11 (MH); funding is not."
+                },
+                "lossPct": {
+                  "$ref": "#/$defs/decimal",
+                  "description": "`loss` as a percent of the orders' value, the bot's Investment (the form's Max loss line shows it as it is, and the typed Max loss, % is in the same base: slMaxLossPct, 0016 amendment 14)."
+                },
+                "fromEntryPct": {
+                  "$ref": "#/$defs/decimal"
+                }
+              }
+            }
+          ]
         },
-        "tpDistancePct": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] },
+        "tpDistancePct": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/decimal"
+            }
+          ]
+        },
         "margin": {
-          "oneOf": [{ "type": "null" }, {
-            "type": "object", "additionalProperties": false, "required": ["toLast", "survive"],
-            "properties": { "toLast": { "$ref": "#/$defs/decimal" }, "survive": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] } }
-          }]
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "toLast",
+                "survive"
+              ],
+              "properties": {
+                "toLast": {
+                  "$ref": "#/$defs/decimal"
+                },
+                "survive": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/$defs/decimal"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
         },
         "funds": {
-          "oneOf": [{ "type": "null" }, {
-            "type": "object", "additionalProperties": false, "required": ["amount", "asset"],
-            "properties": { "amount": { "$ref": "#/$defs/decimal" }, "asset": { "enum": ["quote", "base"] } }
-          }]
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amount",
+                "asset"
+              ],
+              "properties": {
+                "amount": {
+                  "$ref": "#/$defs/decimal"
+                },
+                "asset": {
+                  "enum": [
+                    "quote",
+                    "base"
+                  ]
+                }
+              }
+            }
+          ]
         },
         "liquidation": {
-          "oneOf": [{ "type": "null" }, {
-            "type": "object", "additionalProperties": false, "required": ["rows", "firstUnsafe"],
-            "properties": {
-              "price": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }], "description": "M1: first isolated liquidation on the price path, else the final position; Cross keeps the final-position estimate" },
-              "rows": {
-                "type": "array",
-                "items": {
-                  "type": "object", "additionalProperties": false, "required": ["level", "price", "next", "first"],
-                  "properties": { "level": { "type": "integer", "minimum": 0 }, "price": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }], "description": "Null when no positive liquidation price exists" }, "next": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/decimal" }] }, "first": { "type": "boolean" } }
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rows",
+                "firstUnsafe"
+              ],
+              "properties": {
+                "price": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/$defs/decimal"
+                    }
+                  ],
+                  "description": "M1: first isolated liquidation on the price path, else the final position; Cross keeps the final-position estimate, if nothing else in the account changes (0016 amendment 13). \"0\" means no liquidation price (a position the backing fully covers), on every branch; null only with no position. The object is null where the exchange gives a position no liquidation price (portfolio margin)"
+                },
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "level",
+                      "price",
+                      "next",
+                      "first"
+                    ],
+                    "properties": {
+                      "level": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "price": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "$ref": "#/$defs/decimal"
+                          }
+                        ],
+                        "description": "Null when no positive liquidation price exists"
+                      },
+                      "next": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "$ref": "#/$defs/decimal"
+                          }
+                        ]
+                      },
+                      "first": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "firstUnsafe": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  ]
                 }
-              },
-              "firstUnsafe": { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }] }
+              }
             }
-          }]
+          ]
         }
       }
     },
-    "decimal": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$" },
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
     "restoreEstimate": {
       "description": "GET /api/v1/bots/{id}/restore (decision 0016 Amendment 2 d6): \"The bot is right\"'s market order for the difference between the bots' records on the coin and the exchange's position, estimated from one book read (ruling 141). price: its average on the book; worst: the price its bound allows (the larger of 10% and 1.5 x the book's reach, no ceiling for a person); cost and fee in the quote; warn: the bound passes 25% or the book shows less than the size, so the choice needs `anyway`; reduceOnly: it only reduces the exchange's position (perpetuals).",
-      "type": "object", "additionalProperties": false, "required": ["side", "size", "price", "worst", "cost", "fee", "warn", "reduceOnly"],
-      "properties": { "side": { "enum": ["buy", "sell"] }, "size": { "$ref": "#/$defs/decimal" }, "price": { "$ref": "#/$defs/decimal" }, "worst": { "$ref": "#/$defs/decimal" }, "cost": { "$ref": "#/$defs/decimal" }, "fee": { "$ref": "#/$defs/decimal" }, "warn": { "type": "boolean" }, "reduceOnly": { "type": "boolean" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "side",
+        "size",
+        "price",
+        "worst",
+        "cost",
+        "fee",
+        "warn",
+        "reduceOnly"
+      ],
+      "properties": {
+        "side": {
+          "enum": [
+            "buy",
+            "sell"
+          ]
+        },
+        "size": {
+          "$ref": "#/$defs/decimal"
+        },
+        "price": {
+          "$ref": "#/$defs/decimal"
+        },
+        "worst": {
+          "$ref": "#/$defs/decimal"
+        },
+        "cost": {
+          "$ref": "#/$defs/decimal"
+        },
+        "fee": {
+          "$ref": "#/$defs/decimal"
+        },
+        "warn": {
+          "type": "boolean"
+        },
+        "reduceOnly": {
+          "type": "boolean"
+        }
+      }
     },
     "attentionDone": {
       "description": "POST /api/v1/attention/done (decision 0016 Amendment 2 d10; 0003 Amendment 2 d8): a person's Done on a row of the Dashboard's Needs your attention section, of either kind, journaled once as attention.done so every device hides it. key: the row's (a position row's `bot-row.schema.json` attention.key, an allowance row's `runtime-topic.schema.json` attention.key). 200 {accepted: true}; 403 for a key; 503 {error} when the journal could not be written.",
-      "type": "object", "additionalProperties": false, "required": ["requestId", "key"],
-      "properties": { "requestId": { "type": "string", "minLength": 1, "maxLength": 128 }, "key": { "type": "string", "minLength": 1, "maxLength": 200 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "key"
+      ],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
     },
     "dashboardTold": {
       "description": "Added with MH 220 (0007 Amendment 9 d6): POST /api/v1/dashboard/told, the panel's report that a person saw a Worth a look row: at least half of it in view for five seconds, cumulative within one visit, in a visible, focused window. id: the row's (`dashboard-topic.schema.json` worth[].id). The runtime takes the row's told then (its life P&L, its funding when its words are funding's, the band it shows, the time), once per row per visit; nothing is journaled. 200 {told}: false when the row is not drawn in this visit or was told in it; 403 for a key. dismiss (added with MH 255; absent: false): the person pressed the row's ×: the row is told with what it shows now, even when told already, and the runtime no longer serves it in this visit, on every device; it returns at a later visit only when its situation grows; {told: false} when it is not drawn or was dismissed already. A previous build answers 400 to the field (its body is closed); the panel sends it only to the runtime that serves it.",
-      "type": "object", "additionalProperties": false, "required": ["id"],
-      "properties": { "id": { "type": "string", "minLength": 1, "maxLength": 200 }, "dismiss": { "type": "boolean" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "dismiss": {
+          "type": "boolean"
+        }
+      }
     },
     "attentionSilence": {
       "description": "Added with 0028 d27.4 (RULINGS 356 b): POST /api/v1/attention/silence, a person's Silence on an item's hourly reminders (Telegram's button and the panel's), journaled once as attention.silence so every device agrees. key: the item's (`items[].key` on the runtime topic's attention rows and on GET /api/v1/bots/{id}). The item stays open, on the Dashboard and on the bot's page, its hold unchanged; a new episode of it has a new key and is reminded again. 200 {accepted: true}; 403 for a key; 503 {error} when the journal could not be written.",
-      "type": "object", "additionalProperties": false, "required": ["requestId", "key"],
-      "properties": { "requestId": { "type": "string", "minLength": 1, "maxLength": 128 }, "key": { "type": "string", "minLength": 1, "maxLength": 200 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "key"
+      ],
+      "properties": {
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
     },
     "login": {
       "description": "POST /api/v1/login: the one-time code from the login link's fragment (`gcx open`). Single use, 60 s.",
-      "type": "object", "additionalProperties": false, "required": ["code"],
-      "properties": { "code": { "type": "string", "minLength": 1, "maxLength": 128 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
     },
     "modify": {
       "description": "POST /api/v1/orders/{id}/modify (decision 0004 d10; release plan A65, A67): change an open order. Either a level dragged on the chart and confirmed (decision 0005, item 9), `field` and `price`, or the fields the modify form changes, `changes` (added in A65). What each order may change is goodcryptoX's caps table (docs/reference/orders/primitives.md, Modify); every price, size and duration is a decimal string.",
       "oneOf": [
         {
-          "type": "object", "additionalProperties": false, "required": ["requestId", "field", "price"],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requestId",
+            "field",
+            "price"
+          ],
           "properties": {
-            "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
-            "field": { "enum": ["price", "triggerPrice"] },
-            "price": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" }
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "field": {
+              "enum": [
+                "price",
+                "triggerPrice"
+              ]
+            },
+            "price": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$"
+            }
           }
         },
         {
-          "type": "object", "additionalProperties": false, "required": ["requestId", "changes"],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requestId",
+            "changes"
+          ],
           "properties": {
-            "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
             "changes": {
-              "type": "object", "additionalProperties": false, "minProperties": 1,
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
               "description": "Only the fields that change.",
               "properties": {
-                "size": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "The order's whole size in the base asset, what filled included." },
-                "price": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A limit's price, a stop-limit's limit price." },
-                "triggerPrice": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
-                "triggerTimeout": { "type": "string", "pattern": "^\\d+$", "description": "Milliseconds." },
-                "distance": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A trailing stop's distance, in the order's unit (percent or quote)." },
-                "trailStart": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$" },
-                "postOnly": { "type": "boolean" },
-                "reduceOnly": { "type": "boolean" },
-                "improveOnly": { "type": "boolean" }
+                "size": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "The order's whole size, what filled included: in the base asset, or in `sizeUnit` when it is sent."
+                },
+                "sizeUnit": {
+                  "enum": [
+                    "base",
+                    "quote",
+                    "coin"
+                  ],
+                  "description": "Added 2026-11-11 (decision 0058): the unit of `size`, sent with it (alone it is refused, 400). `quote` (or `coin` on an inverse contract) makes the order a value order: it keeps that value at every later change of price and is sized from it at each send. Absent, or `base`: coins, as before; a value order given a size in coins becomes a coin order."
+                },
+                "price": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "A limit's price, a stop-limit's limit price."
+                },
+                "triggerPrice": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$"
+                },
+                "triggerTimeout": {
+                  "type": "string",
+                  "pattern": "^\\d+$",
+                  "description": "Milliseconds."
+                },
+                "distance": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "A trailing stop's distance, in the order's unit (percent or quote)."
+                },
+                "trailStart": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$"
+                },
+                "postOnly": {
+                  "type": "boolean"
+                },
+                "reduceOnly": {
+                  "type": "boolean"
+                },
+                "improveOnly": {
+                  "type": "boolean"
+                }
               }
             },
             "exits": {
-              "type": "object", "additionalProperties": false, "required": ["bracket"],
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "bracket"
+              ],
               "description": "Decision 0004 amendment 2 v4.3 d7 (added 2026-10-18): one Save of the order's Modify form that changes the order and its take-profit and stop-loss is one request. `bracket` is the whole TP/SL block after the Save (exits-command.schema.json, edit), null when both are switched off; `overrides` the exits' warnings sent anyway. The runtime judges the change, then the exits against the order as changed, and journals both in one step, or refuses the request and changes nothing. A person's only: a trading key's request carrying it is refused (key.order). Absent: the change alone, as before; an earlier runtime refuses a body with it.",
               "properties": {
-                "bracket": { "oneOf": [{ "$ref": "order-command.schema.json#/$defs/bracket" }, { "type": "null" }] },
-                "overrides": { "$ref": "exits-command.schema.json#/$defs/overrides" }
+                "bracket": {
+                  "oneOf": [
+                    {
+                      "$ref": "order-command.schema.json#/$defs/bracket"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "overrides": {
+                  "$ref": "exits-command.schema.json#/$defs/overrides"
+                }
               }
             }
           }
@@ -468,190 +1261,864 @@
     },
     "leverage": {
       "description": "POST /api/v1/leverage: the exchange's leverage and margin mode for one account and instrument (decision 0007 part 3 decision 8; built in decision 0013 S10). The answer is 200 {accepted: true} once the exchange took it, or 422 {rejected, text}; the leverage topic shows the exchange's state after it, never the request.",
-      "type": "object", "additionalProperties": false, "required": ["requestId", "sourceId", "instrumentId", "leverage", "marginMode"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "sourceId",
+        "instrumentId",
+        "leverage",
+        "marginMode"
+      ],
       "properties": {
-        "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
-        "sourceId": { "type": "string", "minLength": 1 },
-        "instrumentId": { "type": "string", "minLength": 1 },
-        "leverage": { "type": "string", "pattern": "^[1-9]\\d*$", "description": "The integer multiplier." },
-        "marginMode": { "enum": ["cross", "isolated"] }
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrumentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "leverage": {
+          "type": "string",
+          "pattern": "^[1-9]\\d*$",
+          "description": "The integer multiplier."
+        },
+        "marginMode": {
+          "enum": [
+            "cross",
+            "isolated"
+          ]
+        }
       }
     },
     "margin": {
       "description": "POST /api/v1/margin (decision 0013 S10; 0003 §2.14; BN-ACCOUNT-CAPS): isolated margin added to (positive) or removed from (negative) the account's position on one perpetual, in the position's margin coin (USDC on Hyperliquid, on its 0.000001 grid). `amount` names it on every venue; `usdc`, its first name, is still taken; one of the two. Sent once, never again without an answer. The answer is 200 {accepted: true} or 422 {rejected, text}.",
-      "type": "object", "additionalProperties": false, "required": ["requestId", "sourceId", "instrumentId"],
-      "oneOf": [{ "required": ["amount"] }, { "required": ["usdc"] }],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "sourceId",
+        "instrumentId"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "amount"
+          ]
+        },
+        {
+          "required": [
+            "usdc"
+          ]
+        }
+      ],
       "properties": {
-        "requestId": { "type": "string", "minLength": 1, "maxLength": 128 },
-        "sourceId": { "type": "string", "minLength": 1 },
-        "instrumentId": { "type": "string", "minLength": 1 },
-        "amount": { "type": "string", "pattern": "^-?\\d+(\\.\\d{1,6})?$", "description": "Added (positive) or removed (negative), in the position's margin coin; a decimal string, never a JSON number." },
-        "usdc": { "type": "string", "pattern": "^-?\\d+(\\.\\d{1,6})?$", "description": "The first name of `amount` (Hyperliquid's USDC), still taken; a decimal string, never a JSON number." }
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrumentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^-?\\d+(\\.\\d{1,6})?$",
+          "description": "Added (positive) or removed (negative), in the position's margin coin; a decimal string, never a JSON number."
+        },
+        "usdc": {
+          "type": "string",
+          "pattern": "^-?\\d+(\\.\\d{1,6})?$",
+          "description": "The first name of `amount` (Hyperliquid's USDC), still taken; a decimal string, never a JSON number."
+        }
       }
     },
     "loginItem": {
       "description": "GET /api/v1/login-item answers it; POST /api/v1/login-item turns start at login on or off and answers the system's state after (it may stay off until the system allows it). 404 where nothing starts goodcryptoX at login (a server, Docker, a checkout). The answer is the system's own registration, read each time; on a Mac and Windows the person's \"off\" is also kept in install.json (0008 amendment 1 d5.5 and its Built notes).",
-      "type": "object", "additionalProperties": false, "required": ["on"],
-      "properties": { "on": { "type": "boolean", "description": "gcx starts when this user logs in." } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on"
+      ],
+      "properties": {
+        "on": {
+          "type": "boolean",
+          "description": "gcx starts when this user logs in."
+        }
+      }
     },
     "loginItemState": {
       "description": "GET /api/v1/login-item and a successful POST answer the system state. Optional requiresApproval preserves a helper’s external Startup-off reason (C111); absent from older providers. The POST body remains loginItem, on only.",
-      "type": "object", "additionalProperties": false, "required": ["on"],
-      "properties": { "on": { "type": "boolean" }, "requiresApproval": { "type": "boolean" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on"
+      ],
+      "properties": {
+        "on": {
+          "type": "boolean"
+        },
+        "requiresApproval": {
+          "type": "boolean"
+        }
+      }
     },
     "updates": {
       "description": "GET /api/v1/updates (0008 amendment 1 d6, amendment 2 d6; roadmap I7): the updater's state. The runtime reads the latest release from GitHub when it starts and at a read of this route (the panel reads it at each connection) when there is no answer, the last one failed more than a minute ago, or the last is more than 6 hours old; no timer. It keeps the answer in <data>/updates/check.json, so a start serves the last answer at once. Where a helper swaps (gcx.app), a newer build is downloaded and checked by itself (staged) and installed once no panel page has been on screen for 5 minutes. A person's, never an access key's; 404 where the runtime has no updater (the development runtimes).",
-      "type": "object", "additionalProperties": false, "required": ["current", "latest", "state", "checkedAt", "canUpdate"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "current",
+        "latest",
+        "state",
+        "checkedAt",
+        "canUpdate"
+      ],
       "properties": {
-        "current": { "type": "string", "description": "The running build's stamp (amendment 2 d1.3): a numbered build such as 3.0.0+2312, a development build such as 3.0.0-dev+2312.a1b2c3d, or a checkout's 3.0.0-dev. The panel compares it at each connection with the one it first received and reloads once when it differs (d6.10)." },
-        "latest": { "type": ["string", "null"], "description": "The latest release's stamp (its tag without the v); null before the first check that reached GitHub." },
-        "state": { "enum": ["upToDate", "available", "checking", "failed", "updating"], "description": "checking: a check has not answered yet; failed: the last check did not reach an answer (see reason); updating: the runtime is downloading and verifying a newer build (by itself, or after Try again), or draining before it exits 75." },
-        "checkedAt": { "type": ["integer", "null"], "description": "When the last check ended, in milliseconds since the epoch." },
-        "canUpdate": { "type": "boolean", "description": "A press installs at once (POST /api/v1/updates/apply, the panel's Try again): a newer release, a helper that swaps the app (gcx.app) or, on a server, the updater beside gcx in the compose file, and not a development build, which reports a release but is never updated by gcx. Also true for a build the helper could not install or put back (refused: never installed again by itself)." },
-        "reason": { "type": "string", "description": "With failed: why the check failed. With available: why the last update did not install (the download, the checksum, the app's version or signature, the helper's swap, or a put-back of the previous version)." },
-        "staged": { "type": "string", "description": "Added by 0008 amendment 2 V4: the stamp of the build downloaded and checked (on a server, the image its updater pulled: ruling 28 of 2026-10-18), which installs in the quiet time: no panel page on screen for 5 minutes and no open order within 1% of its price; absent when none waits." },
-        "withdrawn": { "const": true, "description": "Added by 0024 L10 (d7.7): this build is withdrawn, its own GitHub release marked pre-release after it was found broken. Learned at the usual check, only when latest answers a lower build than this published one (the release list is then read once); kept in check.json and shown at the next start; cleared when a check finds the mark gone or a build not lower. The panel shows \"Build N has a problem: go back to the previous build\" with one button (POST /api/v1/updates/rollback) on a Mac, the compose line in Docker. Absent: not withdrawn (every older runtime)." },
-        "previous": { "type": "string", "description": "Added by 0024 L10, only with withdrawn: the stamp of the build the button goes back to (the newest published build below this one, as the release list named it at that check); absent when the list named none." },
-        "shell": { "enum": ["mac", "windows", "docker", "node"], "description": "Added by 0024 L10: where gcx runs, the daily record's own value (0024 d15.1): mac under the Mac app's helper, windows under the Windows app's helper (added with it), docker in the image, node otherwise. The panel shows the withdrawn banner's button on a Mac and, in Docker, the compose line in its place and beside an available version. Absent (an older runtime): neither." },
-        "tier": { "enum": ["internal", "beta", "everyone"], "description": "Added by 0030 amendment 1 TR1b: the running copy's tier, its GCXTier (or GCX_TIER), Everyone with none. Absent: an older runtime." },
-        "tiers": { "type": "array", "items": { "enum": ["internal", "beta", "everyone"] }, "description": "Added by 0030 amendment 1 TR1b: the tiers POST /api/v1/updates/tier installs, those at or below the install's ceiling (install.json updates.ceiling, the highest tier it ever ran), highest first. Settings › For developers shows Updates from where it holds more than one. Served where goodcryptoX swaps its own program (the Mac's and the Windows helper, the Linux desktop) and in Docker (the compose line); absent elsewhere, on a development build and on an older runtime." }
+        "current": {
+          "type": "string",
+          "description": "The running build's stamp (amendment 2 d1.3): a numbered build such as 3.0.0+2312, a development build such as 3.0.0-dev+2312.a1b2c3d, or a checkout's 3.0.0-dev. The panel compares it at each connection with the one it first received and reloads once when it differs (d6.10)."
+        },
+        "latest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The latest release's stamp (its tag without the v); null before the first check that reached GitHub."
+        },
+        "state": {
+          "enum": [
+            "upToDate",
+            "available",
+            "checking",
+            "failed",
+            "updating"
+          ],
+          "description": "checking: a check has not answered yet; failed: the last check did not reach an answer (see reason); updating: the runtime is downloading and verifying a newer build (by itself, or after Try again), or draining before it exits 75."
+        },
+        "checkedAt": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "When the last check ended, in milliseconds since the epoch."
+        },
+        "canUpdate": {
+          "type": "boolean",
+          "description": "A press installs at once (POST /api/v1/updates/apply, the panel's Try again): a newer release, a helper that swaps the app (gcx.app) or, on a server, the updater beside gcx in the compose file, and not a development build, which reports a release but is never updated by gcx. Also true for a build the helper could not install or put back (refused: never installed again by itself)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "With failed: why the check failed. With available: why the last update did not install (the download, the checksum, the app's version or signature, the helper's swap, or a put-back of the previous version)."
+        },
+        "staged": {
+          "type": "string",
+          "description": "Added by 0008 amendment 2 V4: the stamp of the build downloaded and checked (on a server, the image its updater pulled: ruling 28 of 2026-10-18), which installs in the quiet time: no panel page on screen for 5 minutes and no open order within 1% of its price; absent when none waits."
+        },
+        "withdrawn": {
+          "const": true,
+          "description": "Added by 0024 L10 (d7.7): this build is withdrawn, its own GitHub release marked pre-release after it was found broken. Learned at the usual check, only when latest answers a lower build than this published one (the release list is then read once); kept in check.json and shown at the next start; cleared when a check finds the mark gone or a build not lower. The panel shows \"Build N has a problem: go back to the previous build\" with one button (POST /api/v1/updates/rollback) on a Mac, the compose line in Docker. Absent: not withdrawn (every older runtime)."
+        },
+        "previous": {
+          "type": "string",
+          "description": "Added by 0024 L10, only with withdrawn: the stamp of the build the button goes back to (the newest published build below this one, as the release list named it at that check); absent when the list named none."
+        },
+        "shell": {
+          "enum": [
+            "mac",
+            "windows",
+            "docker",
+            "node"
+          ],
+          "description": "Added by 0024 L10: where gcx runs, the daily record's own value (0024 d15.1): mac under the Mac app's helper, windows under the Windows app's helper (added with it), docker in the image, node otherwise. The panel shows the withdrawn banner's button on a Mac and, in Docker, the compose line in its place and beside an available version. Absent (an older runtime): neither."
+        },
+        "tier": {
+          "enum": [
+            "internal",
+            "beta",
+            "everyone"
+          ],
+          "description": "Added by 0030 amendment 1 TR1b: the running copy's tier, its GCXTier (or GCX_TIER), Everyone with none. Absent: an older runtime."
+        },
+        "tiers": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "internal",
+              "beta",
+              "everyone"
+            ]
+          },
+          "description": "Added by 0030 amendment 1 TR1b: the tiers POST /api/v1/updates/tier installs, those at or below the install's ceiling (install.json updates.ceiling, the highest tier it ever ran), highest first. Settings › For developers shows Updates from where it holds more than one. Served where goodcryptoX swaps its own program (the Mac's and the Windows helper, the Linux desktop) and in Docker (the compose line); absent elsewhere, on a development build and on an older runtime."
+        }
       }
     },
     "updateTier": {
       "description": "POST /api/v1/updates/tier (0030 amendment 1 §2.4, rulings 114, 114 (a)): Settings › For developers › Updates from, gcx tier; a person's only. The runtime reads the tier's repository, stages that tier's own copy of its latest build, or of the build named (one of its published builds), newer or older or the same number, answers {target, warning}, then drains and exits 75 for gcx.app's helper to swap it in; the data folder is kept as it is. Going down it writes <data>/updates/switched (the build left), and the second warning line says what waits. Automatic updates then follow that tier, upward only. In Docker nothing is downloaded: the answer is the compose file's image line (updateTierAnswer). 403 {error} above the install's ceiling; 400 {error} for a tier that is none or a build that is not one of the tier's published builds (a withdrawn one is not); 409 {error} where it cannot (no helper, a development build, an update under way, a read, download or check that failed: nothing changed); 503 {error} while gcx is stopping; 404 where the runtime has no updater.",
-      "type": "object", "additionalProperties": false, "required": ["tier"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier"
+      ],
       "properties": {
-        "tier": { "enum": ["internal", "beta", "everyone"] },
-        "build": { "type": "integer", "minimum": 1, "description": "A build number of the tier's published list; absent: the tier's latest." }
+        "tier": {
+          "enum": [
+            "internal",
+            "beta",
+            "everyone"
+          ]
+        },
+        "build": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "A build number of the tier's published list; absent: the tier's latest."
+        }
       }
     },
     "updateTierAnswer": {
       "description": "The 200 answer of POST /api/v1/updates/tier: where a helper swaps the app, the build gcx goes to and the warning to show before it restarts; in Docker, where the image is the program (0030 amendment 1 §4.3), the image line for compose.yaml: the checked release's pinned image, with applicable reader-only warnings.",
       "anyOf": [
-        { "$ref": "#/$defs/updateRollbackAnswer" },
-        { "type": "object", "additionalProperties": false, "required": ["image"], "properties": { "image": { "type": "string", "description": "The checked release image, such as ghcr.io/goodcryptoapp/gcx:3.1.0-20-beta." }, "warning": { "type": "array", "items": { "type": "string" }, "description": "Warnings for live accounts the checked release can read but cannot trade; absent when none." } } }
+        {
+          "$ref": "#/$defs/updateRollbackAnswer"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "image"
+          ],
+          "properties": {
+            "image": {
+              "type": "string",
+              "description": "The checked release image, such as ghcr.io/goodcryptoapp/gcx:3.1.0-20-beta."
+            },
+            "warning": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Warnings for live accounts the checked release can read but cannot trade; absent when none."
+            }
+          }
+        }
       ]
     },
     "updateBuilds": {
       "description": "The answer of GET /api/v1/updates/builds (ruling 114 (c)): for every tier a switch can take (`tiers` of the updates answer), that tier's latest published build, read from its own repository when the person opens Updates from; never a withdrawn one (GitHub's mark or the signed withdrawn list) or a development build. A tier whose list cannot be read or holds no published build has no row; `unread` gives the reason of the first. `tier`, `current` and `builds` (ruling 114 (a): the running tier's whole list) are deprecated: kept unchanged for one release, removed with a migration note in the next; `builds` is empty when the running tier's list cannot be read.",
-      "type": "object", "additionalProperties": false, "required": ["tier", "current", "builds", "tiers"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier",
+        "current",
+        "builds",
+        "tiers"
+      ],
       "properties": {
-        "tier": { "enum": ["internal", "beta", "everyone"], "deprecated": true, "description": "The running tier. Deprecated (114 (c))." },
-        "current": { "type": "integer", "minimum": 0, "deprecated": true, "description": "The running build's number. Deprecated (114 (c))." },
-        "builds": { "type": "array", "deprecated": true, "description": "The running tier's published builds, newest first. Deprecated (114 (c)).", "items": { "type": "object", "additionalProperties": false, "required": ["build", "version"], "properties": {
-          "build": { "type": "integer", "minimum": 1 },
-          "version": { "type": "string", "description": "Its version, such as 3.0.0." },
-          "published": { "type": "string", "description": "When GitHub published it (ISO 8601); absent when GitHub says nothing." },
-          "cannotTrade": { "type": "array", "items": { "type": "string" }, "description": "Additive (0037 §10 d5, 2026-10-22): the venues this installation holds accounts of that this build cannot trade; the panel asks with a warning before installing it. Absent: none. A build that cannot open this data folder at all is not listed." }
-        } } },
-        "tiers": { "type": "array", "description": "One row per readable tier a switch can take, highest first.", "items": { "type": "object", "additionalProperties": false, "required": ["tier", "build", "version"], "properties": {
-          "tier": { "enum": ["internal", "beta", "everyone"] },
-          "build": { "type": "integer", "minimum": 1, "description": "The tier's newest published build; Beta's is the higher of Beta's and Everyone's, as a switch to Beta installs it." },
-          "version": { "type": "string", "description": "Its version, such as 3.0.0." },
-          "published": { "type": "string", "description": "When GitHub published it (ISO 8601, date and time); absent when GitHub says nothing." },
-          "cannotTrade": { "type": "array", "items": { "type": "string" } }
-        } } },
-        "unread": { "type": "array", "description": "The tiers whose list could not be read, each with the reason (the runtime's own words, for a tooltip, never a line).", "items": { "type": "object", "additionalProperties": false, "required": ["tier", "error"], "properties": {
-          "tier": { "enum": ["internal", "beta", "everyone"] },
-          "error": { "type": "string" }
-        } } }
+        "tier": {
+          "enum": [
+            "internal",
+            "beta",
+            "everyone"
+          ],
+          "deprecated": true,
+          "description": "The running tier. Deprecated (114 (c))."
+        },
+        "current": {
+          "type": "integer",
+          "minimum": 0,
+          "deprecated": true,
+          "description": "The running build's number. Deprecated (114 (c))."
+        },
+        "builds": {
+          "type": "array",
+          "deprecated": true,
+          "description": "The running tier's published builds, newest first. Deprecated (114 (c)).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "build",
+              "version"
+            ],
+            "properties": {
+              "build": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "version": {
+                "type": "string",
+                "description": "Its version, such as 3.0.0."
+              },
+              "published": {
+                "type": "string",
+                "description": "When GitHub published it (ISO 8601); absent when GitHub says nothing."
+              },
+              "cannotTrade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Additive (0037 §10 d5, 2026-10-22): the venues this installation holds accounts of that this build cannot trade; the panel asks with a warning before installing it. Absent: none. A build that cannot open this data folder at all is not listed."
+              }
+            }
+          }
+        },
+        "tiers": {
+          "type": "array",
+          "description": "One row per readable tier a switch can take, highest first.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tier",
+              "build",
+              "version"
+            ],
+            "properties": {
+              "tier": {
+                "enum": [
+                  "internal",
+                  "beta",
+                  "everyone"
+                ]
+              },
+              "build": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "The tier's newest published build; Beta's is the higher of Beta's and Everyone's, as a switch to Beta installs it."
+              },
+              "version": {
+                "type": "string",
+                "description": "Its version, such as 3.0.0."
+              },
+              "published": {
+                "type": "string",
+                "description": "When GitHub published it (ISO 8601, date and time); absent when GitHub says nothing."
+              },
+              "cannotTrade": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "unread": {
+          "type": "array",
+          "description": "The tiers whose list could not be read, each with the reason (the runtime's own words, for a tooltip, never a line).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tier",
+              "error"
+            ],
+            "properties": {
+              "tier": {
+                "enum": [
+                  "internal",
+                  "beta",
+                  "everyone"
+                ]
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          }
+        }
       }
     },
     "updateRollback": {
       "description": "POST /api/v1/updates/rollback (0024 L10, d7.7): the withdrawn banner's button, no fields; gcx rollback with no build named (d7.1), a person's only. The runtime downloads and checks the previous published build (never a withdrawn one), writes this build as refused, answers {target, warning}, then drains, writes the helper's marker and exits 75; the helper swaps the previous build in. 409 {error} when it cannot (a development build, no helper, no published build below, an update under way, a download or check that failed: nothing changed); 503 {error} while gcx is stopping; 404 where the runtime has no updater.",
-      "type": "object", "additionalProperties": false, "properties": {}
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
     },
     "updateRefusal": {
       "description": "A 409 answer of POST /api/v1/updates/rollback or POST /api/v1/updates/tier. Optional reason is additive: referral means the stored referral needs a newer build; absent means another refusal. Existing error remains the CLI sentence.",
-      "type": "object", "additionalProperties": false, "required": ["error"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "error"
+      ],
       "properties": {
-        "error": { "type": "string" },
-        "reason": { "const": "referral", "description": "The selected older build lacks the referral contract. The panel shows its translated sentence at the selected build or tier." }
+        "error": {
+          "type": "string"
+        },
+        "reason": {
+          "const": "referral",
+          "description": "The selected older build lacks the referral contract. The panel shows its translated sentence at the selected build or tier."
+        }
       }
     },
     "updateRollbackAnswer": {
       "description": "The 200 answer of POST /api/v1/updates/rollback and POST /api/v1/updates/tier: the build gcx goes to and the warning to show before it restarts.",
-      "type": "object", "additionalProperties": false, "required": ["target", "warning"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "warning"
+      ],
       "properties": {
-        "target": { "type": "string", "description": "The stamp of the build gcx goes back to." },
-        "warning": { "type": "array", "items": { "type": "string" }, "description": "How many internal stops and trails a restart leaves unwatched for a few seconds; for a rollback to a build older than the previous one, or a switch to an older build, a second sentence." }
+        "target": {
+          "type": "string",
+          "description": "The stamp of the build gcx goes back to."
+        },
+        "warning": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "How many internal stops and trails a restart leaves unwatched for a few seconds; for a rollback to a build older than the previous one, or a switch to an older build, a second sentence."
+        }
       }
     },
     "updateApply": {
       "description": "POST /api/v1/updates/apply: the person's Try again, no fields. The runtime answers {state: \"updating\"} at once, clears a refusal of that build, then downloads and verifies the app, drains and exits 75 at once (no 5 minutes: the person is there); on a server it asks the updater beside it, which pulls the image and restarts the container (the drain on its stop), or says why, the reason then served beside the update still on offer; 409 when GET /api/v1/updates says canUpdate is false.",
-      "type": "object", "additionalProperties": false, "properties": {}
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
     },
     "settings": {
       "description": "GET /api/v1/settings answers every field; POST /api/v1/settings writes the fields it carries (the selector writes favorites and recents).",
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "favorites": { "$ref": "#/$defs/idsPerVenue" },
-        "recents": { "$ref": "#/$defs/idsPerVenue" },
-        "defaultTimeInForce": { "type": "string", "pattern": "^\\d+$", "description": "Milliseconds." },
-        "telegramButtons": { "$ref": "notify-settings.schema.json#/properties/telegramButtons" },
-        "telegramConfirm": { "$ref": "notify-settings.schema.json#/properties/telegramConfirm" },
-        "telegramTopicsClosed": { "type": ["string", "null"], "maxLength": 64, "description": "Added with ruling 41: the Telegram bot (its @name) whose optional Turn on topics card the person closed. While it names the linked bot the card is closed (one row under the Telegram switches instead); another bot's card is open. A panel setting only: the runtime makes the topics whenever Threaded Mode turns on, closed or not. Absent reads as null: open." },
-        "notifyManual": { "$ref": "notify-settings.schema.json#/properties/notifyManual" },
-        "notifyOutside": { "$ref": "notify-settings.schema.json#/properties/notifyOutside" },
-        "notifyBotDefaults": { "$ref": "notify-settings.schema.json#/properties/notifyBotDefaults" },
-        "setupClosed": { "type": "array", "items": { "enum": ["block", "bring", "agent", "move", "freeVolume"] }, "uniqueItems": true, "default": [], "description": "Dismissed Dashboard setup cards on this installation, shared by every device. Absent reads as an empty list." },
-        "newsCard": { "enum": ["open", "closed"], "description": "The Dashboard's optional e-mail card (Get news about gcx by e-mail); open until the person closes it. Settings › About keeps the field either way. Absent reads as open." },
+        "favorites": {
+          "$ref": "#/$defs/idsPerVenue"
+        },
+        "recents": {
+          "$ref": "#/$defs/idsPerVenue"
+        },
+        "defaultTimeInForce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "Milliseconds."
+        },
+        "telegramButtons": {
+          "$ref": "notify-settings.schema.json#/properties/telegramButtons"
+        },
+        "telegramConfirm": {
+          "$ref": "notify-settings.schema.json#/properties/telegramConfirm"
+        },
+        "telegramTopicsClosed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Added with ruling 41: the Telegram bot (its @name) whose optional Turn on topics card the person closed. While it names the linked bot the card is closed (one row under the Telegram switches instead); another bot's card is open. A panel setting only: the runtime makes the topics whenever Threaded Mode turns on, closed or not. Absent reads as null: open."
+        },
+        "notifyManual": {
+          "$ref": "notify-settings.schema.json#/properties/notifyManual"
+        },
+        "notifyOutside": {
+          "$ref": "notify-settings.schema.json#/properties/notifyOutside"
+        },
+        "notifyBotDefaults": {
+          "$ref": "notify-settings.schema.json#/properties/notifyBotDefaults"
+        },
+        "setupClosed": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "block",
+              "bring",
+              "agent",
+              "move",
+              "freeVolume"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [],
+          "description": "Dismissed Dashboard setup cards on this installation, shared by every device. Absent reads as an empty list."
+        },
+        "newsCard": {
+          "enum": [
+            "open",
+            "closed"
+          ],
+          "description": "The Dashboard's optional e-mail card (Get news about gcx by e-mail); open until the person closes it. Settings › About keeps the field either way. Absent reads as open."
+        },
         "reports": {
-          "type": "object", "additionalProperties": false, "required": ["auto"],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "auto"
+          ],
           "description": "Settings › About › Reports to goodcryptoX (decision 0020 d13): auto, gcx sends reports of what went wrong and the daily usage record by itself; off, only the daily sign that this gcx exists (the heartbeat). Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are. Absent reads as {auto: true}.",
-          "properties": { "auto": { "type": "boolean" } }
+          "properties": {
+            "auto": {
+              "type": "boolean"
+            }
+          }
         },
-        "nativeStops": { "type": "boolean", "description": "Added in P12 (0004 d1): a perpetual's stop-loss with no trigger timeout rests on Hyperliquid as Hyperliquid's own stop order (it fires on the mark price, with Hyperliquid's own slippage); gcx still watches it. Off, the default: gcx watches the last price and sends the stop when it is reached. The panel saves true only after the person confirms the warning. Absent reads as false. An order keeps the choice it was placed with." },
+        "nativeStops": {
+          "type": "boolean",
+          "description": "Added in P12 (0004 d1): a perpetual's stop-loss with no trigger timeout rests on Hyperliquid as Hyperliquid's own stop order (it fires on the mark price, with Hyperliquid's own slippage); gcx still watches it. Off, the default: gcx watches the last price and sends the stop when it is reached. The panel saves true only after the person confirms the warning. Absent reads as false. An order keeps the choice it was placed with."
+        },
         "profile": {
-          "type": "object", "additionalProperties": false, "required": ["hiddenFields"],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hiddenFields"
+          ],
           "description": "Added in P12 (0007 d15, §19): the personal profile. `hiddenFields`: the order form's fields it does not show; each goes out at its default (bracket: no take-profit or stop-loss; delay: sent at once; tif: the time-in-force default above; triggerTimeout: none; postOnly, reduceOnly, improveOnly: off; trailStart: trailing from placement). Absent reads as nothing hidden.",
-          "properties": { "hiddenFields": { "type": "array", "uniqueItems": true, "items": { "enum": ["bracket", "delay", "tif", "triggerTimeout", "postOnly", "reduceOnly", "improveOnly", "trailStart"] } } }
+          "properties": {
+            "hiddenFields": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "bracket",
+                  "delay",
+                  "tif",
+                  "triggerTimeout",
+                  "postOnly",
+                  "reduceOnly",
+                  "improveOnly",
+                  "trailStart"
+                ]
+              }
+            }
+          }
         },
-        "liquidationAlert": { "type": "boolean", "description": "Settings › Trading: close-to-liquidation push alerts for active DCA and Grid perpetual position holders. Absent reads as true. Read at the next price check; off suppresses new approaches, while outside prices still rearm the existing latch." },
-        "liquidationAlertPct": { "type": "string", "pattern": "^(?!0+(?:\\.0+)?$)(?:0|[1-9]\\d*)(?:\\.\\d+)?$", "description": "Distance from the liquidation price, in percent, above 0 (0 would be a second way to say off), inclusive on either side. Absent reads as 10. Read at the next check; a known price outside this distance rearms the existing latch. Previous builds ignore both settings." },
-        "bracketReduceOnly": { "type": "boolean", "description": "Settings › Trading: reduce-only on manual and bot TP/SL and on the Telegram TP/SL buttons, recommended on (MH482, 520). The panel snapshots it at manual send or bot launch, the Telegram buttons at the press; the API never reads it: an API order's or attach's TP/SL without their own `reduceOnly` are reduce-only, and a received value is honoured. Resting orders and running bots retain their choice. Absent reads as true." },
-        "baseCurrency": { "$ref": "#/$defs/currency", "description": "Added with 0050: the currency every figure the panel shows in dollars is shown in, at the latest rate, and the currency a key's money limits are stamped in at a write. Absent reads as USD, never from the language. A change converts every unrevoked key's money limits once, in one transaction, at the rate held for under 12 hours (fetched only without one), rounded half-up to five significant digits; with no rate it answers 503 `{rejected: \"rates\", text}` and writes nothing. A code off the list answers 422 `{rejected: \"baseCurrency\", text}`." },
-        "language": { "enum": [null, "en", "ru", "uk", "es", "ko", "de", "fr", "id", "it", "pt", "tr", "vi", "zh", "zh-Hant", "ar", "he", "pl", "ro", "ja", "th"], "description": "Added with 0022 (localisation): the language of the panel, one of the twenty codes (zh-Hant is Traditional Chinese). null, the default, means not chosen yet: the panel's first visit takes the first of the browser's languages whose language part is one of the twenty (English when none), and saves it. Absent reads as null." },
-        "keepAwake": { "type": "boolean", "description": "Added in R3 (0008 §1.11): with keepAwake on, keep the Mac awake throughout the runtime on mains power (ruling 412 b); on battery or unknown power, while any bot or managed order is not done. Absent reads as true; the runtime topic's `awake` says whether it is held now and why." },
-        "network": { "type": "object", "additionalProperties": false, "required": ["on", "addresses"], "description": "Added with 0044 (Connect directly at home): the switch and Your own address as requested; GET answers it, POST /api/v1/settings sets the whole object. on true listens on every address of this machine; each address is an http or https origin (a strict IPv4, a bracketed IPv6 without a zone, or a DNS name, an optional port), one scheme per host, never loopback, unspecified or a localhost name; anything else is 400 with the field's sentence and nothing is stored. What is applied (listening or not, and why not) is the runtime information's `network`. Absent reads as Off with no addresses; an older runtime ignores the field.", "properties": { "on": { "type": "boolean" }, "addresses": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 300 } } } },
-        "localPasskey": { "type": "boolean", "description": "Added with the local passkey (decision 0023): the protection switch in Settings › General (Ask for Touch ID, a passkey or a passphrase to open the dashboard). GET answers it; POST /api/v1/settings refuses it with 400, since it is turned with POST /api/v1/passkey/switch after a check. Absent reads as true." },
-        "proxy": { "description": "P1: all exchange REST and WebSocket connections. Null (the additive default) uses GCX_PROXY if present, otherwise Off. An explicit on/off choice wins over GCX_PROXY. With on true the address must be a SOCKS5 or HTTP proxy address, otherwise 400; Off keeps whatever was typed. Applied at the next connection; streams reconnect immediately. Previous builds ignore this field.", "anyOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["on", "address"], "properties": { "on": { "type": "boolean" }, "address": { "type": "string" } } }] },
-        "logsMaxMb": { "type": "integer", "minimum": 50, "description": "Added by decision 0020 amendment 1: Settings › Storage › Logs › at most … MB. The most the logs (`logs/`, a quarter) and the exchange traffic log (`wire/`, three quarters) take together, in MB (a million bytes); the oldest whole file goes first; applied at once and at each sweep. At least 50. Absent reads as 200." }
+        "liquidationAlert": {
+          "type": "boolean",
+          "description": "Settings › Trading: close-to-liquidation push alerts for active DCA and Grid perpetual position holders. Absent reads as true. Read at the next price check; off suppresses new approaches, while outside prices still rearm the existing latch."
+        },
+        "liquidationAlertPct": {
+          "type": "string",
+          "pattern": "^(?!0+(?:\\.0+)?$)(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+          "description": "Distance from the liquidation price, in percent, above 0 (0 would be a second way to say off), inclusive on either side. Absent reads as 10. Read at the next check; a known price outside this distance rearms the existing latch. Previous builds ignore both settings."
+        },
+        "bracketReduceOnly": {
+          "type": "boolean",
+          "description": "Settings › Trading: reduce-only on manual and bot TP/SL and on the Telegram TP/SL buttons, recommended on (MH482, 520). The panel snapshots it at manual send or bot launch, the Telegram buttons at the press; the API never reads it: an API order's or attach's TP/SL without their own `reduceOnly` are reduce-only, and a received value is honoured. Resting orders and running bots retain their choice. Absent reads as true."
+        },
+        "baseCurrency": {
+          "$ref": "#/$defs/currency",
+          "description": "Added with 0050: the currency every figure the panel shows in dollars is shown in, at the latest rate, and the currency a key's money limits are stamped in at a write. Absent reads as USD, never from the language. A change converts every unrevoked key's money limits once, in one transaction, at the rate held for under 12 hours (fetched only without one), rounded half-up to five significant digits; with no rate it answers 503 `{rejected: \"rates\", text}` and writes nothing. A code off the list answers 422 `{rejected: \"baseCurrency\", text}`."
+        },
+        "language": {
+          "enum": [
+            null,
+            "en",
+            "ru",
+            "uk",
+            "es",
+            "ko",
+            "de",
+            "fr",
+            "id",
+            "it",
+            "pt",
+            "tr",
+            "vi",
+            "zh",
+            "zh-Hant",
+            "ar",
+            "he",
+            "pl",
+            "ro",
+            "ja",
+            "th"
+          ],
+          "description": "Added with 0022 (localisation): the language of the panel, one of the twenty codes (zh-Hant is Traditional Chinese). null, the default, means not chosen yet: the panel's first visit takes the first of the browser's languages whose language part is one of the twenty (English when none), and saves it. Absent reads as null."
+        },
+        "keepAwake": {
+          "type": "boolean",
+          "description": "Added in R3 (0008 §1.11): with keepAwake on, keep the Mac awake throughout the runtime on mains power (ruling 412 b); on battery or unknown power, while any bot or managed order is not done. Absent reads as true; the runtime topic's `awake` says whether it is held now and why."
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "on",
+            "addresses"
+          ],
+          "description": "Added with 0044 (Connect directly at home): the switch and Your own address as requested; GET answers it, POST /api/v1/settings sets the whole object. on true listens on every address of this machine; each address is an http or https origin (a strict IPv4, a bracketed IPv6 without a zone, or a DNS name, an optional port), one scheme per host, never loopback, unspecified or a localhost name; anything else is 400 with the field's sentence and nothing is stored. What is applied (listening or not, and why not) is the runtime information's `network`. Absent reads as Off with no addresses; an older runtime ignores the field.",
+          "properties": {
+            "on": {
+              "type": "boolean"
+            },
+            "addresses": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            }
+          }
+        },
+        "localPasskey": {
+          "type": "boolean",
+          "description": "Added with the local passkey (decision 0023): the protection switch in Settings › General (Ask for Touch ID, a passkey or a passphrase to open the dashboard). GET answers it; POST /api/v1/settings refuses it with 400, since it is turned with POST /api/v1/passkey/switch after a check. Absent reads as true."
+        },
+        "proxy": {
+          "description": "P1: all exchange REST and WebSocket connections. Null (the additive default) uses GCX_PROXY if present, otherwise Off. An explicit on/off choice wins over GCX_PROXY. With on true the address must be a SOCKS5 or HTTP proxy address, otherwise 400; Off keeps whatever was typed. Applied at the next connection; streams reconnect immediately. Previous builds ignore this field.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "on",
+                "address"
+              ],
+              "properties": {
+                "on": {
+                  "type": "boolean"
+                },
+                "address": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "logsMaxMb": {
+          "type": "integer",
+          "minimum": 50,
+          "description": "Added by decision 0020 amendment 1: Settings › Storage › Logs › at most … MB. The most the logs (`logs/`, a quarter) and the exchange traffic log (`wire/`, three quarters) take together, in MB (a million bytes); the oldest whole file goes first; applied at once and at each sweep. At least 50. Absent reads as 200."
+        }
       }
     },
     "note": {
       "description": "POST /api/v1/notes (added with P16, 0007 d22): your note on one order (`order:<id>`, the id its row keeps across a change) or one position (`position:<sourceId>:<instrument>`), plain text of at most 500 characters; empty text removes it. A bot's note is the bot's own (its name and note). A person's only. 200 {}.",
-      "type": "object", "additionalProperties": false, "required": ["subject", "text"],
-      "properties": { "subject": { "type": "string", "pattern": "^(order|position):.+$", "maxLength": 200 }, "text": { "type": "string", "maxLength": 500 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "text"
+      ],
+      "properties": {
+        "subject": {
+          "type": "string",
+          "pattern": "^(order|position):.+$",
+          "maxLength": 200
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
     },
     "notes": {
       "description": "GET /api/v1/notes (added with P16): every note, by subject.",
-      "type": "object", "additionalProperties": false, "required": ["notes"],
-      "properties": { "notes": { "type": "object", "additionalProperties": { "type": "string" } } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "notes"
+      ],
+      "properties": {
+        "notes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
     },
     "panelDictionary": {
       "description": "GET /api/v1/i18n/panel/{lang} (added with 0022 L3b): the panel's texts in one language, flat: each key a label's dotted path in English's `locales/en/panel.json` (a word form `type.limit:gen` and a plural phrase `book.orders#few` beside them), each value its text in that language. A key it lacks reads in English. The bundled file of that language with the keys a delivery over the air verified written over it.",
-      "type": "object", "additionalProperties": { "type": "string" }
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "snapshotBase": {
       "description": "757 (d): a period's base: when the snapshot was taken (ms), whether it is the period's own start, and each coin the account listed then, its amount in its own units and its value in USD.",
       "oneOf": [
-        { "type": "object", "additionalProperties": false, "required": ["at", "whole", "coins"], "properties": { "at": { "type": "integer" }, "whole": { "type": "boolean" }, "coins": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["coin", "amount", "value"], "properties": { "coin": { "type": "string" }, "amount": { "$ref": "#/$defs/decimal" }, "value": { "$ref": "#/$defs/decimal" } } } } } },
-        { "type": "null" }
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "at",
+            "whole",
+            "coins"
+          ],
+          "properties": {
+            "at": {
+              "type": "integer"
+            },
+            "whole": {
+              "type": "boolean"
+            },
+            "coins": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "coin",
+                  "amount",
+                  "value"
+                ],
+                "properties": {
+                  "coin": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "$ref": "#/$defs/decimal"
+                  },
+                  "value": {
+                    "$ref": "#/$defs/decimal"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "portfolio": {
       "description": "Holdings (0007 Amendment 5): for each connected main account and sub-account (not a vault, whose figure is your own share, nor a demo account), `vaults` is its total USDC equity in all vaults, `staked` its delegated + undelegated + pending-withdrawal HYPE; each read independently, reused for 5 minutes, null on failure. GET /api/v1/portfolio (added with P8, 0007 d13; since 757 (d) no venue history is read: the account rows lost `readAt`, `start`, `end` and `error` before the first public release, and every change is computed from `snapshots`). Values are decimal strings; null is not known. `pnl` (added with the PnL block, 0007 Amendment 1 d2; since 0007 Amendment 8, rulings 435 b, 437 and 438 a, the realised P&L; since 0007 Amendment 11, what the accounts made since they were connected to goodcryptoX, from its own record, every exchange alike): in USD, the closed futures trades after their fees and the funding of each counted account from its connection (`accounts[].connected`) (Include in P&L on, not being removed, not a vault), computed by the runtime from the record it keeps of their fills and funding, never from Hyperliquid's P&L series; over the last 24 hours, 7 x 24, 30 x 24 and all time, each summed in decimal over the accounts whose record is ready (0 when it holds no entry), null while none is. `since`: strictly after the moment (`?since=<ms>`, else the runtime's \"since you were last here\": the last moment a panel page was on screen before an absence of 30 minutes or more, on any device, rulings 298 and 304 a), `at` the moment itself; null while there is no moment, and for a `?since=` earlier than the 30 days the runtime holds. `partial`: `ok` the accounts whose figure is current, of the `of` counted; `reading` always 0. `percent`: the realised P&L's time-weighted return over the same windows, from the runtime's own quarter-hour samples of each account's stablecoin balance, chained between deposits and withdrawals; absent while it is rebuilt; null per window when no return is measurable.",
       "type": "object", "additionalProperties": false, "required": ["accounts", "pnl"],
       "properties": {
-        "assets": {"description": "0056: registry identities or venue-scoped exchange assets; values sum each holding at its own venue price. Missing prices retain amounts and contribute zero. Absent on older runtimes.", "type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["assetId", "assetKind", "symbol", "name", "amount", "value", "unpriced", "holdings"], "properties": {"assetId": {"type": "string"}, "assetKind": {"enum": ["bundled", "exchange"]}, "symbol": {"type": "string"}, "name": {"type": "string"}, "amount": {"type": ["string", "null"]}, "value": {"type": "string"}, "unpriced": {"type": "boolean"}, "holdings": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["account", "venue", "code", "amount", "price", "value", "unpriced"], "properties": {"account": {"type": "string"}, "venue": {"type": "string"}, "code": {"type": "string"}, "amount": {"type": ["string", "null"]}, "price": {"type": "string"}, "value": {"type": "string"}, "unpriced": {"type": "boolean"}}}}}}},
+        "assets": {
+          "description": "0056: registry identities or venue-scoped exchange assets; values sum each holding at its own venue price. Missing prices retain amounts and contribute zero. Absent on older runtimes.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "assetId",
+              "assetKind",
+              "symbol",
+              "name",
+              "amount",
+              "value",
+              "unpriced",
+              "holdings"
+            ],
+            "properties": {
+              "assetId": {
+                "type": "string"
+              },
+              "assetKind": {
+                "enum": [
+                  "bundled",
+                  "exchange"
+                ]
+              },
+              "symbol": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "amount": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "value": {
+                "type": "string"
+              },
+              "unpriced": {
+                "type": "boolean"
+              },
+              "holdings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "account",
+                    "venue",
+                    "code",
+                    "amount",
+                    "price",
+                    "value",
+                    "unpriced"
+                  ],
+                  "properties": {
+                    "account": {
+                      "type": "string"
+                    },
+                    "venue": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "price": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    },
+                    "unpriced": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "out": {
           "description": "Live account ids excluded from balances or PnL; absent on older answers means none excluded",
-          "type": "object", "additionalProperties": false, "required": ["balances", "pnl"],
-          "properties": { "balances": { "type": "array", "items": { "type": "string" } }, "pnl": { "type": "array", "items": { "type": "string" } } }
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "balances",
+            "pnl"
+          ],
+          "properties": {
+            "balances": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "pnl": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "pnl": {
-          "type": "object", "additionalProperties": false, "required": ["day", "week", "month", "allTime", "since", "partial"],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "day",
+            "week",
+            "month",
+            "allTime",
+            "since",
+            "partial"
+          ],
           "properties": {
             "percent": { "type": "object", "additionalProperties": false, "required": ["day", "week", "month", "allTime"], "properties": { "day": { "$ref": "#/$defs/startValue" }, "week": { "$ref": "#/$defs/startValue" }, "month": { "$ref": "#/$defs/startValue" }, "allTime": { "$ref": "#/$defs/startValue" } } },
             "day": { "$ref": "#/$defs/startValue" }, "week": { "$ref": "#/$defs/startValue" }, "month": { "$ref": "#/$defs/startValue" }, "allTime": { "$ref": "#/$defs/startValue" },
@@ -664,111 +2131,995 @@
         },
         "accounts": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": false, "required": ["sourceId"], "properties": { "connected": { "description": "Added with 0007 Amendment 11: the moment the account's PnL counts from, its first connection to goodcryptoX (ms). Absent on older answers.", "type": "integer" }, "vaults": { "$ref": "#/$defs/startValue" }, "led": { "description": "Added with 757 (b): of vaults, the USDC equity in vaults the account leads, which are never part of its balances; null on its own read failure; absent on older answers.", "$ref": "#/$defs/startValue" }, "staked": { "$ref": "#/$defs/startValue" }, "sourceId": { "type": "string" } } }
+          "items": { "type": "object", "additionalProperties": false, "required": ["sourceId"], "properties": { "connected": { "description": "Added with 0007 Amendment 11: the moment the account's PnL counts from, its first connection to goodcryptoX (ms). Absent on older answers.", "type": "integer" }, "vaults": { "$ref": "#/$defs/startValue" }, "led": { "description": "Added with 757 (b): of vaults, the USDC equity in vaults the account leads, which are never part of its balances; a failed read retains its last value (null before its first success); absent on older answers.", "$ref": "#/$defs/startValue" }, "staked": { "$ref": "#/$defs/startValue" }, "states": { "description": "Optional holdings read states; a failed read retains its last value, or null before its first success. Absent means live for present values.", "type": "object", "additionalProperties": false, "properties": { "vaults": { "enum": ["live", "stale", "unread"] }, "led": { "enum": ["live", "stale", "unread"] }, "staked": { "enum": ["live", "stale", "unread"] } } }, "sourceId": { "type": "string" } } }
         },
         "snapshots": {
           "description": "Added with 757 (d): by account id, each period's base from the runtime's daily snapshots (one a day of each account: each coin's amount and value in USD, at the day's first Dashboard view in which the account's value is wholly known). The base is the snapshot nearest the period's start (24 hours, 7 days and 30 days back; all time: the first snapshot); `whole` when it lies within half a day of that start, an hour for 24 hours (all time: never), else the change counts since `at`. Null: the account has no snapshot yet. Absent on older answers.",
           "type": "object",
           "additionalProperties": {
-            "type": "object", "additionalProperties": false, "required": ["day", "week", "month", "allTime"],
-            "properties": { "day": { "$ref": "#/$defs/snapshotBase" }, "week": { "$ref": "#/$defs/snapshotBase" }, "month": { "$ref": "#/$defs/snapshotBase" }, "allTime": { "$ref": "#/$defs/snapshotBase" } }
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "day",
+              "week",
+              "month",
+              "allTime"
+            ],
+            "properties": {
+              "day": {
+                "$ref": "#/$defs/snapshotBase"
+              },
+              "week": {
+                "$ref": "#/$defs/snapshotBase"
+              },
+              "month": {
+                "$ref": "#/$defs/snapshotBase"
+              },
+              "allTime": {
+                "$ref": "#/$defs/snapshotBase"
+              }
+            }
           }
         }
       }
     },
-    "startValue": { "oneOf": [{ "type": "string", "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$" }, { "type": "null" }] },
+    "startValue": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^-?(0|[1-9]\\d*)(\\.\\d*[1-9])?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "passkeyState": {
       "description": "GET /api/v1/passkey (decision 0023 d4): the passkey or passphrase that guards the panel in a browser on this computer. A person's only, never an access key's; answered to a session that has not confirmed yet (`verified` false), without the list.",
-      "type": "object", "additionalProperties": false, "required": ["on", "verified", "passkey", "passphrase", "here", "reset"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on",
+        "verified",
+        "passkey",
+        "passphrase",
+        "here",
+        "reset"
+      ],
       "properties": {
-        "on": { "type": "boolean", "description": "The protection switch in Settings › General (Ask for Touch ID, a passkey or a passphrase to open the dashboard; the settings' `localPasskey`)." },
-        "verified": { "type": "boolean", "description": "This session may use the panel: the switch is off, or it passed a check and a page of it is on screen now or was within the last 5 minutes." },
-        "passkey": { "type": "boolean", "description": "A passkey is stored." },
-        "passphrase": { "type": "boolean", "description": "A passphrase is set." },
-        "here": { "enum": ["name", "ip"], "description": "The address this request came to: name, http://localhost:<port>, where a passkey works; ip, any other (127.0.0.1), where only the passphrase does." },
-        "again": { "type": "boolean", "description": "Every stored passkey was made at the panel's earlier address (http://gcx.localhost:<port>, before ruling 115), where a browser does not offer it here: the lock makes one anew, after the passphrase where one is set and otherwise with no check first, and it replaces them. Absent: false." },
-        "reset": { "type": ["string", "null"], "description": "On a NAS or a VPS, the line that removes the passkey and the passphrase and signs every browser out: in Docker (GCX_SHELL=docker) `sudo docker exec gcx gcx passkey reset`, typed on the machine (0024 d5.5); elsewhere, pasted into a shell over SSH, this runtime's own Node and script, each quoted, then passkey reset (and --data with the data folder when it is not the system's). Null on a Mac: there the gcx menu in the menu bar has Reset passkey…, which asks for the Mac's password first (RULINGS 162 (b))." },
+        "on": {
+          "type": "boolean",
+          "description": "The protection switch in Settings › General (Ask for Touch ID, a passkey or a passphrase to open the dashboard; the settings' `localPasskey`)."
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "This session may use the panel: the switch is off, or it passed a check and a page of it is on screen now or was within the last 5 minutes."
+        },
+        "passkey": {
+          "type": "boolean",
+          "description": "A passkey is stored."
+        },
+        "passphrase": {
+          "type": "boolean",
+          "description": "A passphrase is set."
+        },
+        "here": {
+          "enum": [
+            "name",
+            "ip"
+          ],
+          "description": "The address this request came to: name, http://localhost:<port>, where a passkey works; ip, any other (127.0.0.1), where only the passphrase does."
+        },
+        "again": {
+          "type": "boolean",
+          "description": "Every stored passkey was made at the panel's earlier address (http://gcx.localhost:<port>, before ruling 115), where a browser does not offer it here: the lock makes one anew, after the passphrase where one is set and otherwise with no check first, and it replaces them. Absent: false."
+        },
+        "reset": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "On a NAS or a VPS, the line that removes the passkey and the passphrase and signs every browser out: in Docker (GCX_SHELL=docker) `sudo docker exec gcx gcx passkey reset`, typed on the machine (0024 d5.5); elsewhere, pasted into a shell over SSH, this runtime's own Node and script, each quoted, then passkey reset (and --data with the data folder when it is not the system's). Null on a Mac: there the gcx menu in the menu bar has Reset passkey…, which asks for the Mac's password first (RULINGS 162 (b))."
+        },
         "passkeys": {
-          "type": "array", "description": "Only to a verified session: each stored passkey.",
-          "items": { "$ref": "#/$defs/passkey" }
+          "type": "array",
+          "description": "Only to a verified session: each stored passkey.",
+          "items": {
+            "$ref": "#/$defs/passkey"
+          }
         }
       }
     },
     "passkey": {
       "description": "One stored passkey: its credential id, the browser that made it, when it was added and last used (milliseconds since the epoch; null, never).",
-      "type": "object", "additionalProperties": false, "required": ["id", "name", "createdAt", "lastUsedAt"],
-      "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "createdAt": { "type": "integer" }, "lastUsedAt": { "type": ["integer", "null"] } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "createdAt",
+        "lastUsedAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "integer"
+        },
+        "lastUsedAt": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
     },
     "passkeyChallenge": {
       "description": "POST /api/v1/passkey/challenge: the options for navigator.credentials.create (register) or get (verify), as {publicKey}, binary fields in base64url. One challenge waits per session and purpose, for 2 minutes, used once. 409 at an address other than the panel's name, and for verify when no passkey is stored; 403 for register from a session that has not confirmed while a passkey or passphrase is set.",
-      "type": "object", "additionalProperties": false, "required": ["purpose"],
-      "properties": { "purpose": { "enum": ["register", "verify"] } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "purpose"
+      ],
+      "properties": {
+        "purpose": {
+          "enum": [
+            "register",
+            "verify"
+          ]
+        }
+      }
     },
     "passkeyOptions": {
       "description": "The answer to POST /api/v1/passkey/challenge: the publicKey options, the panel's to hand to the browser unchanged once the base64url fields (challenge, user.id, allowCredentials[].id) are bytes.",
-      "type": "object", "required": ["publicKey"],
-      "properties": { "publicKey": { "type": "object", "required": ["challenge", "timeout"], "properties": { "challenge": { "type": "string" }, "timeout": { "type": "integer" } } } }
+      "type": "object",
+      "required": [
+        "publicKey"
+      ],
+      "properties": {
+        "publicKey": {
+          "type": "object",
+          "required": [
+            "challenge",
+            "timeout"
+          ],
+          "properties": {
+            "challenge": {
+              "type": "string"
+            },
+            "timeout": {
+              "type": "integer"
+            }
+          }
+        }
+      }
     },
     "passkeyRegister": {
       "description": "POST /api/v1/passkey/register: a new passkey, from the browser's answer to create(); 201 with the stored passkey, and the session counts as checked. Any session while no passkey or passphrase is stored (first run, after a reset); otherwise a confirmed session checked in the last 60 s (403 otherwise). 403 when a check fails.",
-      "type": "object", "additionalProperties": false, "required": ["credentialId", "clientDataJSON", "authenticatorData", "publicKey", "alg", "name"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credentialId",
+        "clientDataJSON",
+        "authenticatorData",
+        "publicKey",
+        "alg",
+        "name"
+      ],
       "properties": {
-        "credentialId": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096 }, "clientDataJSON": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096 }, "authenticatorData": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096 },
-        "publicKey": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096, "description": "getPublicKey(): the key as SPKI." },
-        "alg": { "type": "integer", "description": "getPublicKeyAlgorithm(); only -7 (ES256) is taken." },
-        "name": { "type": "string", "minLength": 1, "maxLength": 64, "description": "The browser that made it, as the panel names it." }
+        "credentialId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096
+        },
+        "clientDataJSON": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096
+        },
+        "authenticatorData": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096
+        },
+        "publicKey": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096,
+          "description": "getPublicKey(): the key as SPKI."
+        },
+        "alg": {
+          "type": "integer",
+          "description": "getPublicKeyAlgorithm(); only -7 (ES256) is taken."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "The browser that made it, as the panel names it."
+        }
       }
     },
     "passkeyVerify": {
       "description": "POST /api/v1/passkey/verify: the browser's answer to get(); 204 and the session is confirmed (and checked, for 60 s), 403 when a check fails.",
-      "type": "object", "additionalProperties": false, "required": ["credentialId", "clientDataJSON", "authenticatorData", "signature"],
-      "properties": { "credentialId": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096 }, "clientDataJSON": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096 }, "authenticatorData": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096 }, "signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "maxLength": 4096 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credentialId",
+        "clientDataJSON",
+        "authenticatorData",
+        "signature"
+      ],
+      "properties": {
+        "credentialId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096
+        },
+        "clientDataJSON": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096
+        },
+        "authenticatorData": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "maxLength": 4096
+        }
+      }
     },
     "passkeyRemove": {
       "description": "POST /api/v1/passkey/remove: a passkey by its id, or the passphrase (\"passphrase\"); 204. Needs a check in the last 60 s (403); 404 no such one; 409 the last one while the switch is on.",
-      "type": "object", "additionalProperties": false, "required": ["id"],
-      "properties": { "id": { "type": "string", "minLength": 1, "maxLength": 4096 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
     },
     "passkeySwitch": {
       "description": "POST /api/v1/passkey/switch: Ask for the passkey on this computer on or off; 204. Needs a check in the last 60 s (403), unless nothing is stored.",
-      "type": "object", "additionalProperties": false, "required": ["on"],
-      "properties": { "on": { "type": "boolean" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on"
+      ],
+      "properties": {
+        "on": {
+          "type": "boolean"
+        }
+      }
     },
-    "quit": { "description": "Person-only POST /api/v1/runtime/quit (ruling 110 (b)): the runtime's drained stop, after the answer, where GET /api/v1/runtime says `quit`; 404 elsewhere.", "type": "object", "additionalProperties": false, "properties": {} },
-    "showDataFolder": { "description": "Person-only POST /api/v1/runtime/show-data-folder opens only the configured folder using the desktop provider; no supplied path. 404 without the capability.", "type": "object", "additionalProperties": false, "properties": {} },
+    "quit": {
+      "description": "Person-only POST /api/v1/runtime/quit (ruling 110 (b)): the runtime's drained stop, after the answer, where GET /api/v1/runtime says `quit`; 404 elsewhere.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "showDataFolder": {
+      "description": "Person-only POST /api/v1/runtime/show-data-folder opens only the configured folder using the desktop provider; no supplied path. 404 without the capability.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
     "runtimeInfo": {
       "description": "GET /api/v1/runtime (added with P12's Runtime rows, 0007 d15): where gcx keeps its data (the data folder, a path on this computer) and whether its key store is locked now; with an account open, `watching` (0024 d8.1, added; absent: no account open): what an export would leave unwatched, the warning of Settings › General › Move to another machine. A person's only, never an access key's. 404 from a runtime that does not serve it.",
-      "type": "object", "additionalProperties": false, "required": ["dataFolder", "keyStore"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataFolder",
+        "keyStore"
+      ],
       "properties": {
-        "shell": { "enum": ["mac", "windows", "docker", "node"] },
-        "internal": { "type": "boolean", "description": "C77: true only when the running startup tier is internal; absent on older runtimes means false" },
-        "demo": { "type": "boolean", "description": "The installation demo preference, independent of the panel account-view mode" },
-        "showDataFolder": { "type": "boolean", "description": "Whether the desktop provider can open its configured data folder" },
-        "quit": { "type": "boolean", "description": "Added (ruling 110 (b)): the panel offers Quit goodcryptoX (POST /api/v1/runtime/quit), on the Linux desktop's installed program; absent elsewhere, to a paired device and on older runtimes" },
-        "tier": { "enum": ["internal", "beta", "everyone"] },
-        "installedAt": { "type": "integer", "minimum": 0, "description": "Actual installed build transition time in milliseconds; absent on older installs" },
-        "dataFolder": { "type": "string" }, "keyStore": { "enum": ["unlocked", "locked"] },
-        "exportLine": { "type": "string", "description": "Added (MH 2026-11-05): where goodcryptoX runs with no screen of its own (Docker, a plain Node server), the line that runs `gcx export` in this machine's own terminal (`sudo docker exec -it gcx gcx export` in Docker; else this program's path, PowerShell's form on Windows). Settings › Move shows it in place of Export on every page there, the one reached through an SSH tunnel included. Absent on a desktop (the Mac and Windows apps, the Linux desktop), where a paired device is told to press Export on that computer, and from older runtimes. POST /api/v1/export answers a device 403." },
-        "apiUrl": { "type": "string", "description": "The runtime's loopback API origin, including its port, for MCP clients and API programs. Present in Docker too; absent from older runtimes." },
-        "network": { "type": "object", "additionalProperties": false, "required": ["requested", "applied", "failure", "addresses"], "description": "Added with 0044: Connect directly at home as requested (the settings' `network`) and as applied (listening on every address or not, and why not: the port taken, another bind failure, the addresses unread), and the addresses the home link can carry, the first the default. `relay` (0044 amendment 2): our server is on; absent from older runtimes means true. Absent from runtimes before 0044.", "properties": { "requested": { "type": "object", "additionalProperties": false, "required": ["on", "addresses"], "properties": { "on": { "type": "boolean" }, "addresses": { "type": "array", "items": { "type": "string" } } } }, "applied": { "type": "boolean" }, "failure": { "enum": ["port", "bind", "refresh", null] }, "addresses": { "type": "array", "items": { "type": "string" } }, "relay": { "type": "boolean" } } },
-        "laptop": { "type": "boolean", "description": "Added with 0044 amendment 2: this installation runs on a laptop (macOS: an internal battery; Windows: a portable chassis or a battery; Linux: a portable chassis or a system battery; never in Docker), read once at the start, false until it answers or when the read fails. The Home network card's warning line. Absent from older runtimes means false." },
-        "programRelay": { "$ref": "program-device.schema.json#/$defs/target", "description": "0042 remote program capability; absent when unsupported or relay access is disabled." },
-        "connector": { "type": "object", "additionalProperties": false, "required": ["url", "run"], "description": "What Settings › MCP & API shows any MCP client: the runtime's loopback address and the program that starts the connector (`gcx mcp`) on this computer, this Node and the connector file; absent in Docker (its paths are the container's), where the file is missing, and from older runtimes.", "properties": { "url": { "type": "string" }, "run": { "type": "array", "items": { "type": "string" }, "minItems": 2 } } },
+        "shell": {
+          "enum": [
+            "mac",
+            "windows",
+            "docker",
+            "node"
+          ]
+        },
+        "internal": {
+          "type": "boolean",
+          "description": "C77: true only when the running startup tier is internal; absent on older runtimes means false"
+        },
+        "demo": {
+          "type": "boolean",
+          "description": "The installation demo preference, independent of the panel account-view mode"
+        },
+        "showDataFolder": {
+          "type": "boolean",
+          "description": "Whether the desktop provider can open its configured data folder"
+        },
+        "quit": {
+          "type": "boolean",
+          "description": "Added (ruling 110 (b)): the panel offers Quit goodcryptoX (POST /api/v1/runtime/quit), on the Linux desktop's installed program; absent elsewhere, to a paired device and on older runtimes"
+        },
+        "tier": {
+          "enum": [
+            "internal",
+            "beta",
+            "everyone"
+          ]
+        },
+        "installedAt": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Actual installed build transition time in milliseconds; absent on older installs"
+        },
+        "dataFolder": {
+          "type": "string"
+        },
+        "keyStore": {
+          "enum": [
+            "unlocked",
+            "locked"
+          ]
+        },
+        "exportLine": {
+          "type": "string",
+          "description": "Added (MH 2026-11-05): where goodcryptoX runs with no screen of its own (Docker, a plain Node server), the line that runs `gcx export` in this machine's own terminal (`sudo docker exec -it gcx gcx export` in Docker; else this program's path, PowerShell's form on Windows). Settings › Move shows it in place of Export on every page there, the one reached through an SSH tunnel included. Absent on a desktop (the Mac and Windows apps, the Linux desktop), where a paired device is told to press Export on that computer, and from older runtimes. POST /api/v1/export answers a device 403."
+        },
+        "apiUrl": {
+          "type": "string",
+          "description": "The runtime's loopback API origin, including its port, for MCP clients and API programs. Present in Docker too; absent from older runtimes."
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requested",
+            "applied",
+            "failure",
+            "addresses"
+          ],
+          "description": "Added with 0044: Connect directly at home as requested (the settings' `network`) and as applied (listening on every address or not, and why not: the port taken, another bind failure, the addresses unread), and the addresses the home link can carry, the first the default. `relay` (0044 amendment 2): our server is on; absent from older runtimes means true. Absent from runtimes before 0044.",
+          "properties": {
+            "requested": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "on",
+                "addresses"
+              ],
+              "properties": {
+                "on": {
+                  "type": "boolean"
+                },
+                "addresses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "applied": {
+              "type": "boolean"
+            },
+            "failure": {
+              "enum": [
+                "port",
+                "bind",
+                "refresh",
+                null
+              ]
+            },
+            "addresses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "relay": {
+              "type": "boolean"
+            }
+          }
+        },
+        "laptop": {
+          "type": "boolean",
+          "description": "Added with 0044 amendment 2: this installation runs on a laptop (macOS: an internal battery; Windows: a portable chassis or a battery; Linux: a portable chassis or a system battery; never in Docker), read once at the start, false until it answers or when the read fails. The Home network card's warning line. Absent from older runtimes means false."
+        },
+        "programRelay": {
+          "$ref": "program-device.schema.json#/$defs/target",
+          "description": "0042 remote program capability; absent when unsupported or relay access is disabled."
+        },
+        "connector": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url",
+            "run"
+          ],
+          "description": "What Settings › MCP & API shows any MCP client: the runtime's loopback address and the program that starts the connector (`gcx mcp`) on this computer, this Node and the connector file; absent in Docker (its paths are the container's), where the file is missing, and from older runtimes.",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "run": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2
+            }
+          }
+        },
         "watching": {
           "description": "Bots not finished; and, of the person's own open orders (a bot's orders are its bot's, MH 412), the stops and trails gcx triggers itself (`stops`) and every other one, resting, a native stop or waiting for a timer (`orders`). `botStops`: the bots whose own stop-loss gcx triggers itself and is open (one per bot, never its averaging levels); absent from an older runtime means 0.",
-          "type": "object", "additionalProperties": false, "required": ["bots", "orders", "stops"],
-          "properties": { "bots": { "type": "integer", "minimum": 0 }, "orders": { "type": "integer", "minimum": 0 }, "stops": { "type": "integer", "minimum": 0 }, "botStops": { "type": "integer", "minimum": 0 } }
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bots",
+            "orders",
+            "stops"
+          ],
+          "properties": {
+            "bots": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "orders": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "stops": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "botStops": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         }
       }
     },
     "newsEmail": {
       "description": "POST /api/v1/news-email: the address the person typed for news about gcx by e-mail (opt-in). The runtime forwards exactly {email} to the website's waitlist and attaches nothing else (no install id, no version). 200 {} when the list took it; 422 {error} for an address that is not one or that the list does not take; 502 {error} when the list did not take it. A person's only, never an access key's.",
-      "type": "object", "additionalProperties": false, "required": ["email"],
-      "properties": { "email": { "type": "string", "maxLength": 320 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 320
+        }
+      }
     },
     "idsPerVenue": {
-      "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
       "description": "Instrument ids per venue id."
+    },
+    "demoBybitViewRequest": {
+      "description": "Person session only. Transient, shared in this runtime, targeting by-main. Initial choice resets progress. Recovery and reset require the acknowledged positive safe-integer generation. Restart forgets it; last demo-topic release discards it. No stored Settings member, no MCP tool or access-key capability.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene"
+          ],
+          "properties": {
+            "scene": {
+              "enum": [
+                "classic",
+                "uta1",
+                "uta1-pro",
+                "uta2",
+                "uta2-pro",
+                "portfolio",
+                "stale",
+                "account-unread",
+                "borrowed",
+                "launch-dca-last-day",
+                "launch-grid-last-day",
+                "cycle-dca-last-day",
+                "cycle-grid-last-day",
+                "cycle-dca-expired",
+                "cycle-grid-expired",
+                "dashboard-refused-key",
+                "dashboard-location",
+                "dashboard-expiry-30d",
+                "dashboard-expiry-7d",
+                "dashboard-expiry-last-day",
+                "dashboard-expiry-expired",
+                "dashboard-expiry-distant",
+                "dashboard-expiry-unknown",
+                "dashboard-expiry-unread",
+                "permissionReadOnly",
+                "collateral",
+                "collateral-refused",
+                "collateral-unconfirmed",
+                "collateral-unread"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene",
+            "stage",
+            "generation"
+          ],
+          "properties": {
+            "scene": {
+              "enum": [
+                "launch-dca-last-day",
+                "launch-grid-last-day",
+                "cycle-dca-last-day",
+                "cycle-grid-last-day",
+                "cycle-dca-expired",
+                "cycle-grid-expired",
+                "dashboard-expiry-30d",
+                "dashboard-expiry-7d",
+                "dashboard-expiry-last-day",
+                "dashboard-expiry-expired"
+              ]
+            },
+            "stage": {
+              "const": "renewed"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene",
+            "stage",
+            "generation"
+          ],
+          "properties": {
+            "scene": {
+              "enum": [
+                "dashboard-refused-key",
+                "dashboard-location"
+              ]
+            },
+            "stage": {
+              "const": "live"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene",
+            "generation"
+          ],
+          "properties": {
+            "scene": {
+              "type": "null"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      ]
+    },
+    "demoBybitViewAnswer": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene",
+            "stage",
+            "generation"
+          ],
+          "properties": {
+            "scene": {
+              "enum": [
+                "classic",
+                "uta1",
+                "uta1-pro",
+                "uta2",
+                "uta2-pro",
+                "portfolio",
+                "stale",
+                "account-unread",
+                "borrowed",
+                "launch-dca-last-day",
+                "launch-grid-last-day",
+                "cycle-dca-last-day",
+                "cycle-grid-last-day",
+                "cycle-dca-expired",
+                "cycle-grid-expired",
+                "dashboard-refused-key",
+                "dashboard-location",
+                "dashboard-expiry-30d",
+                "dashboard-expiry-7d",
+                "dashboard-expiry-last-day",
+                "dashboard-expiry-expired",
+                "dashboard-expiry-distant",
+                "dashboard-expiry-unknown",
+                "dashboard-expiry-unread",
+                "permissionReadOnly",
+                "collateral",
+                "collateral-refused",
+                "collateral-unconfirmed",
+                "collateral-unread"
+              ]
+            },
+            "stage": {
+              "const": "initial"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene",
+            "stage",
+            "generation"
+          ],
+          "properties": {
+            "scene": {
+              "enum": [
+                "launch-dca-last-day",
+                "launch-grid-last-day",
+                "cycle-dca-last-day",
+                "cycle-grid-last-day",
+                "cycle-dca-expired",
+                "cycle-grid-expired",
+                "dashboard-expiry-30d",
+                "dashboard-expiry-7d",
+                "dashboard-expiry-last-day",
+                "dashboard-expiry-expired"
+              ]
+            },
+            "stage": {
+              "const": "renewed"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene",
+            "stage",
+            "generation"
+          ],
+          "properties": {
+            "scene": {
+              "enum": [
+                "dashboard-refused-key",
+                "dashboard-location"
+              ]
+            },
+            "stage": {
+              "const": "live"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scene",
+            "generation"
+          ],
+          "properties": {
+            "scene": {
+              "type": "null"
+            },
+            "generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      ]
+    },
+    "demoBybitViewRefusal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rejected",
+        "text"
+      ],
+      "properties": {
+        "rejected": {
+          "const": "demoBybitView"
+        },
+        "text": {
+          "enum": [
+            "Choose a Bybit demo state from the list",
+            "Bybit demo states are not available in this runtime",
+            "This Bybit demo state has changed. Choose it again"
+          ]
+        }
+      }
+    },
+    "settingsPostRequest": {
+      "description": "Optional demoBybitView is consumed separately from ordinary preferences. Absent: unchanged settings path and zero demo work. Scene-only: zero ordinary settings/backend/store/proxy/awake work. Invalid, unavailable or stale selection changes neither half. Invalid ordinary fields never change the scene. A valid mixed patch completes ordinary work first, preserving its acknowledgement/status/failures, then publishes the scene; no rollback across ordinary effects.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "favorites": {
+          "$ref": "#/$defs/idsPerVenue"
+        },
+        "recents": {
+          "$ref": "#/$defs/idsPerVenue"
+        },
+        "defaultTimeInForce": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "description": "Milliseconds."
+        },
+        "telegramButtons": {
+          "$ref": "notify-settings.schema.json#/properties/telegramButtons"
+        },
+        "telegramConfirm": {
+          "$ref": "notify-settings.schema.json#/properties/telegramConfirm"
+        },
+        "telegramTopicsClosed": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Added with ruling 41: the Telegram bot (its @name) whose optional Turn on topics card the person closed. While it names the linked bot the card is closed (one row under the Telegram switches instead); another bot's card is open. A panel setting only: the runtime makes the topics whenever Threaded Mode turns on, closed or not. Absent reads as null: open."
+        },
+        "notifyManual": {
+          "$ref": "notify-settings.schema.json#/properties/notifyManual"
+        },
+        "notifyOutside": {
+          "$ref": "notify-settings.schema.json#/properties/notifyOutside"
+        },
+        "notifyBotDefaults": {
+          "$ref": "notify-settings.schema.json#/properties/notifyBotDefaults"
+        },
+        "setupClosed": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "block",
+              "bring",
+              "agent",
+              "move",
+              "freeVolume"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [],
+          "description": "Dismissed Dashboard setup cards on this installation, shared by every device. Absent reads as an empty list."
+        },
+        "newsCard": {
+          "enum": [
+            "open",
+            "closed"
+          ],
+          "description": "The Dashboard's optional e-mail card (Get news about gcx by e-mail); open until the person closes it. Settings › About keeps the field either way. Absent reads as open."
+        },
+        "reports": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "auto"
+          ],
+          "description": "Settings › About › Reports to goodcryptoX (decision 0020 d13): auto, gcx sends reports of what went wrong and the daily usage record by itself; off, only the daily sign that this gcx exists (the heartbeat). Even with reports off, goodcryptoX tells us when one of its orders fills without our fee, once a day per account, without saying who you are. Absent reads as {auto: true}.",
+          "properties": {
+            "auto": {
+              "type": "boolean"
+            }
+          }
+        },
+        "nativeStops": {
+          "type": "boolean",
+          "description": "Added in P12 (0004 d1): a perpetual's stop-loss with no trigger timeout rests on Hyperliquid as Hyperliquid's own stop order (it fires on the mark price, with Hyperliquid's own slippage); gcx still watches it. Off, the default: gcx watches the last price and sends the stop when it is reached. The panel saves true only after the person confirms the warning. Absent reads as false. An order keeps the choice it was placed with."
+        },
+        "profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hiddenFields"
+          ],
+          "description": "Added in P12 (0007 d15, §19): the personal profile. `hiddenFields`: the order form's fields it does not show; each goes out at its default (bracket: no take-profit or stop-loss; delay: sent at once; tif: the time-in-force default above; triggerTimeout: none; postOnly, reduceOnly, improveOnly: off; trailStart: trailing from placement). Absent reads as nothing hidden.",
+          "properties": {
+            "hiddenFields": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "bracket",
+                  "delay",
+                  "tif",
+                  "triggerTimeout",
+                  "postOnly",
+                  "reduceOnly",
+                  "improveOnly",
+                  "trailStart"
+                ]
+              }
+            }
+          }
+        },
+        "liquidationAlert": {
+          "type": "boolean",
+          "description": "Settings › Trading: close-to-liquidation push alerts for active DCA and Grid perpetual position holders. Absent reads as true. Read at the next price check; off suppresses new approaches, while outside prices still rearm the existing latch."
+        },
+        "liquidationAlertPct": {
+          "type": "string",
+          "pattern": "^(?!0+(?:\\.0+)?$)(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+          "description": "Distance from the liquidation price, in percent, above 0 (0 would be a second way to say off), inclusive on either side. Absent reads as 10. Read at the next check; a known price outside this distance rearms the existing latch. Previous builds ignore both settings."
+        },
+        "bracketReduceOnly": {
+          "type": "boolean",
+          "description": "Settings › Trading: reduce-only on manual and bot TP/SL and on the Telegram TP/SL buttons, recommended on (MH482, 520). The panel snapshots it at manual send or bot launch, the Telegram buttons at the press; the API never reads it: an API order's or attach's TP/SL without their own `reduceOnly` are reduce-only, and a received value is honoured. Resting orders and running bots retain their choice. Absent reads as true."
+        },
+        "baseCurrency": {
+          "$ref": "#/$defs/currency",
+          "description": "Added with 0050: the currency every figure the panel shows in dollars is shown in, at the latest rate, and the currency a key's money limits are stamped in at a write. Absent reads as USD, never from the language. A change converts every unrevoked key's money limits once, in one transaction, at the rate held for under 12 hours (fetched only without one), rounded half-up to five significant digits; with no rate it answers 503 `{rejected: \"rates\", text}` and writes nothing. A code off the list answers 422 `{rejected: \"baseCurrency\", text}`."
+        },
+        "language": {
+          "enum": [
+            null,
+            "en",
+            "ru",
+            "uk",
+            "es",
+            "ko",
+            "de",
+            "fr",
+            "id",
+            "it",
+            "pt",
+            "tr",
+            "vi",
+            "zh",
+            "zh-Hant",
+            "ar",
+            "he",
+            "pl",
+            "ro",
+            "ja",
+            "th"
+          ],
+          "description": "Added with 0022 (localisation): the language of the panel, one of the twenty codes (zh-Hant is Traditional Chinese). null, the default, means not chosen yet: the panel's first visit takes the first of the browser's languages whose language part is one of the twenty (English when none), and saves it. Absent reads as null."
+        },
+        "keepAwake": {
+          "type": "boolean",
+          "description": "Added in R3 (0008 §1.11): with keepAwake on, keep the Mac awake throughout the runtime on mains power (ruling 412 b); on battery or unknown power, while any bot or managed order is not done. Absent reads as true; the runtime topic's `awake` says whether it is held now and why."
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "on",
+            "addresses"
+          ],
+          "description": "Added with 0044 (Connect directly at home): the switch and Your own address as requested; GET answers it, POST /api/v1/settings sets the whole object. on true listens on every address of this machine; each address is an http or https origin (a strict IPv4, a bracketed IPv6 without a zone, or a DNS name, an optional port), one scheme per host, never loopback, unspecified or a localhost name; anything else is 400 with the field's sentence and nothing is stored. What is applied (listening or not, and why not) is the runtime information's `network`. Absent reads as Off with no addresses; an older runtime ignores the field.",
+          "properties": {
+            "on": {
+              "type": "boolean"
+            },
+            "addresses": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              }
+            }
+          }
+        },
+        "localPasskey": {
+          "type": "boolean",
+          "description": "Added with the local passkey (decision 0023): the protection switch in Settings › General (Ask for Touch ID, a passkey or a passphrase to open the dashboard). GET answers it; POST /api/v1/settings refuses it with 400, since it is turned with POST /api/v1/passkey/switch after a check. Absent reads as true."
+        },
+        "proxy": {
+          "description": "P1: all exchange REST and WebSocket connections. Null (the additive default) uses GCX_PROXY if present, otherwise Off. An explicit on/off choice wins over GCX_PROXY. With on true the address must be a SOCKS5 or HTTP proxy address, otherwise 400; Off keeps whatever was typed. Applied at the next connection; streams reconnect immediately. Previous builds ignore this field.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "on",
+                "address"
+              ],
+              "properties": {
+                "on": {
+                  "type": "boolean"
+                },
+                "address": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "logsMaxMb": {
+          "type": "integer",
+          "minimum": 50,
+          "description": "Added by decision 0020 amendment 1: Settings › Storage › Logs › at most … MB. The most the logs (`logs/`, a quarter) and the exchange traffic log (`wire/`, three quarters) take together, in MB (a million bytes); the oldest whole file goes first; applied at once and at each sweep. At least 50. Absent reads as 200."
+        },
+        "demoBybitView": {
+          "$ref": "#/$defs/demoBybitViewRequest"
+        }
+      }
+    },
+    "settingsPostAnswer": {
+      "type": "object",
+      "description": "Ordinary acknowledgement fields are preserved. Successful transient operations add demoBybitView. Failure never includes an accepted scene. Generations increase on choice, recovery, reset and last-topic discard.",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "baseCurrency": {
+          "$ref": "#/$defs/currency"
+        },
+        "network": {
+          "type": "object"
+        },
+        "demoBybitView": {
+          "$ref": "#/$defs/demoBybitViewAnswer"
+        }
+      },
+      "additionalProperties": true
     }
   }
 }
