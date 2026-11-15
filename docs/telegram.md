@@ -71,7 +71,7 @@ Under an alert about one of your bots or orders sit the buttons that fit it:
 
 - **Your order filled** (a buy, or a sell on perpetuals): **TP +5%**, **TP & SL 5%** or **TP & SL 10%** add a take-profit, or a take-profit and a stop-loss, to it.
 - **A bot is running**: **Stop bot**, and **Close position** while it holds one.
-- **A bot's averaging order failed**: **Stop bot** and **Retry order**.
+- **A bot's averaging order failed**: **Stop bot** and **Fix failed**.
 - **A bot ended**: **Relaunch** starts a new one with its settings, and **Close position** if its position is still open.
 - **An order canceled on the exchange**: **Place again** places its unfilled remainder again; **Leave canceled** closes it in goodcryptoX. Other repairs and bots offer the answers that apply on their page. If you changed it on {venue}, the new order is already there.
 - **The hourly reminder**: its item's buttons, and **Silence** to stop the reminders.

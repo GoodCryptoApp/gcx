@@ -872,7 +872,10 @@
                 "maxTradeSzs",
                 "liquidatedNtlPos",
                 "liquidatedAccountValue",
-                "cumVlm"
+                "cumVlm",
+                "account",
+                "room",
+                "needed"
               ]
             },
             "policy": {

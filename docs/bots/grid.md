@@ -81,7 +81,9 @@ Choose a value or coin amount for each level, your investment and whether to rei
 
 ## Margin and liquidation
 
-**Approx. margin** shows the funds needed to back your grid. Orders worth 1,000 at 5x need 200 in order margin, before fees and losses. Leverage can bring liquidation before price reaches the grid's edge or stop.
+**Approx. margin** is what your account needs for the grid to reach its stop, fees included: the most it needs at any moment while the price runs to the stop. With no stop, it is what the account needs for the grid to fill its last level. The loss at the stop is not added on top of the orders' margin, because it comes out of that same money.
+
+Say a long grid has five buys of 100 USDT, from 0.99 down to 0.95, and a stop at 0.90, at 10x. The exchange takes about 50 USDT as margin for the orders. If the price runs down through every level to the stop, the grid loses about 36 USDT and the exchange keeps about 12 more back; that is less than the 50 already locked, so Approx. margin is about 50 USDT. At 3x it is about 167 USDT, the margin the orders lock. On **Isolated**, Approx. margin is that margin at placement. With **% of account**, the grid is sized so that Approx. margin is that share of your account. Leverage can bring liquidation before price reaches the grid's edge or stop.
 
 Check **Est. liquidation** and the warning before launching. Use the offered lower leverage, move your stop before liquidation, or consider Cross where supported. The bot never adds margin by itself. These are estimates: fees, funding, gaps and other positions can change the outcome. Reaching the range's edge gives no protection against a further move. On Cross, Est. liquidation assumes every order fills and nothing else in your account changes.
 

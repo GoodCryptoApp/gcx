@@ -110,6 +110,13 @@
           "type": "string",
           "description": "Added 2026-10-05 (MH audit line 13): with done error, the exchange's text that stopped the bot; also (RULINGS 218 b) while the bot waits in repair on the exchange's refusal of its spot sale of the rest, that refusal's text."
         },
+        "errorWords": {
+          "type": "object",
+          "description": "Added 2026-11-15 (0063 d5): with `error`, the message text and its code where the exchange has codes, as the venue's reader takes them out of it (a JSON reply on Bybit and Binance). `error` keeps the reply unchanged. Absent for words goodcryptoX wrote itself and on older runtimes.",
+          "required": ["text"],
+          "additionalProperties": false,
+          "properties": { "text": { "type": "string" }, "code": { "type": "string" } }
+        },
         "why": {
           "type": "string",
           "description": "Added 2026-10-05 (ruling 203): with `error`, our explanation of what the error was, in the person's language (the `language` setting; English when none is chosen or the language has no text for it); the exchange's own words stay raw in `error`. Absent without `error`; a reader that does not know it shows `error` alone."
@@ -235,7 +242,7 @@
         },
         "invested": {
           "$ref": "order-row.schema.json#/$defs/decimal",
-          "description": "goodcryptoX's Invested (EN algo.dcaInvestedInfo): the largest notional of a cycle's entry and averaging orders, over every cycle; the base of the percentages."
+          "description": "goodcryptoX's Invested (EN algo.dcaInvestedInfo), the panel's Max planned: the largest plan of a cycle over every cycle; the base of the percentages. A cycle started by 0064's build counts its unrounded plan, the typed Investment × its scale (planTop on its allowance row); an older cycle the notional of its entry and averaging orders. A bot with no cycle yet (waiting for its start or its signal) shows its plan, worked out when the row is served: sized as a share of the account, at the account's last read, 0 before any (corrected by 0064, which showed 0 until the entry filled)."
         },
         "apr": {
           "$ref": "order-row.schema.json#/$defs/signed",
@@ -259,11 +266,11 @@
         },
         "ownFunds": {
           "$ref": "order-row.schema.json#/$defs/decimal",
-          "description": "Added 2026-10-17 (0016 Amendment 10): Invested in own funds, the largest of a cycle's entry and averaging orders' notional divided by that cycle's leverage (read at its entry; a cycle before the bot's first known leverage takes that one). Perpetuals only; absent on spot, before any leverage is known, and while not positive."
+          "description": "Added 2026-10-17 (0016 Amendment 10): Invested in own funds, what the bot needs from the account. A cycle started by 0064's build: its plan × its needPerPlan (its allowance row), the most the account needs at any moment of the cycle for it to reach its stop, or to fill its last averaging order without one, fees included; an older cycle: its orders' notional divided by its leverage (read at its entry; a cycle before the bot's first known leverage takes that one), as before. Perpetuals only; absent on spot, before any leverage is known, and while not positive."
         },
         "ownFundsPeak": {
           "$ref": "order-row.schema.json#/$defs/decimal",
-          "description": "Added 2026-10-17 (0016 Amendment 10): investedPeak in own funds, each cycle's cost and resting orders divided by its leverage. As ownFunds, absent on spot, before any leverage is known, and while not positive."
+          "description": "Added 2026-10-17 (0016 Amendment 10): investedPeak in own funds, each cycle's cost and resting orders × its needPerPlan (a cycle started by 0064's build), else divided by its leverage. As ownFunds, absent on spot, before any leverage is known, and while not positive."
         },
         "ownFundsAverage": {
           "$ref": "order-row.schema.json#/$defs/decimal",
@@ -271,7 +278,7 @@
         },
         "breakeven": {
           "const": true,
-          "description": "B18: the current cycle's take-profit was moved to break-even (its average plus the fees paid so far)."
+          "description": "B18: the current cycle's take-profit was moved to breakeven (its average plus the fees paid so far)."
         },
         "change": {
           "type": "object",
@@ -292,7 +299,7 @@
               ]
             }
           },
-          "description": "Added 2026-10-18 (MH 726 (e)): the current cycle's take-profit's `change` (order-row.schema.json): the last command since the runtime started that moved it (Move to break even) and how it ended at the exchange. Absent while not known, and after a restart."
+          "description": "Added 2026-10-18 (MH 726 (e)): the current cycle's take-profit's `change` (order-row.schema.json): the last command since the runtime started that moved it (Move to breakeven) and how it ended at the exchange. Absent while not known, and after a restart."
         },
         "counters": {
           "type": "object",
@@ -520,7 +527,8 @@
           "type": "object"
         },
         "orders": {
-          "type": "array"
+          "type": "array",
+          "description": "The grid's orders. Added 2026-11-15 (0063 slice G), on an order that failed (`status` failed): `error`, why it failed: its latest try as the order rows tell it (`why` our sentence; `errorType`, `exchangeWords`, `reason` and `refusalBy` as on an order row), or, with no such try, the sentence of what the grid knows (`why` alone); `retry: true` while `restore-level` with its `cloid` would place it again now (as the order row's `retry`); and `past: true` while placing it again would fill it at once (added 2026-11-15, round 2). All absent on older runtimes."
         },
         "seq": {
           "type": "integer"
@@ -584,7 +592,8 @@
           "type": "string"
         },
         "ownFunds": {
-          "type": "string"
+          "type": "string",
+          "description": "Perpetuals: invested in own funds, × the grid's need per unit of Investment on its layout now (what the account needs for the grid to reach its stop, or to fill its last level without one, fees included), worked out when the row is served, finished grids included (0064 d8; before it ÷ the grid's leverage). The same factor gives ownFundsCurrent and ownFundsAverage; ÷ the leverage while the grid has no layout"
         },
         "ownFundsCurrent": {
           "type": "string"

@@ -4,6 +4,7 @@
   "title": "Runtime API request bodies",
   "description": "The request bodies of the local API (decision 0008 §4.6) that no other schema defines. The order command is order-command.schema.json; the cancel body and the bot command are in lists-api.schema.json. Money uses decimal strings. Counts, timestamps and transient demo generations use JSON integers where declared. See docs/reference/runtime/api.md.",
   "$defs": {
+    "decimalRange": { "type": "object", "additionalProperties": false, "required": ["low", "high"], "properties": { "low": { "$ref": "#/$defs/decimal" }, "high": { "$ref": "#/$defs/decimal" } } },
     "orderFeeEvent": {
       "type": "object",
       "additionalProperties": false,
@@ -812,6 +813,7 @@
             "cost"
           ],
           "properties": {
+            "range": { "$ref": "#/$defs/decimalRange", "description": "Added 2026-11-14 (0064 d11): between low and high depending on the price, since each order's size rounds to the exchange's step; absent when both print alike." },
             "size": {
               "type": "array",
               "items": {
@@ -857,6 +859,7 @@
                   "$ref": "#/$defs/decimal",
                   "description": "`loss` as a percent of the orders' value, the bot's Investment (the form's Max loss line shows it as it is, and the typed Max loss, % is in the same base: slMaxLossPct, 0016 amendment 14)."
                 },
+                "range": { "$ref": "#/$defs/decimalRange", "description": "Added 2026-11-14 (0064 d11): between low and high depending on the price, since each order's size rounds to the exchange's step; absent when both print alike." },
                 "fromEntryPct": {
                   "$ref": "#/$defs/decimal"
                 }
@@ -887,10 +890,13 @@
                 "survive"
               ],
               "properties": {
+                "range": { "$ref": "#/$defs/decimalRange", "description": "Added 2026-11-14 (0064 d11): between low and high depending on the price, since each order's size rounds to the exchange's step; absent when both print alike." },
                 "toLast": {
+                  "description": "The most the account needs for the bot to fill its last averaging order, fees included; corrected by 0064.",
                   "$ref": "#/$defs/decimal"
                 },
                 "survive": {
+                  "description": "The most the account needs for the bot to reach its stop, fees included; corrected by 0064.",
                   "oneOf": [
                     {
                       "type": "null"

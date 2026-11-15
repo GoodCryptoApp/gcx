@@ -25,6 +25,7 @@
   - [Stop Market and Stop Limit](trading/stop-orders.md)
   - [Trailing stops](trading/trailing-stops.md)
   - [Take-profit and stop-loss](trading/take-profit-stop-loss.md)
+  - [When an order fails](trading/order-errors.md)
 
 - [DCA bot](bots/dca.md)
   - [Features & setup](bots/dca-setup.md)

@@ -243,7 +243,7 @@
             "type": { "const": "market" },
             "mode": { "enum": ["percent", "quoted", "price", "loss"], "description": "loss: value is the expected loss in quote." },
             "value": { "$ref": "#/$defs/decimal" },
-            "follow": { "enum": ["breakeven", "tp"], "description": "Follow TPs: move to break-even at the first target, or to the previous target at each. Off when absent." },
+            "follow": { "enum": ["breakeven", "tp"], "description": "Follow TPs: move to breakeven at the first target, or to the previous target at each. Off when absent." },
             "triggerTimeout": { "$ref": "#/$defs/millis" }
           }
         },

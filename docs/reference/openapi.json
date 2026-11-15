@@ -3721,6 +3721,7 @@
                 "description": "The Binance account's id (sourceId)."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/accounts-api.keepAlive",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -3891,6 +3892,7 @@
                 "description": "The account's id (sourceId)."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/accounts-api.check",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -5156,6 +5158,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/order-command",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -5601,7 +5604,7 @@
                           "breakeven",
                           "tp"
                         ],
-                        "description": "Follow TPs: move to break-even at the first target, or to the previous target at each. Off when absent."
+                        "description": "Follow TPs: move to breakeven at the first target, or to the previous target at each. Off when absent."
                       },
                       "triggerTimeout": {
                         "$ref": "#/$defs/order-command.millis"
@@ -5964,6 +5967,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/order-command",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -6409,7 +6413,7 @@
                           "breakeven",
                           "tp"
                         ],
-                        "description": "Follow TPs: move to break-even at the first target, or to the previous target at each. Off when absent."
+                        "description": "Follow TPs: move to breakeven at the first target, or to the previous target at each. Off when absent."
                       },
                       "triggerTimeout": {
                         "$ref": "#/$defs/order-command.millis"
@@ -6805,6 +6809,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/lists-api.cancelAllBody",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -7010,6 +7015,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/lists-api.closeAllBody",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -7193,6 +7199,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/lists-api.stopAllBody",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -7403,6 +7410,7 @@
                 "description": "The order's id, percent-encoded as one segment (a take-profit leg `x1/tp1` is `x1%2Ftp1`). Or `ext:` and the exchange's id of an order placed outside goodcryptoX."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/lists-api.cancelBody",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -7809,6 +7817,7 @@
                 "description": "The order's id, percent-encoded as one segment (a take-profit leg `x1/tp1` is `x1%2Ftp1`). Or `ext:` and the exchange's id of an order placed outside goodcryptoX."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/lists-api.refreshBody",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -7968,6 +7977,7 @@
                 "description": "The order's id, percent-encoded as one segment (a take-profit leg `x1/tp1` is `x1%2Ftp1`)."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/runtime-api.modify",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -8313,7 +8323,7 @@
                           "breakeven",
                           "tp"
                         ],
-                        "description": "Follow TPs: move to break-even at the first target, or to the previous target at each. Off when absent."
+                        "description": "Follow TPs: move to breakeven at the first target, or to the previous target at each. Off when absent."
                       },
                       "triggerTimeout": {
                         "$ref": "#/$defs/order-command.millis"
@@ -8513,6 +8523,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/runtime-api.botCreate",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -8706,7 +8717,7 @@
                       "unit",
                       "amount"
                     ],
-                    "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: Approx. margin on perps (ladder margin plus the stop-loss reserve; without a stop, margin and fees plus the loss at the last averaging level), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+                    "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: on perps the cycle's Approx. margin, what the account needs for the cycle to reach its stop (without a stop, to fill its last averaging order), fees included, taken at the size the share yields (0064); orders total on spot. A running bot takes a new size from its next cycle. Exact resolved sizing is journaled; replay never re-reads.",
                     "properties": {
                       "unit": {
                         "enum": [
@@ -9424,7 +9435,7 @@
                       "unit",
                       "amount"
                     ],
-                    "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+                    "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: on perps the grid's Approx. margin, what the account needs for it to reach its stop (without a stop, to fill its last level), fees included, taken at the size the share yields (0064); orders total on spot. A running grid's next placed order takes a new size; its resting orders keep theirs. Exact resolved sizing is journaled; replay never re-reads.",
                     "properties": {
                       "unit": {
                         "enum": [
@@ -10359,6 +10370,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/runtime-api.botPreview",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -10494,7 +10506,7 @@
                       "unit",
                       "amount"
                     ],
-                    "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: Approx. margin on perps (ladder margin plus the stop-loss reserve; without a stop, margin and fees plus the loss at the last averaging level), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+                    "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: on perps the cycle's Approx. margin, what the account needs for the cycle to reach its stop (without a stop, to fill its last averaging order), fees included, taken at the size the share yields (0064); orders total on spot. A running bot takes a new size from its next cycle. Exact resolved sizing is journaled; replay never re-reads.",
                     "properties": {
                       "unit": {
                         "enum": [
@@ -11186,7 +11198,7 @@
                       "unit",
                       "amount"
                     ],
-                    "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+                    "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: on perps the grid's Approx. margin, what the account needs for it to reach its stop (without a stop, to fill its last level), fees included, taken at the size the share yields (0064); orders total on spot. A running grid's next placed order takes a new size; its resting orders keep theirs. Exact resolved sizing is journaled; replay never re-reads.",
                     "properties": {
                       "unit": {
                         "enum": [
@@ -12002,7 +12014,7 @@
         },
         "responses": {
           "200": {
-            "description": "`{accepted: true}` (a `modify` adds `applied`: `now`, or `next` when a field waits for the next cycle); a grid's `fix-failed` answers `{placed, left, needed, unit, later?, past?}` (placed: orders sent; one the exchange then refuses is counted in the row's `failed` again), 422 `paused` or `balance` with nothing placed, 409 `state` for a stopped grid; 422 when the bot's state does not allow the command, and `settings` for a modify whose settings the bot cannot run (its `text` the engine's reason; the panel says its own sentence). To a trading key: 422 for a bot it did not create, an unsupported command or invalid settings; 403 when a person stopped it."
+            "description": "`{accepted: true}` (a `modify` adds `applied`: `now`, or `next` when a field waits for the next cycle); a grid's `fix-failed`, and `restore-level` with a failed order's `cloid` (a person's Retry, for that order alone), answer `{placed, left, needed, unit, later?, past?}` (placed: orders sent; one the exchange then refuses is counted in the row's `failed` again), 422 `paused` or `balance` with nothing placed, 409 `state` for a stopped grid; 422 when the bot's state does not allow the command, and `settings` for a modify whose settings the bot cannot run (its `text` the engine's reason; the panel says its own sentence). To a trading key: 422 for a bot it did not create, an unsupported command or invalid settings; 403 when a person stopped it."
           },
           "400": {
             "description": "The request does not match its schema.",
@@ -12114,6 +12126,7 @@
                 "description": "The bot's id."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/lists-api.botCommand",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -12297,7 +12310,7 @@
                       },
                       "from": {
                         "const": "next-cycle",
-                        "description": "The scope of the fields a running cycle was built from: from the next cycle, the only scope in V1 (V1.1 adds this-cycle). Optional and ignored in a request; the runtime journals it when a field waits for the next cycle (a cycle open at the press and the value not the one in force, 0016 Amendment 7; since 3.2.1 Reinvest and a TA bot's signals apply at once), and an older runtime whenever such a field was present."
+                        "description": "The scope of the fields a running cycle was built from: from the next cycle, the only scope in V1 (V1.1 adds this-cycle). Optional and ignored in a request; the runtime journals it when a field waits for the next cycle (a cycle open at the press and the value not the one in force, 0016 Amendment 7; since 3.2.1 Reinvest and a TA bot's signals apply at once, since 2026-11-14 postOnly), and an older runtime whenever such a field was present."
                       }
                     }
                   },
@@ -12480,7 +12493,7 @@
                 "type": "object",
                 "additionalProperties": false,
                 "minProperties": 1,
-                "description": "Any setting of dca-bot-create.schema.json but the entry condition and the end time (0016 Amendment 1 B46; the TA periods and signals added by 0016 Amendment 7, MH 669: a TA bot's only, 422 on another; startAt and atEnd added by its d9, MH 709 (a), 710 (a): startAt only while the bot waits for its start, 422 otherwise, its start timer moved to the new time; atEnd, what happens when the days end, at once). goodcryptoX's five (closeOnStop, repeatOnTp, repeatOnSl, tpFixedFromEntry, cooldownMs; 0016 d16; a cooldown changed during the cooldown counts from its start), wholePosition (\"Only this bot trades this pair\", 0028 d21.6: on is refused while another bot that is not done trades the pair; off closes the bot's open count item and yellow notice), since 3.2.1 reinvest and a TA bot's signal, taPeriods and taSignals (read only while it waits for its signal; entrySide still waits), and the bot's name and note (B65, the limits of the create's; also on a stopped bot) apply at once; every other field at once while no cycle is open (waiting to start, for its signal, in its cooldown, closing, or held before its entry is sent; the details serve the current cycle's chartCycle.open) and from the next cycle while one is: the open cycle keeps its ladder and exits. The answer's applied says which. The runtime validates the settings the next cycle will run on as at creation (422 with the reason).",
+                "description": "Any setting of dca-bot-create.schema.json but the entry condition and the end time (0016 Amendment 1 B46; the TA periods and signals added by 0016 Amendment 7, MH 669: a TA bot's only, 422 on another; startAt and atEnd added by its d9, MH 709 (a), 710 (a): startAt only while the bot waits for its start, 422 otherwise, its start timer moved to the new time; atEnd, what happens when the days end, at once). goodcryptoX's five (closeOnStop, repeatOnTp, repeatOnSl, tpFixedFromEntry, cooldownMs; 0016 d16; a cooldown changed during the cooldown counts from its start), wholePosition (\"Only this bot trades this pair\", 0028 d21.6: on is refused while another bot that is not done trades the pair; off closes the bot's open count item and yellow notice), since 3.2.1 reinvest and a TA bot's signal, taPeriods and taSignals (read only while it waits for its signal; entrySide still waits), postOnly (added 2026-11-14, 0063 ruling (a): read at each averaging send, Retry and Fix failed included; an averaging order made but not sent yet takes it, one resting on the exchange keeps its own), and the bot's name and note (B65, the limits of the create's; also on a stopped bot) apply at once; every other field at once while no cycle is open (waiting to start, for its signal, in its cooldown, closing, or held before its entry is sent; the details serve the current cycle's chartCycle.open) and from the next cycle while one is: the open cycle keeps its ladder and exits. The answer's applied says which. The runtime validates the settings the next cycle will run on as at creation (422 with the reason).",
                 "properties": {
                   "investment": {
                     "type": "object",
@@ -13052,7 +13065,7 @@
                   "unit",
                   "amount"
                 ],
-                "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+                "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: on perps the grid's Approx. margin, what the account needs for it to reach its stop (without a stop, to fill its last level), fees included, taken at the size the share yields (0064); orders total on spot. A running grid's next placed order takes a new size; its resting orders keep theirs. Exact resolved sizing is journaled; replay never re-reads.",
                 "properties": {
                   "unit": {
                     "enum": [
@@ -14818,6 +14831,7 @@
                 "description": "The Binance account's id (sourceId)."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/accounts-api.bnbFees",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -15152,6 +15166,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/runtime-api.leverage",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -15317,6 +15332,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/runtime-api.margin",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -19453,6 +19469,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/proposal-api.propose",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -19921,7 +19938,7 @@
                           "breakeven",
                           "tp"
                         ],
-                        "description": "Follow TPs: move to break-even at the first target, or to the previous target at each. Off when absent."
+                        "description": "Follow TPs: move to breakeven at the first target, or to the previous target at each. Off when absent."
                       },
                       "triggerTimeout": {
                         "$ref": "#/$defs/order-command.millis"
@@ -20433,6 +20450,7 @@
             "additionalProperties": false,
             "properties": {
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/proposal-api.proposeBot",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -20624,7 +20642,7 @@
                       "unit",
                       "amount"
                     ],
-                    "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: Approx. margin on perps (ladder margin plus the stop-loss reserve; without a stop, margin and fees plus the loss at the last averaging level), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+                    "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: on perps the cycle's Approx. margin, what the account needs for the cycle to reach its stop (without a stop, to fill its last averaging order), fees included, taken at the size the share yields (0064); orders total on spot. A running bot takes a new size from its next cycle. Exact resolved sizing is journaled; replay never re-reads.",
                     "properties": {
                       "unit": {
                         "enum": [
@@ -21342,7 +21360,7 @@
                       "unit",
                       "amount"
                     ],
-                    "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+                    "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: on perps the grid's Approx. margin, what the account needs for it to reach its stop (without a stop, to fill its last level), fees included, taken at the size the share yields (0064); orders total on spot. A running grid's next placed order takes a new size; its resting orders keep theirs. Exact resolved sizing is journaled; replay never re-reads.",
                     "properties": {
                       "unit": {
                         "enum": [
@@ -22449,6 +22467,7 @@
                 "description": "The proposal's id."
               },
               "body": {
+                "type": "object",
                 "$ref": "#/$defs/proposal-api.withdraw",
                 "description": "The request's JSON, as the operation's request body."
               }
@@ -28137,6 +28156,22 @@
                 "type": "string",
                 "description": "Added 2026-10-05 (MH audit line 13): with done error, the exchange's text that stopped the bot; also (RULINGS 218 b) while the bot waits in repair on the exchange's refusal of its spot sale of the rest, that refusal's text."
               },
+              "errorWords": {
+                "type": "object",
+                "description": "Added 2026-11-15 (0063 d5): with `error`, the message text and its code where the exchange has codes, as the venue's reader takes them out of it (a JSON reply on Bybit and Binance). `error` keeps the reply unchanged. Absent for words goodcryptoX wrote itself and on older runtimes.",
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                }
+              },
               "why": {
                 "type": "string",
                 "description": "Added 2026-10-05 (ruling 203): with `error`, our explanation of what the error was, in the person's language (the `language` setting; English when none is chosen or the language has no text for it); the exchange's own words stay raw in `error`. Absent without `error`; a reader that does not know it shows `error` alone."
@@ -28262,7 +28297,7 @@
               },
               "invested": {
                 "$ref": "#/components/schemas/order-row.decimal",
-                "description": "goodcryptoX's Invested (EN algo.dcaInvestedInfo): the largest notional of a cycle's entry and averaging orders, over every cycle; the base of the percentages."
+                "description": "goodcryptoX's Invested (EN algo.dcaInvestedInfo), the panel's Max planned: the largest plan of a cycle over every cycle; the base of the percentages. A cycle started by 0064's build counts its unrounded plan, the typed Investment × its scale (planTop on its allowance row); an older cycle the notional of its entry and averaging orders. A bot with no cycle yet (waiting for its start or its signal) shows its plan, worked out when the row is served: sized as a share of the account, at the account's last read, 0 before any (corrected by 0064, which showed 0 until the entry filled)."
               },
               "apr": {
                 "$ref": "#/components/schemas/order-row.signed",
@@ -28286,11 +28321,11 @@
               },
               "ownFunds": {
                 "$ref": "#/components/schemas/order-row.decimal",
-                "description": "Added 2026-10-17 (0016 Amendment 10): Invested in own funds, the largest of a cycle's entry and averaging orders' notional divided by that cycle's leverage (read at its entry; a cycle before the bot's first known leverage takes that one). Perpetuals only; absent on spot, before any leverage is known, and while not positive."
+                "description": "Added 2026-10-17 (0016 Amendment 10): Invested in own funds, what the bot needs from the account. A cycle started by 0064's build: its plan × its needPerPlan (its allowance row), the most the account needs at any moment of the cycle for it to reach its stop, or to fill its last averaging order without one, fees included; an older cycle: its orders' notional divided by its leverage (read at its entry; a cycle before the bot's first known leverage takes that one), as before. Perpetuals only; absent on spot, before any leverage is known, and while not positive."
               },
               "ownFundsPeak": {
                 "$ref": "#/components/schemas/order-row.decimal",
-                "description": "Added 2026-10-17 (0016 Amendment 10): investedPeak in own funds, each cycle's cost and resting orders divided by its leverage. As ownFunds, absent on spot, before any leverage is known, and while not positive."
+                "description": "Added 2026-10-17 (0016 Amendment 10): investedPeak in own funds, each cycle's cost and resting orders × its needPerPlan (a cycle started by 0064's build), else divided by its leverage. As ownFunds, absent on spot, before any leverage is known, and while not positive."
               },
               "ownFundsAverage": {
                 "$ref": "#/components/schemas/order-row.decimal",
@@ -28298,7 +28333,7 @@
               },
               "breakeven": {
                 "const": true,
-                "description": "B18: the current cycle's take-profit was moved to break-even (its average plus the fees paid so far)."
+                "description": "B18: the current cycle's take-profit was moved to breakeven (its average plus the fees paid so far)."
               },
               "change": {
                 "type": "object",
@@ -28319,7 +28354,7 @@
                     ]
                   }
                 },
-                "description": "Added 2026-10-18 (MH 726 (e)): the current cycle's take-profit's `change` (order-row.schema.json): the last command since the runtime started that moved it (Move to break even) and how it ended at the exchange. Absent while not known, and after a restart."
+                "description": "Added 2026-10-18 (MH 726 (e)): the current cycle's take-profit's `change` (order-row.schema.json): the last command since the runtime started that moved it (Move to breakeven) and how it ended at the exchange. Absent while not known, and after a restart."
               },
               "counters": {
                 "type": "object",
@@ -28567,7 +28602,8 @@
                 "type": "object"
               },
               "orders": {
-                "type": "array"
+                "type": "array",
+                "description": "The grid's orders. Added 2026-11-15 (0063 slice G), on an order that failed (`status` failed): `error`, why it failed: its latest try as the order rows tell it (`why` our sentence; `errorType`, `exchangeWords`, `reason` and `refusalBy` as on an order row), or, with no such try, the sentence of what the grid knows (`why` alone); `retry: true` while `restore-level` with its `cloid` would place it again now (as the order row's `retry`); and `past: true` while placing it again would fill it at once (added 2026-11-15, round 2). All absent on older runtimes."
               },
               "seq": {
                 "type": "integer"
@@ -28631,7 +28667,8 @@
                 "type": "string"
               },
               "ownFunds": {
-                "type": "string"
+                "type": "string",
+                "description": "Perpetuals: invested in own funds, × the grid's need per unit of Investment on its layout now (what the account needs for the grid to reach its stop, or to fill its last level without one, fees included), worked out when the row is served, finished grids included (0064 d8; before it ÷ the grid's leverage). The same factor gives ownFundsCurrent and ownFundsAverage; ÷ the leverage while the grid has no layout"
               },
               "ownFundsCurrent": {
                 "type": "string"
@@ -31077,7 +31114,7 @@
               "unit",
               "amount"
             ],
-            "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: Approx. margin on perps (ladder margin plus the stop-loss reserve; without a stop, margin and fees plus the loss at the last averaging level), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+            "description": "A3 d100: absent means quote. Quote and coin (the settled coin of a coin-margined contract, decision 0045 amendment 3 d8) are form metadata. Account is a percent of held account value: on perps the cycle's Approx. margin, what the account needs for the cycle to reach its stop (without a stop, to fill its last averaging order), fees included, taken at the size the share yields (0064); orders total on spot. A running bot takes a new size from its next cycle. Exact resolved sizing is journaled; replay never re-reads.",
             "properties": {
               "unit": {
                 "enum": [
@@ -32213,7 +32250,7 @@
               "unit",
               "amount"
             ],
-            "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+            "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: on perps the grid's Approx. margin, what the account needs for it to reach its stop (without a stop, to fill its last level), fees included, taken at the size the share yields (0064); orders total on spot. A running grid's next placed order takes a new size; its resting orders keep theirs. Exact resolved sizing is journaled; replay never re-reads.",
             "properties": {
               "unit": {
                 "enum": [
@@ -32929,7 +32966,7 @@
           "unit",
           "amount"
         ],
-        "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+        "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: on perps the grid's Approx. margin, what the account needs for it to reach its stop (without a stop, to fill its last level), fees included, taken at the size the share yields (0064); orders total on spot. A running grid's next placed order takes a new size; its resting orders keep theirs. Exact resolved sizing is journaled; replay never re-reads.",
         "properties": {
           "unit": {
             "enum": [
@@ -33899,6 +33936,19 @@
                 "minLength": 1,
                 "description": "Added 2026-11-07 (FIRST-MARKET): the instrument id the Trade page opens on when nothing is remembered for the venue or the remembered market is no longer listed (goodcryptoX's default_symbol), for example, Hyperliquid `BTC` (the main dex's BTC perpetual), Binance `binance:spot:BTCUSDT`. Optional; when absent, or not in the list, the list's first row."
               },
+              "margin": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "perp": {
+                    "$ref": "#/components/schemas/venue-caps.properties.margin"
+                  },
+                  "spot": {
+                    "$ref": "#/components/schemas/venue-caps.properties.margin"
+                  }
+                },
+                "description": "Added 2026-11-14 (0064 d7): the exchange's margin rules per instrument kind, read from the venue's port, from which the forms work out what a bot needs from the account. Absent for a venue or kind: market orders margined at the last price, no fee held at placement, no maintenance on resting orders, no check at a fill, and a fallback maintenance of 1/max leverage."
+              },
               "feeRates": {
                 "type": "object",
                 "additionalProperties": false,
@@ -34508,7 +34558,7 @@
               },
               "from": {
                 "const": "next-cycle",
-                "description": "The scope of the fields a running cycle was built from: from the next cycle, the only scope in V1 (V1.1 adds this-cycle). Optional and ignored in a request; the runtime journals it when a field waits for the next cycle (a cycle open at the press and the value not the one in force, 0016 Amendment 7; since 3.2.1 Reinvest and a TA bot's signals apply at once), and an older runtime whenever such a field was present."
+                "description": "The scope of the fields a running cycle was built from: from the next cycle, the only scope in V1 (V1.1 adds this-cycle). Optional and ignored in a request; the runtime journals it when a field waits for the next cycle (a cycle open at the press and the value not the one in force, 0016 Amendment 7; since 3.2.1 Reinvest and a TA bot's signals apply at once, since 2026-11-14 postOnly), and an older runtime whenever such a field was present."
               }
             }
           },
@@ -35642,7 +35692,7 @@
         }
       },
       "lists-api.item": {
-        "description": "Added with 0028 d11, d18 (stream 2): one open item, whatever gcx cannot settle by itself and waits for a person's answer, derived from the bot's or the order's records (src/domain/repair/items.ts), never stored. The runtime topic's `attention` rows and GET /api/v1/bots/{id} carry the same. id: `<bot>:<cause>` or `<orderId>:order`; key: `<id>:<episode>`, the handle of Telegram's message, of POST /api/v1/attention/silence and of a new episode (a refusal of the answer's act opens a new one); cause: the catalogue's code (0028 d15); level: red holds (the bot's new risk, d3), yellow is the notice, which holds nothing (RULINGS 319 a); holds: new-risk, nothing, or order (only that order waits); answers: the codes of the existing commands, in order (adopt Exchange is right, keep Bot is right on red and Accept on yellow, restore Retry of a refused sale, match Make the exchange match the bot, free Cancel that order, retry Retry, close Close position, cancel Cancel order, stop Stop bot, level Retry order, renew and limits open Settings, accept-venue older journals); since: the episode's time; acting: an answer's act is out (match); orderId: the order it is about; words: the exchange's own words; preview (GET /api/v1/bots/{id} only, on the items Exchange is right answers, d22.8, RULINGS 330 a): what the bot will count after Exchange is right, figured as the press figures it from the venue's history and a read of the exchange, read again when the item shows a new exchange figure (size and cost after the correction, what the fills found realize, the correction's size, and the fills at the venue's time), or failed: they could not be read and gcx reads them again every minute and at the press. A newer cause or answer may appear; a reader shows what it knows. Added 2026-11-11 (STUCK-BOT-WATCH): causes stuck-stopping, stuck-launching and stuck-entry (a DCA's market entry not filled), a bot still Stopping, or Launching without waiting for anything the person set, five minutes after it began; red, it holds nothing; answers [\"stop\"] for a grid and any launch, none for a DCA still closing (its open orders' Refresh); it leaves when the bot leaves that state; key `<bot>:<cause>:<the episode start>`.",
+        "description": "Added with 0028 d11, d18 (stream 2): one open item, whatever gcx cannot settle by itself and waits for a person's answer, derived from the bot's or the order's records (src/domain/repair/items.ts), never stored. The runtime topic's `attention` rows and GET /api/v1/bots/{id} carry the same. id: `<bot>:<cause>` or `<orderId>:order`; key: `<id>:<episode>`, the handle of Telegram's message, of POST /api/v1/attention/silence and of a new episode (a refusal of the answer's act opens a new one); cause: the catalogue's code (0028 d15); level: red holds (the bot's new risk, d3), yellow is the notice, which holds nothing (RULINGS 319 a); holds: new-risk, nothing, or order (only that order waits); answers: the codes of the existing commands, in order (adopt Exchange is right, keep Bot is right on red and Accept on yellow, restore Retry of a refused sale, match Make the exchange match the bot, free Cancel that order, retry Retry, close Close position, cancel Cancel order, stop Stop bot, level Fix failed, renew and limits open Settings, accept-venue older journals); since: the episode's time; acting: an answer's act is out (match); orderId: the order it is about; words: the exchange's own words; preview (GET /api/v1/bots/{id} only, on the items Exchange is right answers, d22.8, RULINGS 330 a): what the bot will count after Exchange is right, figured as the press figures it from the venue's history and a read of the exchange, read again when the item shows a new exchange figure (size and cost after the correction, what the fills found realize, the correction's size, and the fills at the venue's time), or failed: they could not be read and gcx reads them again every minute and at the press. A newer cause or answer may appear; a reader shows what it knows. Added 2026-11-11 (STUCK-BOT-WATCH): causes stuck-stopping, stuck-launching and stuck-entry (a DCA's market entry not filled), a bot still Stopping, or Launching without waiting for anything the person set, five minutes after it began; red, it holds nothing; answers [\"stop\"] for a grid and any launch, none for a DCA still closing (its open orders' Refresh); it leaves when the bot leaves that state; key `<bot>:<cause>:<the episode start>`.",
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -35723,6 +35773,22 @@
           "words": {
             "type": "string"
           },
+          "exchangeWords": {
+            "type": "object",
+            "description": "Added 2026-11-15 (0063 d5): words as the venue's reader takes them: the message text and its code where the exchange has codes (a JSON reply on Bybit and Binance). words keeps the reply unchanged. Absent without words, for words goodcryptoX wrote itself, and on older runtimes.",
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              }
+            }
+          },
           "refusals": {
             "type": "integer",
             "minimum": 1,
@@ -35737,7 +35803,8 @@
                 "const": true
               },
               "failed": {
-                "description": "Added 2026-11-11 (0040 amendment 8 d164): on a grid's one orders-failed item (answered fix-failed, Fix failed): how many of its orders failed, and why: money when every one was refused or canceled for money, other otherwise.",
+                "deprecated": true,
+                "description": "Deprecated (0063 d7, 2026-11-14): never sent any more; read the grid row's `failed` and `failedWhy`. Kept in the schema for one release, as the no-breaking-changes rule asks.",
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
@@ -36054,7 +36121,7 @@
         "type": "object",
         "additionalProperties": false,
         "minProperties": 1,
-        "description": "Any setting of dca-bot-create.schema.json but the entry condition and the end time (0016 Amendment 1 B46; the TA periods and signals added by 0016 Amendment 7, MH 669: a TA bot's only, 422 on another; startAt and atEnd added by its d9, MH 709 (a), 710 (a): startAt only while the bot waits for its start, 422 otherwise, its start timer moved to the new time; atEnd, what happens when the days end, at once). goodcryptoX's five (closeOnStop, repeatOnTp, repeatOnSl, tpFixedFromEntry, cooldownMs; 0016 d16; a cooldown changed during the cooldown counts from its start), wholePosition (\"Only this bot trades this pair\", 0028 d21.6: on is refused while another bot that is not done trades the pair; off closes the bot's open count item and yellow notice), since 3.2.1 reinvest and a TA bot's signal, taPeriods and taSignals (read only while it waits for its signal; entrySide still waits), and the bot's name and note (B65, the limits of the create's; also on a stopped bot) apply at once; every other field at once while no cycle is open (waiting to start, for its signal, in its cooldown, closing, or held before its entry is sent; the details serve the current cycle's chartCycle.open) and from the next cycle while one is: the open cycle keeps its ladder and exits. The answer's applied says which. The runtime validates the settings the next cycle will run on as at creation (422 with the reason).",
+        "description": "Any setting of dca-bot-create.schema.json but the entry condition and the end time (0016 Amendment 1 B46; the TA periods and signals added by 0016 Amendment 7, MH 669: a TA bot's only, 422 on another; startAt and atEnd added by its d9, MH 709 (a), 710 (a): startAt only while the bot waits for its start, 422 otherwise, its start timer moved to the new time; atEnd, what happens when the days end, at once). goodcryptoX's five (closeOnStop, repeatOnTp, repeatOnSl, tpFixedFromEntry, cooldownMs; 0016 d16; a cooldown changed during the cooldown counts from its start), wholePosition (\"Only this bot trades this pair\", 0028 d21.6: on is refused while another bot that is not done trades the pair; off closes the bot's open count item and yellow notice), since 3.2.1 reinvest and a TA bot's signal, taPeriods and taSignals (read only while it waits for its signal; entrySide still waits), postOnly (added 2026-11-14, 0063 ruling (a): read at each averaging send, Retry and Fix failed included; an averaging order made but not sent yet takes it, one resting on the exchange keeps its own), and the bot's name and note (B65, the limits of the create's; also on a stopped bot) apply at once; every other field at once while no cycle is open (waiting to start, for its signal, in its cooldown, closing, or held before its entry is sent; the details serve the current cycle's chartCycle.open) and from the next cycle while one is: the open cycle keeps its ladder and exits. The answer's applied says which. The runtime validates the settings the next cycle will run on as at creation (422 with the reason).",
         "properties": {
           "investment": {
             "type": "object",
@@ -37018,7 +37085,7 @@
       "notify-settings.properties.telegramButtons": {
         "type": "boolean",
         "default": true,
-        "description": "Shortcut buttons under gcx's Telegram messages (0009 Amendment 1): Stop bot, Close position, Retry, Retry order, Relaunch, the three TP/SL shortcuts. Off: new messages carry the panel link only, and a press on an older message answers \"Shortcut buttons are off in Settings\" and does nothing."
+        "description": "Shortcut buttons under gcx's Telegram messages (0009 Amendment 1): Stop bot, Close position, Retry, Fix failed, Relaunch, the three TP/SL shortcuts. Off: new messages carry the panel link only, and a press on an older message answers \"Shortcut buttons are off in Settings\" and does nothing."
       },
       "notify-settings.properties.telegramConfirm": {
         "type": "boolean",
@@ -37448,7 +37515,7 @@
                   "breakeven",
                   "tp"
                 ],
-                "description": "Follow TPs: move to break-even at the first target, or to the previous target at each. Off when absent."
+                "description": "Follow TPs: move to breakeven at the first target, or to the previous target at each. Off when absent."
               },
               "triggerTimeout": {
                 "$ref": "#/components/schemas/order-command.millis"
@@ -37980,11 +38047,35 @@
           },
           "why": {
             "type": "string",
-            "description": "An order in repair: the repair as a sentence for the person, the text the notification says (when the exchange refused the order in words goodcryptoX named, its error type instead, ruling 203; when goodcryptoX refused it itself, `refusalBy` is `gcx` and the sentence says the order was never placed, ruling 570), in the person's language (the `language` setting; English when none is chosen or the language has no text for it). Also present on a closed manual order canceled outside goodcryptoX: it says the order was not canceled from goodcryptoX. Otherwise absent when the order is not in repair. Added 2026-10-05 (ruling 203): also on a closed order whose `closeReason` is `rejected` (refused by the exchange, never placed, or unfilled): our explanation of the error, goodcryptoX's error type for the refusals it named, else the generic one; before it, such a row had no `why` and a reader ignores it."
+            "description": "Our sentence in the person's language (English when unavailable). On an exchange refusal it is chosen by errorType; unknown says the exchange refused the order. In repair, a known exchange type gives its sentence, otherwise the repair's sentence stays. goodcryptoX's own refusals keep their own sentence and refusalBy gcx. A never-placed or unfilled order keeps its explanation. Also present on a closed manual order canceled outside goodcryptoX; absent on other rows. Additive since ruling 203; older readers may ignore it."
+          },
+          "errorType": {
+            "type": "string",
+            "description": "0063: the exchange refusal's type, read from reason: post-only, funds, funds-margin, below-minimum, size-too-small, size-too-large, size-step, price-step, price-range, trigger-passed, reduce-only, no-liquidity, market-closed, order-type, open-orders, position-limit, oi-cap, key-permission, api-wallet, account-restricted, settings, unknown. A reader shows what it knows; values may be added. Absent where the order has no refusal from an exchange, including goodcryptoX's own refusals, unfilled and never-placed orders, and on older runtimes."
+          },
+          "exchangeWords": {
+            "type": "object",
+            "description": "0063: the exchange's own message text and its code where the exchange has codes, taken from reason. reason keeps the raw reply unchanged. Absent without an exchange refusal and on older runtimes.",
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              }
+            }
           },
           "refusalBy": {
             "const": "gcx",
             "description": "Added 2026-10-16 (ruling 570): on a closed order whose `closeReason` is `rejected`, `reason` is goodcryptoX's own words, not the exchange's: it refused the order before signing it (an instrument it does not trade, a market order it could not price because the book could not be read) or could not sign it; the words start \"not sent: \". Also, since the same day (batch-533-578 finding 1), on an order in repair (`status` `unknown`) whose `reason` is such words: a stop that fired and could not be priced. Absent (the default, and on every older row): `reason` is the exchange's words. A reader that does not know it shows `reason` as before."
+          },
+          "retry": {
+            "const": true,
+            "description": "Added 2026-11-14 (0063 d9): on a DCA bot's failed averaging order that the bot would send again now (`restore-level` with its level, the press of Retry or the wrench): the bot is in a position, not paused or in repair, its stop-loss has not fired, its take profit is not trailing, and the row is that level's latest order in the running cycle. Since 2026-11-15 (slice G) also on a Grid's order that is the latest try of a failed order `restore-level` with its `cloid` would place again now: the grid is not paused, stopping or done, its position agrees with the exchange's, no open item holds its new orders, and no other order holds that order's level; the press is Fix failed for that one order (one read of the free balance). A person presses Retry; a key cannot send `restore-level`. Absent (the default, and on every older row and every other order): Retry is not offered."
           },
           "repairActionCause": {
             "type": "string",
@@ -39756,6 +39847,10 @@
               "cost"
             ],
             "properties": {
+              "range": {
+                "$ref": "#/components/schemas/runtime-api.decimalRange",
+                "description": "Added 2026-11-14 (0064 d11): between low and high depending on the price, since each order's size rounds to the exchange's step; absent when both print alike."
+              },
               "size": {
                 "type": "array",
                 "items": {
@@ -39801,6 +39896,10 @@
                     "$ref": "#/components/schemas/runtime-api.decimal",
                     "description": "`loss` as a percent of the orders' value, the bot's Investment (the form's Max loss line shows it as it is, and the typed Max loss, % is in the same base: slMaxLossPct, 0016 amendment 14)."
                   },
+                  "range": {
+                    "$ref": "#/components/schemas/runtime-api.decimalRange",
+                    "description": "Added 2026-11-14 (0064 d11): between low and high depending on the price, since each order's size rounds to the exchange's step; absent when both print alike."
+                  },
                   "fromEntryPct": {
                     "$ref": "#/components/schemas/runtime-api.decimal"
                   }
@@ -39831,10 +39930,16 @@
                   "survive"
                 ],
                 "properties": {
+                  "range": {
+                    "$ref": "#/components/schemas/runtime-api.decimalRange",
+                    "description": "Added 2026-11-14 (0064 d11): between low and high depending on the price, since each order's size rounds to the exchange's step; absent when both print alike."
+                  },
                   "toLast": {
+                    "description": "The most the account needs for the bot to fill its last averaging order, fees included; corrected by 0064.",
                     "$ref": "#/components/schemas/runtime-api.decimal"
                   },
                   "survive": {
+                    "description": "The most the account needs for the bot to reach its stop, fees included; corrected by 0064.",
                     "oneOf": [
                       {
                         "type": "null"
@@ -40150,6 +40255,22 @@
       "runtime-api.decimal": {
         "type": "string",
         "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+      },
+      "runtime-api.decimalRange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "low",
+          "high"
+        ],
+        "properties": {
+          "low": {
+            "$ref": "#/components/schemas/runtime-api.decimal"
+          },
+          "high": {
+            "$ref": "#/components/schemas/runtime-api.decimal"
+          }
+        }
       },
       "runtime-api.demoBybitViewAnswer": {
         "oneOf": [
@@ -43272,6 +43393,106 @@
           },
           "simulated": {
             "const": true
+          }
+        }
+      },
+      "venue-caps.properties.margin": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "orderPrice",
+          "placementFees",
+          "orderMaintenance",
+          "fillCheck",
+          "fallbackMaintenance"
+        ],
+        "description": "Added 2026-11-14 (design 0064 d7): the exchange's own margin rules for a perpetual kind, from which the app works out what a bot needs from the account. Absent on spot and where the venue offers no perpetuals; absent reads as: market orders margined at the last price, no fee held at placement, no maintenance on resting orders, no check at a fill, the fallback maintenance at 1/max leverage. Each value's source is in the venue's handbook under Margin rules (0064).",
+        "properties": {
+          "orderPrice": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "market"
+            ],
+            "properties": {
+              "market": {
+                "oneOf": [
+                  {
+                    "const": "last"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "premium"
+                    ],
+                    "properties": {
+                      "premium": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]+)?$"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "description": "The price an order's initial margin is taken at: a limit its own; a market order the last price, or above it by premium (Binance 0.0015)."
+          },
+          "placementFees": {
+            "oneOf": [
+              {
+                "const": "none"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "open",
+                  "close"
+                ],
+                "properties": {
+                  "open": {
+                    "const": "taker"
+                  },
+                  "close": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "rate",
+                      "at"
+                    ],
+                    "properties": {
+                      "rate": {
+                        "type": "string",
+                        "pattern": "^[0-9]+(\\.[0-9]+)?$"
+                      },
+                      "at": {
+                        "const": "bankruptcy"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "description": "Fees the exchange holds at placement (Bybit: the fee to open at the taker rate and the fee to close at the non-VIP taker rate, at the bankruptcy price)."
+          },
+          "orderMaintenance": {
+            "type": "boolean",
+            "description": "Resting orders carry maintenance margin (Bybit)."
+          },
+          "fillCheck": {
+            "enum": [
+              "initial",
+              "none"
+            ],
+            "description": "A resting order's fill is checked again against initial margin (Hyperliquid, assumed)."
+          },
+          "fallbackMaintenance": {
+            "enum": [
+              "initial",
+              "half-initial"
+            ],
+            "description": "The maintenance rate assumed where no tier is read: the initial-margin rate at the max leverage (initial, 1/max: Bybit, Binance) or half of it (half-initial: Hyperliquid's documented rule); with no max known, the bot's leverage stands in for it."
           }
         }
       }

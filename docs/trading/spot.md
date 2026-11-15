@@ -26,6 +26,6 @@ A DCA bot runs on a spot market as goodcryptoX 2.0's did: no leverage or margin 
 
 - **A short bot** sells coins you hold first: it is created only if your account holds the coin for its whole ladder.
 - **A signal bot** (TA) can be armed to sell by a sell signal. It is created even if you lack the coin for a full sell ladder (the form's Funds needed shows the coin's column red before you launch), with a one-line warning in the answer; if a sell signal comes and the coin is missing, the exchange refuses the sell and goodcryptoX tells you.
-- "Only this bot trades {instrument} in this account" on spot compares your holding of the coin (what the account has, orders resting included) with what the bot holds, at a start or a wake; coins you keep beside the bot's make them differ and you are told once; nothing is changed, and the bot's exits sell only what it bought.
+- **Only this bot trades this pair** on spot compares your holding of the coin (what the account has, orders resting included) with what the bot holds, at a start or a wake; coins you keep beside the bot's make them differ and you are told once; nothing is changed, and the bot's exits sell only what it bought.
 
 Machine-readable: the orders route and its answers in [the API reference](../reference/openapi.json); the instrument list's `caps.spot` in `instrument-row.schema.json`.

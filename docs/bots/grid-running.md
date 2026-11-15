@@ -4,7 +4,7 @@
 
 Once goodcryptoX's Grid bot runs, you follow it in the Bots list on the Trade page and in its details, and you can change its range, levels, sizing, Follow, trailing exits and stops while it trades.
 
-On **Trade**, open **Bots**, choose **Grid**, then click your bot. The row shows its mode, position, realized and unrealized PnL, and APR. **Trades** counts completed round trips; the filled-order count below it also includes openings. Click a heading to sort. The row offers **Stop**, **Copy** and **Chart**, plus **Fix failed** if any orders failed. **Copy** fills the form with this bot's settings.
+On **Trade**, open **Bots**, choose **Grid**, then click your bot. The row shows its mode, position, realized and unrealized PnL, and APR. **Trades** counts completed round trips; the filled-order count below it also includes openings. Click a heading to sort. The row offers **Stop** while the bot runs and **Copy** once it has stopped, then **Chart**. **Copy** fills the form with this bot's settings.
 
 <figure><img src="../pictures/grid/running-1-bots-list.webp" alt="The Bots list on Grid, the arrow at the Trades column" width="563"><figcaption></figcaption></figure>
 
@@ -44,7 +44,7 @@ Choose a base under **Invested** or **Own funds**:
 - **Current** — what it is set to use now.
 - **Average** — funds used on average over running time.
 
-Own funds is your own money backing the bot, on perpetuals. **APR** projects the realized return over a year; **ROE** shows realized return on your own funds. PnL percentages use Initial. The chart shows realized PnL bars and an APR line. Treat APR as a comparison, not promised earnings.
+Own funds, on perpetuals, is what the bot needs from your account to reach its stop loss, worked out as **Approx. margin** is on the form. **APR** projects the realized return over a year; **ROE** shows realized return on those funds. PnL percentages use Initial. The chart shows realized PnL bars and an APR line. Treat APR as a comparison, not promised earnings.
 
 The bot's result covers its trades; your exchange's position figures cover the account position. Compare total results and the position still open when assessing performance.
 
@@ -102,13 +102,15 @@ Use **Every order**, **Every PnL change**, **Range, follows, resizes** and **Sta
 
 ## When the bot needs you
 
-A failed order does not stop the grid: the rest keeps trading, and the level is free for the grid's next order there.
+A failed order does not stop the grid: the rest keeps trading, and the level is free for the grid's next order there. [When an order fails](../trading/order-errors.md) explains each refusal.
 
 ### Failed orders
 
 When an order is refused or canceled for money, the grid puts it back by itself once its own trades free the money: nearest the price first, at most three times a level an hour. Money from anywhere else (a deposit, another bot) is used only when you press **Fix failed**.
 
-The Dashboard's **Needs your attention** shows how many of the grid's orders failed. Add money and press **Fix failed** on the bot: it places the failed orders nearest the price first, as far as your free balance goes, and says what the rest needs. What still doesn't fit stays failed; press again later. An order the price has already passed goes at once, at the market.
+The bot's card and the Bots list count the grid's failed orders. They don't go into **Needs your attention**: the bot keeps running. Add money and press **Fix failed** on the bot: it places the failed orders nearest the price first, as far as your free balance goes, and says what the rest needs. What still doesn't fit stays failed; press again later. An order the price has already passed goes at once, at the market.
+
+A failed order says **Error**; open it to see why. Press the wrench on its row, or **Retry** on the order, to place that one order again.
 
 If the bot needs a decision about its position, its status says so. Existing exits keep working while it takes no new risk. A notice about other resting orders alone leaves it running.
 

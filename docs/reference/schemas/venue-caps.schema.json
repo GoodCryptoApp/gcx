@@ -7,6 +7,17 @@
   "additionalProperties": false,
   "required": ["reduceOnly", "nativeStops", "modify", "batchOrders", "expiresAfterMs"],
   "properties": {
+    "margin": {
+      "type": "object", "additionalProperties": false, "required": ["orderPrice", "placementFees", "orderMaintenance", "fillCheck", "fallbackMaintenance"],
+      "description": "Added 2026-11-14 (design 0064 d7): the exchange's own margin rules for a perpetual kind, from which the app works out what a bot needs from the account. Absent on spot and where the venue offers no perpetuals; absent reads as: market orders margined at the last price, no fee held at placement, no maintenance on resting orders, no check at a fill, the fallback maintenance at 1/max leverage. Each value's source is in the venue's handbook under Margin rules (0064).",
+      "properties": {
+        "orderPrice": { "type": "object", "additionalProperties": false, "required": ["market"], "properties": { "market": { "oneOf": [ { "const": "last" }, { "type": "object", "additionalProperties": false, "required": ["premium"], "properties": { "premium": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$" } } } ] } }, "description": "The price an order's initial margin is taken at: a limit its own; a market order the last price, or above it by premium (Binance 0.0015)." },
+        "placementFees": { "oneOf": [ { "const": "none" }, { "type": "object", "additionalProperties": false, "required": ["open", "close"], "properties": { "open": { "const": "taker" }, "close": { "type": "object", "additionalProperties": false, "required": ["rate", "at"], "properties": { "rate": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$" }, "at": { "const": "bankruptcy" } } } } } ], "description": "Fees the exchange holds at placement (Bybit: the fee to open at the taker rate and the fee to close at the non-VIP taker rate, at the bankruptcy price)." },
+        "orderMaintenance": { "type": "boolean", "description": "Resting orders carry maintenance margin (Bybit)." },
+        "fillCheck": { "enum": ["initial", "none"], "description": "A resting order's fill is checked again against initial margin (Hyperliquid, assumed)." },
+        "fallbackMaintenance": { "enum": ["initial", "half-initial"], "description": "The maintenance rate assumed where no tier is read: the initial-margin rate at the max leverage (initial, 1/max: Bybit, Binance) or half of it (half-initial: Hyperliquid's documented rule); with no max known, the bot's leverage stands in for it." }
+      }
+    },
     "uncoveredCancelsIn": {"type": "array", "items": {"enum": ["standard", "unified", "portfolio", "dexAbstraction", "unknown"]}, "uniqueItems": true, "description": "Added 2026-11-11. Account modes in which an uncovered order cancels other orders holding the coin, for this market kind. An empty or absent list means refusal in every mode. Required in the TypeScript port; an unread account mode counts as unknown."},
     "feeRates": { "type": "object", "additionalProperties": false, "required": ["maker", "taker"], "properties": { "maker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }, "taker": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" } }, "description": "Published base maker/taker fractions for display before an account rate read (0040 amendment d28.4)." },
     "reduceOnly": { "type": "boolean", "description": "The venue enforces reduce-only on this kind (Hyperliquid spot: no)." },

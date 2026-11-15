@@ -32,7 +32,7 @@
         "unit",
         "amount"
       ],
-      "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: Approx. margin on perps (orders margin plus the stop-loss reserve; Grid without a stop reserves to the far band edge, DCA without a stop reserves the loss at the last averaging level plus margin and fees), orders total on spot. Exact resolved sizing is journaled; replay never re-reads.",
+      "description": "A3 d100: absent means quote. Quote is form metadata; on inverse, Investment amounts use settlement coin. Account is a percent of held account value: on perps the grid's Approx. margin, what the account needs for it to reach its stop (without a stop, to fill its last level), fees included, taken at the size the share yields (0064); orders total on spot. A running grid's next placed order takes a new size; its resting orders keep theirs. Exact resolved sizing is journaled; replay never re-reads.",
       "properties": {
         "unit": {
           "enum": [

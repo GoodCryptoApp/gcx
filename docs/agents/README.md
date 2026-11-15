@@ -116,7 +116,21 @@ The line copied through our relay works from any computer. When goodcryptoX does
 
 The first time an app starts the connector, it pairs that computer with your installation, with a one-use code the line carries. The code works until it is used, for a day at most, whether or not goodcryptoX's page stays open; restarting goodcryptoX also ends it. From then on every app on that computer connects by itself. The computer appears in **Settings › Devices** as **Programs on …**, with **Remove**.
 
-If your app says **This connector has expired. Download it again from goodcryptoX**, its line was not used within the day: copy the line again (or download Claude Desktop's file again) and replace the old one; in Claude Code, `claude mcp remove` the old one first.
+If your app says **This connector has expired. Download it again from goodcryptoX**, a day has not always passed: restarting goodcryptoX or using the code on another computer also makes the old line unusable. Copy a new line from **Settings › MCP & API** and replace your app's entry, following its steps above (in Claude Code, `claude mcp remove` the old one first); for Claude Desktop, download its file again. If the saved connection cannot be opened, use the steps below.
+
+The connector uses your installation's address when it can confirm that your goodcryptoX answers there. Otherwise, it connects through our relay. On another computer, using the relay is normal.
+
+If your app says **Can't open or save the connection on this computer**, first check that you are signed in as the computer user who first connected it. The message can also mean a file is damaged, access is denied, or Windows cannot open or save it. Copying a new line alone does not repair the saved files.
+
+If the saved files need replacing, follow these steps. They replace the saved connections of your current computer user; they do not fix blocked PowerShell or folder permissions.
+
+1. Close the AI apps that use goodcryptoX and stop any running `gcx connect`.
+2. Open the folder that holds them: on Windows, enter `%LOCALAPPDATA%\goodcryptoX` in File Explorer's address bar; on a Mac, use Finder's **Go to Folder** with `~/Library/Application Support/goodcryptoX`; on Linux, open `~/.local/share/goodcryptoX` in your file manager.
+3. Rename `connect` to an unused name, such as `connect-old`. If you cannot rename it, fix the folder's access first.
+4. Copy a new line from **Settings › MCP & API**, replace one app's entry using its steps above, and start that app. For Claude Desktop, download its file again.
+5. Repeat for each goodcryptoX installation you use. Other apps of the same computer user and installation then reuse that saved connection.
+
+If your app says **The connection took too long. Try again in a minute**, try again in a minute. A running connector tries again by itself; if your AI app stopped the connector, restart the app. If it keeps happening, it needs a closer look.
 
 Keep the copied lines private: they hold your key and, for a day, the code that pairs a computer. Claude Desktop's file holds the code but not the key: Claude Desktop asks for it. The code alone reads and trades nothing; an access key is still needed.
 
@@ -232,6 +246,8 @@ The Dashboard shows **At its limit**, and Telegram names the agent and the limit
 Ask for a preview before placing an order. It shows the proposed size, price, value and warnings without sending anything. The key's limits are checked on placement. A preview is a check of the plan, not approval of the trade.
 
 A DCA bot's preview has, for each side, `liquidation.price`: where the exchange would liquidate the position as the bot's orders fill. On Cross it is an estimate that assumes nothing else in the account changes. `"0"` means there is no liquidation price (the account fully covers the position); `liquidation` is `null` where the exchange gives a position none (portfolio margin).
+
+A DCA bot's preview also has `margin`: `survive` is what the account needs for the bot to reach its stop loss, and `toLast` what it needs to fill its last averaging order, both fees included and in the currency the market settles in, as the form's **Approx. margin** shows them. Each order's size rounds to the exchange's step, so `margin.range`, `position.range` and `stop.range` give the bounds the figure moves between with the price; the figure on the page is what would be sent now. They are absent when both bounds are alike. A Grid's preview does not yet carry its need: an agent reads the DCA's.
 
 A Grid bot's preview also has `maxLoss`, the Grid form's **Max loss** line: for Stop below and Stop above, the most the grid can lose when that stop fires, fees included (`loss` in money; `lossPct` a percent of the Investment (the orders' value), as the form shows it; `by` says whether the stop, a Stop loss, Max drawdown or a liquidation ends it first). `by: none` with a `reason` means there is no most, for example with both follows on. It is an estimate at the price now; see [Max loss at a stop](../bots/grid-setup.md#max-loss-at-a-stop).
 

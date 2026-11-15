@@ -40,7 +40,7 @@ Next, choose how to enter:
 
 ## Investment and entry size
 
-**Investment** — the planned total of your entry and averaging orders. Orders of 100, 200 and 400 total 700. Type Investment and the app works out the sizes from it, keeping the ladder's shape, and shows them in grey; type the sizes and Investment shows their total in grey. Changing any of the ladder's settings after typing Investment works the sizes out again. Choose **% of account** to use a share of your account value, including unrealized PnL: it targets Approx. margin on perpetuals and the orders' total on spot.
+**Investment** — the planned total of your entry and averaging orders. Orders of 100, 200 and 400 total 700. Type Investment and the app works out the sizes from it, keeping the ladder's shape, and shows them in grey; type the sizes and Investment shows their total in grey. Changing any of the ladder's settings after typing Investment works the sizes out again. Choose **% of account** to use a share of your account value, including unrealized PnL: it targets Approx. margin on perpetuals, the most your account needs for the bot to reach its stop loss, and the orders' total on spot.
 
 **Entry size** — the first order's value in the quote currency, or quantity in the coin. Averaging orders use the same unit. We suggest sticking with the quote currency for **Entry size**, unless you want a fixed coin amount at each level. Typing Entry size returns Investment to the quote currency.
 
@@ -103,7 +103,7 @@ Next, choose your exits. Both are optional:
 
 <figure><img src="../pictures/dca/setup-6-take-profit.webp" alt="The bot form, the arrow at the Limit take profit" width="300"><figcaption></figcaption></figure>
 
-**Take Profit** — the distance from your average entry, 3% by default. An average of 95 gives a target of 97.85. It follows averaging fills unless fixed to entry or moved to break even.
+**Take Profit** — the distance from your average entry, 3% by default. An average of 95 gives a target of 97.85. It follows averaging fills unless fixed to entry or moved to breakeven.
 
 - **Limit** rests on the exchange and fills at its price or better.
 - **Market** closes at market when price reaches the target.
@@ -177,7 +177,7 @@ Finally, check the funds:
 
 <figure><img src="../pictures/dca/setup-9-launch.webp" alt="The bot form with the liquidation warning, the arrow at Launch" width="430"><figcaption></figcaption></figure>
 
-**Max position** is what the bot holds after entry and all averaging orders fill. On spot, **Funds needed** shows the coins or quote currency needed for the ladder. On perpetuals, check **Approx. margin** and **Est. liquidation** before launching; see [Margin and liquidation](dca.md#margin-and-liquidation). Check the warning against your intended stop and averaging range.
+**Max position** is what the bot holds after entry and all averaging orders fill. Each order's size rounds down to the step the exchange trades in. On coins that trade in coarse steps and orders sized as an amount of money, that moves the figures with the price. The figures show what would be sent at the price now; on those coins the tooltips of **Max position**, **Max loss** and **Approx. margin** add a line, "…–… depending on the price". On spot, **Funds needed** shows the coins or quote currency needed for the ladder. On perpetuals, check **Approx. margin** and **Est. liquidation** before launching; see [Margin and liquidation](dca.md#margin-and-liquidation). Check the warning against your intended stop and averaging range.
 
 Add a **Bot name** and **Note** if you like. Review the description under **Launch**, then launch. **Launch** asks once more and shows that description; press **Launch** in it to start the bot, or **Back** to leave the form as it is. Tick **Don't ask again** to skip the question; the switch **Launching a bot** in Settings brings it back. A trading warning asks with **Launch anyway** instead, and no second question follows. Check the named issue first, since the exchange may refuse the order.
 

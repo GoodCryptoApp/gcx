@@ -48,7 +48,7 @@ The form's type row is Market, Limit and a third cell that shows the type you la
 
 ### Post only
 
-**Post only** (limit orders): "Ensures that your order is placed in the Order Book. If it would execute against existing orders, it will cancel instead. Used to pay lower Maker fee or collect Maker rebate". The order goes to the exchange as one that may only add to the book. If it would trade at once (a buy at or above the lowest offer, a sell at or below the highest bid), the exchange refuses it and the order reads **Error** with a sentence of ours, and the exchange's own words behind **Raw message**; nothing is placed instead. A DCA bot's **Post only** applies to its averaging orders.
+**Post only** (limit orders): "Ensures that your order is placed in the Order Book. If it would execute against existing orders, it will cancel instead. Used to pay lower Maker fee or collect Maker rebate". The order goes to the exchange as one that may only add to the book. If it would trade at once (a buy at or above the lowest offer, a sell at or below the highest bid), the exchange refuses it and the order reads **Error** with our sentence; hover over the sentence, or tap it, to see what the exchange replied. Nothing is placed instead. A DCA bot's **Post only** applies to its averaging orders.
 
 ### Reduce only
 
@@ -130,7 +130,7 @@ Point at an order's status for its reason, then open the details for fills and a
 - **Held** means a send needs attention after goodcryptoX stopped, the disk filled or maintenance interrupted it. Read the reason and offered action before sending again.
 - **Checking** means goodcryptoX is checking with the exchange. **Unknown** means the outcome still needs resolving; neither means the order definitely failed to reach the exchange.
 - **Filled** means the order traded. **Canceled** ends the unfilled rest; any filled part still counts. Its reason can name your cancel, a position that closed or changed side, or another exit that closed it.
-- **Expired** means Time in force ended. **Error** gives the refusal or failure in the details; **Raw message** holds the exchange's own words when available.
+- **Expired** means Time in force ended. **Error** gives the refusal or failure in the details; hover over its sentence, or tap it, to see what the exchange replied.
 - **Left** means the account was removed and the order was left on the named exchange. It was not canceled there. Check it on the exchange, since goodcryptoX no longer manages that account.
 
 ## Your orders in the orderbook

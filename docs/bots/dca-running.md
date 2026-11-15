@@ -19,7 +19,7 @@ On **Trade**, open **Bots** under the chart and choose **DCA**:
 | **Position** | Coin amount and dollar value. |
 | **R · U · APR** | Realized PnL, unrealized PnL and yearly rate so far. |
 
-Click a heading to sort, or a row for details. Row actions include **Stop**, **Copy**, **Chart** and **Fix failed**; **Copy** fills the form with this bot's settings. **Stop all** stops the running bots the filtered list shows, after confirmation, and says how many stopped and how many are stopping. A bot whose order's cancel the exchange never answered reads "An order of this bot needs a decision" while it stops: **Retry** on its item sends that cancel again; **Refresh** on the order's details asks the exchange about it. A bot still stopping, or still launching with a market entry, 5 minutes after it began sends you one message and shows in Needs attention: **Refresh** on its close order asks the exchange; a launch has **Stop** beside it.
+Click a heading to sort, or a row for details. A bot's row has **Stop** while it runs and **Copy** once it has stopped, then **Chart**; **Copy** fills the form with this bot's settings. **Stop all** stops the running bots the filtered list shows, after confirmation, and says how many stopped and how many are stopping. A bot whose order's cancel the exchange never answered reads "An order of this bot needs a decision" while it stops: **Retry** on its item sends that cancel again; **Refresh** on the order's details asks the exchange about it. A bot still stopping, or still launching with a market entry, 5 minutes after it began sends you one message and shows in Needs attention: **Refresh** on its close order asks the exchange; a launch has **Stop** beside it.
 
 ## The bot's details
 
@@ -29,12 +29,12 @@ The details open in the right column, from the top down.
 
 <figure><img src="../pictures/dca/running-2-header.webp" alt="The bot's details, the arrow at Chart" width="300"><figcaption></figcaption></figure>
 
-The header names the account, pair and bot, with status, cycle, position and total PnL. Use **+ Add a name** or **+ Add a note** to help identify it. **What happened?** explains an error here, or a repair in **Needs your attention**.
+The header names the account, pair and bot, with status, cycle, position and total PnL. Use **+ Add a name** or **+ Add a note** to help identify it. Next to the bot's status, a red count such as **3 errors** tells you how many averaging orders failed.
 
 - **Stop** cancels all the bot's orders, including Take Profit and Stop Loss. With **Close pos. on stop** on, it also closes the position; otherwise you keep it.
 - **Close pos.** closes at market and ends the cycle. Another cycle needs **Repeat after** with **TP** selected, subject to Run, cooldown and entry conditions.
 - **Chart** shows the bot on the chart.
-- **Fix failed** sends failed averaging orders again at their prices.
+- **Fix failed** sends every failed averaging order again at its price. The wrench on a failed order's row sends just that order.
 - **Start now** starts a scheduled bot's entry process immediately.
 - **Copy** fills the form with these settings. Change what you like and press Launch to start another bot.
 
@@ -44,9 +44,9 @@ The header names the account, pair and bot, with status, cycle, position and tot
 
 Open **Parameters** to edit settings. Confirm with ✓ or Enter; × or Escape cancels.
 
-**Reinvest**, the signals in **Entry condition**, **Close pos. on stop**, **Repeat after**, **Cooldown**, **TP from**, **Run**, **finish the cycle** and **Only this bot trades BTC.USDC perp in this account** apply at once; the checkbox names your chosen instrument. Reinvest affects the next cycle's order sizes. Signal changes apply while the bot waits for an entry; this cycle's orders stay as they are. Other changes apply next cycle while one is open. For example, changing Entry size from 100 to 150 leaves this cycle's entry unchanged. The next cycle's value appears below the current one; enter the current value again to cancel the change. See [Features & setup](dca-setup.md) for field meanings.
+**Reinvest**, the signals in **Entry condition**, **Close pos. on stop**, **Repeat after**, **Cooldown**, **TP from**, **Run**, **finish the cycle** and **Only this bot trades this pair** apply at once. Reinvest affects the next cycle's order sizes. Signal changes apply while the bot waits for an entry; this cycle's orders stay as they are. **Avg orders post only** applies at once, from the next averaging order the bot sends. Other changes apply next cycle while one is open. For example, changing Entry size from 100 to 150 leaves this cycle's entry unchanged. The next cycle's value appears below the current one; enter the current value again to cancel the change. See [Features & setup](dca-setup.md) for field meanings.
 
-**Move to break even** fixes this cycle's **Take Profit** at a price that covers the position's cost and fees already paid. It excludes the closing fee. Later averaging does not move this fixed price.
+**BE** on the **Take Profit** line (**Move to breakeven**) sets this cycle's take profit at a price that covers the position's cost and the fees paid so far, not the closing fee. With the take profit off, it adds one there. Later averaging orders don't move it.
 
 For a bot set up with Max loss, % before 3.2.1, the percentage now refers to the Investment: 20% of margin at 10x is shown as 2%. The stop price stays the same.
 
@@ -66,13 +66,13 @@ This is the planned ladder for the selected cycle: entry, averaging orders, Stop
 
 **Total PnL** combines **Realized PnL** and **Unreal. PnL**: +20 realized and −30 unrealized means −10 total, before closing fees. Open Realized PnL to see trading result, exchange fees, platform fees and funding. Unrealized values the open position at the last traded price.
 
-**Invested** is the bot's investment; **Own funds**, on perpetuals, is your own money backing it. Choose a base:
+**Invested** is the bot's investment; **Own funds**, on perpetuals, is what the bot needs from your account to reach its stop loss, the figure **Approx. margin** showed on the form. Choose a base:
 
-- **Max planned** — the largest planned entry-and-averaging total of a cycle so far.
+- **Max planned** — the largest planned entry-and-averaging total of a cycle so far, at the top of its range when the exchange's step is coarse.
 - **Max reached** — the most funds used at one time.
 - **Average** — the funds used on average over running time.
 
-PnL percentages use Max planned. **APR** projects the realized return over a year; **ROE** shows realized return on your own funds. Neither promises future earnings. The chart shows realized PnL bars and an APR line; historical APR is estimated, and older history may show only the current point.
+PnL percentages use Max planned. **APR** projects the realized return over a year; **ROE** shows realized return on those funds. Neither promises future earnings. The chart shows realized PnL bars and an APR line; historical APR is estimated, and older history may show only the current point.
 
 When a cycle was sized with Reinvest, **incl. … reinvested** shows profit included in this cycle's sizes, or a negative amount after losses. Account-percent sizing has no separate line.
 
@@ -108,7 +108,7 @@ Choose **Stop/error**, **TP/SL** and **Entry/avg orders** in Notifications; From
 
 With Only this bot trades on, an unexpected position difference may need a decision: **Exchange is right** accepts the exchange position; **Bot is right** keeps the bot's count. A notice about other resting orders offers **Accept** or **Stop bot**; the bot keeps running meanwhile.
 
-A failed averaging order does not stop the bot; use **Fix failed** to retry it. When the bot ends, **Copy** prepares another.
+A failed averaging order does not stop the bot. Its row says **Error**; open it to see why, and press **Retry** to send it again. [When an order fails](../trading/order-errors.md) explains each refusal. When the bot ends, **Copy** prepares another.
 
 ### Accepting the exchange position
 
@@ -142,7 +142,9 @@ Yes: open **Parameters** and edit a setting. Some apply at once; the others appl
 
 ### What if an averaging order fails?
 
-The bot keeps running; **Fix failed** sends failed averaging orders again at their prices. You get one Telegram message while averaging orders remain failed. A later refusal after **Fix failed** or **Retry order** can send another message, as can a refusal in a new cycle. Immediate retry failures are shown in the bot.
+The bot keeps running, and a failed averaging order doesn't go into **Needs your attention**: the Bots list counts it. **Fix failed** sends failed averaging orders again at their prices; the wrench on a failed row, or **Retry** when you open it, sends just that one. You get one Telegram message while averaging orders remain failed. A later refusal after you send them again can send another message, as can a refusal in a new cycle. Immediate retry failures are shown in the bot.
+
+If an averaging order was refused because it was post only and would have filled at once, turn off **Avg orders post only** in **Parameters** and press **Fix failed**. The change applies to the next order the bot sends; orders already on the exchange stay as they are.
 
 ### Is funding included in the bot's result?
 

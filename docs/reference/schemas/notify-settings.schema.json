@@ -8,7 +8,7 @@
   "properties": {
     "telegramButtons": {
       "type": "boolean", "default": true,
-      "description": "Shortcut buttons under gcx's Telegram messages (0009 Amendment 1): Stop bot, Close position, Retry, Retry order, Relaunch, the three TP/SL shortcuts. Off: new messages carry the panel link only, and a press on an older message answers \"Shortcut buttons are off in Settings\" and does nothing."
+      "description": "Shortcut buttons under gcx's Telegram messages (0009 Amendment 1): Stop bot, Close position, Retry, Fix failed, Relaunch, the three TP/SL shortcuts. Off: new messages carry the panel link only, and a press on an older message answers \"Shortcut buttons are off in Settings\" and does nothing."
     },
     "telegramConfirm": {
       "type": "boolean", "default": true,
