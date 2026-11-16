@@ -141,7 +141,7 @@ In hedge mode, Long and Short are separate positions on the same market, and the
 On a unified account in Cross or Portfolio margin, your account's coin list on the Dashboard has a Collateral column. A coin switched on counts as collateral in your Unified Trading Account for your positions and borrowing; switched off, it doesn't. Turning a coin off doesn't sell or move it, and coins in Funding aren't affected.
 
 - USDT, USDC and any other coin Bybit requires as collateral stay on and can't be switched off.
-- Not accepted means Bybit doesn't take that coin as collateral.
+- A coin Bybit doesn't accept as collateral stays off and can't be switched on.
 - Turn a coin's switch on or off to change its collateral setting. If Bybit refuses, the reason appears below the coin. If the change can't be confirmed, press **Refresh** to check the current setting.
 - Changes you make on Bybit also appear here.
 

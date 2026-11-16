@@ -34,6 +34,7 @@
         "leverage": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?$", "description": "A3 d100: the leverage used to resolve the margin budget; absent uses the last recorded grid leverage, then ruling 88 (a)'s 5x default" },
         "account": { "type": "object", "required": ["kind"], "properties": { "kind": { "enum": ["fresh", "stale", "absent"] }, "value": { "type": "string" } }, "description": "A2 d61: the held account value used before planning; resolved amounts also live in each grid note" },
         "request": { "$ref": "bot-entry.schema.json#/$defs/request" },
+        "by": { "$ref": "bot-entry.schema.json#/$defs/request/properties/actor", "description": "Added 2026-11-15 (NOTIFY-MODIFIED-1115): as a bot row's `by`, on a grid's modify that another bot's launch journaled (its \"Only this bot trades this pair\" off): who launched; only the notifier reads it. Absent on every other row and on older journals." },
         "action": {
           "type": "object"
         },

@@ -327,7 +327,14 @@
             },
             "averagingPlanned": {
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "description": "Averaging orders configured for this cycle, including orders that cannot be sent."
+            },
+            "averagingUnsent": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "description": "This cycle’s below-minimum averaging orders that cannot be sent; zero without levels or when absent in older rows."
             },
             "averagingFailed": {
               "type": "integer",

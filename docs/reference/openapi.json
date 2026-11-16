@@ -28382,7 +28382,14 @@
                   },
                   "averagingPlanned": {
                     "type": "integer",
-                    "minimum": 0
+                    "minimum": 0,
+                    "description": "Averaging orders configured for this cycle, including orders that cannot be sent."
+                  },
+                  "averagingUnsent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0,
+                    "description": "This cycle’s below-minimum averaging orders that cannot be sent; zero without levels or when absent in older rows."
                   },
                   "averagingFailed": {
                     "type": "integer",
@@ -39422,7 +39429,7 @@
         "description": "The tier the copy says it is (0030 amendments 1 and 2), as case.schema.json header.tier, so a record from an internal tester is told from one that touches production. Optional: absent when the copy reads none; on the heartbeat too."
       },
       "runtime-api.attentionDone": {
-        "description": "POST /api/v1/attention/done (decision 0016 Amendment 2 d10; 0003 Amendment 2 d8): a person's Done on a row of the Dashboard's Needs your attention section, of either kind, journaled once as attention.done so every device hides it. key: the row's (a position row's `bot-row.schema.json` attention.key, an allowance row's `runtime-topic.schema.json` attention.key). 200 {accepted: true}; 403 for a key; 503 {error} when the journal could not be written.",
+        "description": "POST /api/v1/attention/done (decision 0016 Amendment 2 d10; 0003 Amendment 2 d8): a person's Done on a row of the Dashboard's Needs your attention section, of either kind, journaled once as attention.done so every device hides it. key: the row's (a position row's `bot-row.schema.json` attention.key, an allowance row's `runtime-topic.schema.json` attention.key). Added 2026-11-16: also the key of a row the panel makes from account state (the builder fee, a key's expiry, Binance's keep-alive, credits; `runtime-topic.schema.json` hidden), served back in the runtime topic's `hidden`. Hiding changes nothing on the account, the bot or the order. 200 {accepted: true}; 403 for a key; 503 {error} when the journal could not be written.",
         "type": "object",
         "additionalProperties": false,
         "required": [
