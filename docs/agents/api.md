@@ -120,6 +120,10 @@ A grid row in `GET /api/v1/bots` carries `failed`, how many of its orders failed
 
 `POST /api/v1/bots/{id}/command` with `{"requestId": "...", "kind": "fix-failed"}` places them again, the same as **Fix failed** in the panel: one fresh read of what the exchange says is free for a new order, less your orders on their way, then the failed orders nearest the price first, as far as that goes. It sends nothing the read does not cover. The answer is `{"placed", "left", "needed", "unit"}`: how many it sent, how many are still failed, and how much more of `unit` the rest needs (an order the exchange then refuses shows again in the row's `failed`); `later` counts the ones it left for another reason, `past` the ones it sent at once because the price had passed them. A paused grid answers 422 `paused` and places nothing; a balance read that fails answers 422 `balance` and places nothing; a stopped grid answers 409 `state`. It is an order action, so a key may send it for a grid it created. The bot's items no longer carry an `orders-failed` item; its `facts.failed` is deprecated (see A bot's failed orders). The MCP tool comes from the same operation.
 
+## When a grid's PnL stops can't fire
+
+A grid row's `total` is null while the grid holds a position the app has no price to value at yet (`position.waiting` is true, `position.unrealized` null). Then its Take profit, Stop loss and Max drawdown on total PnL can't fire while Count the open position is on; price stops still work. The bot sends one `grid.valuation` notification when this starts, and `total` returns by itself with the first price. Tell the person their PnL stops are on hold; there is nothing for them to press.
+
 A bot still stopping or launching five minutes after it began, not waiting for anything you set, carries an item with cause `stuck-stopping`, `stuck-launching` or `stuck-entry` (a DCA's entry not filled); `GET /api/v1/bots/{id}` and the Dashboard's attention rows serve it, and it leaves when the bot leaves that state.
 
 ## Paying credits with $GOOD

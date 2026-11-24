@@ -17,7 +17,7 @@
     "l": { "$ref": "#/$defs/decimal" },
     "c": { "$ref": "#/$defs/decimal" },
     "v": { "$ref": "#/$defs/decimal", "description": "Volume in the base asset." },
-    "n": { "type": "integer", "minimum": 0, "description": "Number of trades in the bar." }
+    "n": { "type": "integer", "minimum": 0, "description": "Number of trades; 0 where the exchange does not state it (Bybit, Bybit EU). Whether a bar traded is `v` above zero." }
   },
   "$defs": { "decimal": { "type": "string", "pattern": "^\\d+(\\.\\d+)?$", "description": "A plain non-negative decimal string. Never a JSON number." } }
 }

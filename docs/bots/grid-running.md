@@ -44,7 +44,7 @@ Choose a base under **Invested** or **Own funds**:
 - **Current** — what it is set to use now.
 - **Average** — funds used on average over running time.
 
-Own funds, on perpetuals, is what the bot needs from your account to reach its stop loss, worked out as **Approx. margin** is on the form. **APR** projects the realized return over a year; **ROE** shows realized return on those funds. PnL percentages use Initial. The chart shows realized PnL bars and an APR line. Treat APR as a comparison, not promised earnings.
+Own funds, on perpetuals, is what the bot needs from your account to reach its stop loss, worked out as **Approx. margin** is on the form. **APR** projects the realized return over a year; **ROE** shows realized return on those funds. PnL percentages use Current. The chart shows realized PnL bars and an APR line. Treat APR as a comparison, not promised earnings.
 
 The bot's result covers its trades; your exchange's position figures cover the account position. Compare total results and the position still open when assessing performance.
 
@@ -99,6 +99,8 @@ Choose your four notification switches here. **Stop** offers the position-close 
 ## What goodcryptoX tells you
 
 Use **Every order**, **Every PnL change**, **Range, follows, resizes** and **Starts, stops, changes** to choose routine messages. Automatic fills, Follow moves and stops can reach you on Telegram. Errors and problems needing a decision always arrive.
+
+If **Count the open position** is on and goodcryptoX has no price yet for the position the grid holds, it can't work out total PnL, so Take profit, Stop loss and Max drawdown on total PnL can't fire. If any of them is on, you get one message when that starts. They work again by themselves once the price arrives. Price stops are not affected.
 
 ## When the bot needs you
 

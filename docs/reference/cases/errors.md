@@ -37,6 +37,9 @@ A failure while Hyperliquid announced maintenance.
 ## `UPGRADE_GATE`
 Refused in the few minutes after Hyperliquid's upgrade when it takes only post-only orders: nothing was placed. The order waits and is sent again every 10 seconds, under the same client order id, until Hyperliquid takes one; no page, no repair.
 
+## `BUSY`
+Hyperliquid answered that too many requests were pending. The order may still have reached the exchange, so goodcryptoX sends nothing again for it and checks whether it went through. If it is not there, an order still wanted is placed again, about three and a half minutes after its send. If Hyperliquid cannot be read in that time, goodcryptoX alerts you. Do not place it again by hand before that. An order an earlier 3.2.1 build marked refused on this answer is checked after the update. If it is on Hyperliquid, goodcryptoX shows it, counts its trades, and cancels it if its bot has stopped or its level already has another order. If it is not there, it stays a failed order.
+
 ## `UNAVAILABLE`
 A read got no answer (no connection, a timeout, a 5xx): the figure is unknown, never zero; two minutes of no answer pages you.
 
@@ -126,6 +129,9 @@ An answer goodcryptoX does not know: new risk is held and you are paged; nothing
 ## "Isolated position does not have sufficient margin available to decrease leverage"
 `REJECTED_TERMINAL`: lowering the leverage of an open isolated position that has too little margin for it. Observed 2026-11-11. The person reads "Add margin to this position before lowering leverage" at the leverage control, Hyperliquid's words behind it.
 
+## "Position does not have sufficient margin for reduction"
+`REJECTED_TERMINAL`: removing more margin from an isolated position than it can spare. Observed 2026-11-21. The person reads "The exchange refused this margin change" at the margin form, Hyperliquid's words behind it; nothing is paged.
+
 ## "Invalid leverage value"
 `REJECTED_TERMINAL`.
 
@@ -146,3 +152,6 @@ An answer goodcryptoX does not know: new risk is held and you are paged; nothing
 
 ## "Only post-only orders allowed immediately after"
 `UPGRADE_GATE`: Hyperliquid's post-only minutes after an upgrade ("… after network upgrade" or "… after a network upgrade").
+
+## "Too many pending nonces"
+`BUSY`: seen as "L1 error: Too many pending nonces" on 2026-11-21 and 22, when a large Grid's orders went out at once; on no page of Hyperliquid's documentation.

@@ -9,8 +9,10 @@
     { "$ref": "#/$defs/fill" },
     { "$ref": "#/$defs/cancelled" },
     { "$ref": "#/$defs/unknown" },
+    { "$ref": "#/$defs/busyFound" },
     { "$ref": "#/$defs/lookup" },
     { "$ref": "#/$defs/notPlaced" },
+    { "$ref": "#/$defs/filledEnd" },
     { "$ref": "#/$defs/reported" },
     { "$ref": "#/$defs/fillsDue" }
   ],
@@ -99,7 +101,23 @@
         "action": { "enum": ["place", "cancel"] },
         "expiresAfter": { "$ref": "#/$defs/time", "description": "After this time the venue refuses the action (0003 §2.7)." },
         "resigned": { "type": "boolean", "description": "Its cloid was signed again (0013 d1 step 6)." },
+        "reason": { "const": "bybit-10002", "description": "Bybit rejected the request timestamp. The placement is being reconciled by orderLinkId." },
         "proof": { "const": true, "description": "The send path runs the venue's proof for this send (0013 Amendment 1 d14): no repair before two minutes from when it was due. Absent (every journal before it): the order goes to repair at once and is never sent again by itself." },
+        "holdUntil": { "$ref": "#/$defs/time", "description": "0013 Amendment 8 (added 2026-11-23): the bound waits until this time at least, for a send turned away as too busy or unanswered at a start, whose proof waits longer. Absent (every journal before it): two minutes from when it was due." },
+        "busy": { "const": true, "description": "0013 Amendment 8 ruling 6 (added 2026-11-23): Hyperliquid answered this place too busy. Nothing more is signed or posted for the attempt until its proof of absence passes or the exchange shows the order. Absent (every journal before it): not known." },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "busyFound": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "oid", "at"],
+      "description": "A positive exchange witness for a Hyperliquid order an older build rejected on a busy answer. The venue order id survives restart, including when a trade is the only witness.",
+      "properties": {
+        "type": { "const": "busy-found" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "oid": { "$ref": "#/$defs/id" },
         "at": { "$ref": "#/$defs/time" }
       }
     },
@@ -113,6 +131,23 @@
         "orderId": { "$ref": "#/$defs/id" },
         "attempt": { "$ref": "#/$defs/attempt" },
         "found": { "type": "boolean" },
+        "deferred": {
+          "description": "An identified venue order whose status is applied after its fills. Null clears the observation in the same step as the settled status.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["oid", "coin", "required", "status"],
+              "properties": {
+                "oid": { "$ref": "#/$defs/id" },
+                "coin": { "$ref": "#/$defs/id" },
+                "required": { "$ref": "#/$defs/decimal", "description": "Minimum executed quantity evidenced by the status and any fills awaiting admission." },
+                "status": { "oneOf": [{ "$ref": "#/$defs/accepted" }, { "$ref": "#/$defs/cancelled" }, { "$ref": "#/$defs/rejected" }, { "$ref": "#/$defs/filledEnd" }] }
+              }
+            }
+          ]
+        },
         "healthy": { "type": "boolean" },
         "expiresAfter": { "$ref": "#/$defs/time", "description": "The send's deadline, from the journal." },
         "resigned": { "type": "boolean", "description": "The send's nonce was re-signed, from the journal." },
@@ -154,6 +189,19 @@
         "attempt": { "$ref": "#/$defs/attempt" },
         "origSz": { "$ref": "#/$defs/decimal" },
         "sz": { "$ref": "#/$defs/decimal" },
+        "at": { "$ref": "#/$defs/time" }
+      }
+    },
+    "filledEnd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "orderId", "attempt", "executed", "at"],
+      "description": "The venue says this send is over and filled (0004 amendment 4 d2): Hyperliquid's filled reply, row or found order, Binance's FILLED, Bybit's Filled. executed is its figure, the size the send's fills must reach (origSz − sz when 0 ≤ sz < origSz, else origSz; a reply's totalSz when 0 < totalSz ≤ the size signed, else that size; an imported order's origSz − sz); never a fill. The order holds until its fills reach it, then closes; fills that never come go to repair (fills-missing) 180 s after the word. Added 2026-11-20; an older build does not read it (ruling 164).",
+      "properties": {
+        "type": { "const": "filled-end" },
+        "orderId": { "$ref": "#/$defs/id" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "executed": { "$ref": "#/$defs/decimal" },
         "at": { "$ref": "#/$defs/time" }
       }
     },

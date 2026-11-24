@@ -528,7 +528,8 @@
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "description": "Total PnL, realized plus unrealized, a decimal string. null while the grid holds a position the app has no price to value at yet (on perpetuals the mark, on spot the last trade): then `position.unrealized` is null and `position.waiting` true, and a Take profit, Stop loss or Max drawdown on total PnL with Count the open position on cannot fire until a value arrives; the bot says so once by a `grid.valuation` notification (0040 d13 (6)). Described 2026-11-20 (unwatched-alert-1120); the field is unchanged"
         },
         "position": {
           "type": "object"
@@ -580,7 +581,8 @@
           "type": "string"
         },
         "investedCurrent": {
-          "type": "string"
+          "type": "string",
+          "description": "What the grid holds now (the panel's Current): its levels' value at the level size as they stand, times the reinvest factor; it moves with a Modify, with a range move in coin sizing and with Reinvest. The base of every percent beside the grid's PnL, on its page, in the Bots list and in its messages (goodcryptoX's Invested; 2026-11-16). `invested` stays Initial, what the grid held when it started"
         },
         "closesPosition": {
           "type": "boolean",
@@ -596,7 +598,8 @@
           "description": "Grid on spot: the coin-fee percent used to size a sell that keeps profit in the coin; buys are always the plan. Absent: the default rate. Additive: the previous build ignores it and reads the row as before"
         },
         "aprCurrent": {
-          "type": "string"
+          "type": "string",
+          "description": "The APR on investedCurrent: the realized PnL including funding over what the grid holds now, a year's worth at the rate since the grid was made, in percent; the Bots list's APR (2026-11-16)"
         },
         "ownFunds": {
           "type": "string",

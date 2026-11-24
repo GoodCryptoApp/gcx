@@ -374,11 +374,12 @@
                 "RATE_ADDRESS",
                 "MAINTENANCE",
                 "UPGRADE_GATE",
+                "BUSY",
                 "UNAVAILABLE",
                 "RESOLVE",
                 "UNKNOWN"
               ],
-              "description": "src/venues/hyperliquid/errors.ts ErrorClass. UPGRADE_GATE added 2026-10-05 (0003 Amendment 3 d5): a placement refused in the post-only minutes after an upgrade."
+              "description": "src/venues/hyperliquid/errors.ts ErrorClass. UPGRADE_GATE added 2026-10-05 (0003 Amendment 3 d5): a placement refused in the post-only minutes after an upgrade. BUSY added 2026-11-22 (0013 Amendment 8 d2): an ambiguous answer, too many of ours pending; the action may still have run."
             },
             "pattern": {
               "type": "string",

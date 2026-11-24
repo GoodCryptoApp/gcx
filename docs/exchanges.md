@@ -50,13 +50,13 @@ Exchanges see the IP address of the computer running goodcryptoX. A fixed IP add
 
 ## Removing an account
 
-In **Settings › Exchanges**, open the account's removal dialog. Removing it stops goodcryptoX from following or trading that account. It leaves positions and orders resting on the exchange as they are; stops watched by goodcryptoX end and its bots stop. Check what is open before removing it. Other connected accounts keep their own records.
+In **Settings › Exchanges**, open the account's removal dialog. Removing it stops goodcryptoX from following or trading that account. It leaves positions and orders resting on the exchange as they are; stops watched by goodcryptoX end and its bots stop. The dialog says what is open on the account: its running bots, its open orders and its open positions. Check it before removing it. Other connected accounts keep their own records.
 
 **Keep trading history** decides what stays on this computer. Ticked, the removed account's orders and bots remain available for reference, without trading actions. Unticked, every order, trade, bot and note of that account is erased permanently; goodcryptoX restarts to do it. This cannot be undone.
 
-Where an API wallet is used, **Also remove the API wallet** is a separate choice. Unticked, that wallet stays approved on the named exchange until it expires or you remove it there. Ticked, your wallet asks you to revoke it. If other accounts share that approval, the dialog names them: revoking the shared API wallet also takes away their ability to trade with it. Removing one account and revoking a shared trading key are different actions.
+Where an API wallet is used, **Also remove the API wallet** is a separate choice. Unticked, that wallet stays approved on the named exchange until it expires or you remove it there. Ticked, your wallet asks you to revoke it. If other accounts share that approval, the dialog says they stop trading: revoking the shared API wallet also takes away their ability to trade with it. Removing one account and revoking a shared trading key are different actions.
 
-Where each account has its own API key, as on Binance, there is no shared approval to revoke: goodcryptoX deletes its copy of the key, and the dialog reminds you to delete the key on the exchange too.
+Where each account has its own API key, as on Binance, there is no shared approval to revoke: goodcryptoX deletes its copy of the key; the key stays on the exchange until you delete it there.
 
 ## Questions
 
